@@ -1,0 +1,26 @@
+include: package:flutter_lints/flutter.yaml
+analyzer:
+  errors:
+    constant_identifier_names: ignore
+    dangling_library_doc_comments: ignore
+formatter:
+  page_width: 120
+linter:
+  rules:
+    prefer_relative_imports: true
+    directives_ordering: true
+    always_use_package_imports: false
+    # temporarily allow dynamic calls
+    avoid_dynamic_calls: false
+    avoid_slow_async_io: true
+    avoid_type_to_string: true
+    close_sinks: true
+    cancel_subscriptions: true
+    combinators_ordering: true
+    deprecated_consistency: true
+    # Doesn't work with formatter
+    # require_trailing_commas: true
+
+# Additional information about this file can be found at
+# https://dart.dev/guides/language/analysis-options
+# https://dart.dev/tools/linter-rules
