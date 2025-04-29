@@ -23,3 +23,16 @@ plugins {
 }
 
 include(":app")
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    val flutterStorageUrl: String = System.getenv("FLUTTER_STORAGE_BASE_URL") ?: "https://storage.googleapis.com"
+    val reclaimStorageUrl: String = System.getenv("RECLAIM_STORAGE_BASE_URL") ?: "https://reclaim-inapp-sdk.s3.ap-south-1.amazonaws.com/android/repo"
+    repositories {
+        google()
+        mavenCentral()
+        maven(url = reclaimStorageUrl)
+        maven(url = "$flutterStorageUrl/download.flutter.io")
+        maven(url = "/Users/mushaheedsyed/Projects/reclaimprotocol.org/inapp/reclaim_inapp_sdk_android/dist/library/0.5.1/repo")
+    }
+}

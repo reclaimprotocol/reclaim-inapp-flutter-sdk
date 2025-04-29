@@ -14,11 +14,11 @@ import 'package:reclaim_inapp_flutter_sdk/reclaim_inapp_flutter_sdk.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('getPlatformVersion test', (WidgetTester tester) async {
-    final ReclaimVerirication plugin = ReclaimVerirication();
-    final String? version = await plugin.getPlatformVersion();
+  testWidgets('ping test', (WidgetTester tester) async {
+    final ReclaimVerification plugin = ReclaimVerification();
+    final String? pingResponse = await plugin.ping();
     // The version string depends on the host platform running the test, so
     // just assert that some non-empty string is returned.
-    expect(version?.isNotEmpty, true);
+    expect(pingResponse?.isNotEmpty, true);
   });
 }

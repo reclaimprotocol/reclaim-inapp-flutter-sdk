@@ -1,6 +1,9 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-import 'src/method_channel.dart';
+import 'src/data/data.dart';
+import 'src/implementation/method_channel.dart';
+
+export 'src/data/data.dart';
 
 abstract class ReclaimInappFlutterSdkPlatform extends PlatformInterface {
   /// Constructs a ReclaimInappFlutterSdkPlatform.
@@ -23,7 +26,11 @@ abstract class ReclaimInappFlutterSdkPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String?> getPlatformVersion() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
+  Future<String?> ping() {
+    throw UnimplementedError('ping() has not been implemented.');
+  }
+
+  Future<ReclaimVerificationResponse> startVerification(ReclaimVerificationRequest request) {
+    throw UnimplementedError('startVerification() has not been implemented.');
   }
 }

@@ -1,7 +1,14 @@
 import 'platform_interface.dart';
 
-class ReclaimVerirication {
-  Future<String?> getPlatformVersion() {
-    return ReclaimInappFlutterSdkPlatform.instance.getPlatformVersion();
+export 'src/data/data.dart';
+export 'src/exception/exception.dart';
+
+class ReclaimVerification {
+  Future<String?> ping() {
+    return ReclaimInappFlutterSdkPlatform.instance.ping();
+  }
+
+  Future<ReclaimVerificationResponse> startVerification(ReclaimVerificationRequest request) {
+    return ReclaimInappFlutterSdkPlatform.instance.startVerification(request);
   }
 }

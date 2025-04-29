@@ -4,7 +4,7 @@ analyzer:
     constant_identifier_names: ignore
     dangling_library_doc_comments: ignore
 formatter:
-  page_width: 120
+  page_width: 300
 linter:
   rules:
     prefer_relative_imports: true
