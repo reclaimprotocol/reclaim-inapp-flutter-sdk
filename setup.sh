@@ -8,6 +8,9 @@ cd internal;
 
 git clone --depth=1 --branch=main git@github.com:reclaimprotocol/reclaim-inapp-sdk.git sdk
 rm -rf ./sdk/.git
+# remove unnecessary files to avoid confusion
+rm -rf ./sdk/example
+rm -rf ./sdk/README.md
 
 git clone --depth=1 --branch=main git@github.com:reclaimprotocol/reclaim-gnark-zkoperator-flutter.git zkoperator
 rm -rf ./zkoperator/.git

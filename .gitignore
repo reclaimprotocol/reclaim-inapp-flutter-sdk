@@ -33,4 +33,4 @@ migrate_working_dir/
 build/
 
 # uncomment to include internal sdk dependencies
-internal/
+# internal/

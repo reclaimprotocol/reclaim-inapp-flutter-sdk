@@ -1,0 +1,50 @@
+name: reclaim_gnark_zkoperator
+description: Reclaim Protocol's implementation of Zero-Knowledge (ZK) SNARK Operator powered by a Gnark Prover library
+version: 1.2.0
+homepage: https://reclaimprotocol.org
+publish_to: none
+
+environment:
+  sdk: '>=3.7.0 <4.0.0'
+  flutter: '>=3.29.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  ffi: ^2.0.1
+  plugin_platform_interface: ^2.0.0
+  logging: ^1.0.0
+  http: ^1.3.0
+  cronet_http: ^1.3.2
+  cupertino_http: ^2.0.2
+  retry: ^3.1.2
+  path: ^1.9.0
+  measure_performance: ^1.1.0
+
+dev_dependencies:
+  ffigen: ^18.1.0
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  yaml_edit: ^2.2.1
+  version: ^3.0.2
+
+flutter:
+  # This section identifies this Flutter project as a plugin project.
+  # The 'pluginClass' specifies the class (in Java, Kotlin, Swift, Objective-C, etc.)
+  # which should be registered in the plugin registry. This is required for
+  # using method channels.
+  # The Android 'package' specifies package in which the registered class is.
+  # This is required for using method channels on Android.
+  # The 'ffiPlugin' specifies that native code should be built and bundled.
+  # This is required for using `dart:ffi`.
+  # All these are used by the tooling to maintain consistency when
+  # adding or updating assets for this project.
+  #
+  # Please refer to README.md for a detailed explanation.
+  plugin:
+    platforms:
+      android:
+        ffiPlugin: true
+      ios:
+        ffiPlugin: true

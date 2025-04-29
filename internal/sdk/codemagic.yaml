@@ -1,0 +1,84 @@
+workflows:
+  just-tests:
+    name: Just Tests
+    when:
+      condition: not event.pull_request.draft
+    triggering:
+      events:
+        - push
+        # - pull_request
+        # - pull_request_labeled #GitHub only
+        - tag
+      branch_patterns:              # Include or exclude watched branches
+        - pattern: '*'
+          include: true
+          source: true
+      tag_patterns:                 # Include or exclude watched tag labels
+        - pattern: '*'
+          include: true
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      groups:
+        - reclaim_devtools_and_github_access # <-- (Includes RECLAIM_CONSUMER_APP_ID, RECLAIM_CONSUMER_APP_SECRET, PACKAGE_CLONE_USER, PACKAGE_CLONE_PASSWD)
+        - reclaim_env_overrides
+      vars:
+        # Note: Available from reclaim_env_overrides
+        # OVERRIDE_RECLAIM_ZKOPERATOR_PACKAGE_GIT: "main" # <-- Put the reference for https://github.com/reclaimprotocol/reclaim-gnark-zkoperator-flutter/ here
+        EXAMPLE_APP_BUNDLE_ID: "com.reclaim.example"
+        APP_STORE_CONNECT_ISSUER_ID: 4bfb5134-2f3a-470a-8ab9-29020117a094
+        APP_STORE_CONNECT_KEY_ID: AHYVVF9WDD
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up example app dependencies
+        script: |
+          set -ex
+          (cd example; export OVERRIDE_RECLAIM_ZKOPERATOR_PACKAGE_GIT=${OVERRIDE_RECLAIM_ZKOPERATOR_PACKAGE_GIT}; ./scripts/setup_vendor.sh;)
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Run package tests
+        script: |
+          flutter test
+      # - name: Set up debug.keystore
+      #   script: |
+      #     rm -f ~/.android/debug.keystore
+      #     keytool -genkeypair -alias androiddebugkey -keypass android -keystore ~/.android/debug.keystore -storepass android -dname 'CN=Android Debug,O=Android,C=US' -keyalg 'RSA' -keysize 2048 -validity 10000
+      # - name: Set up local.properties
+      #   script: |
+      #     echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/example/android/local.properties"
+      # - name: Set up code signing identities
+      #     script: |
+      #       echo "== Fetch iOS code signing files from Apple Developer Portal =="
+      #       keychain initialize
+      #       app-store-connect fetch-signing-files ${EXAMPLE_APP_BUNDLE_ID} --type IOS_APP_STORE --platform IOS --issuer-id ${APP_STORE_CONNECT_ISSUER_ID} --key-id ${APP_STORE_CONNECT_KEY_ID} --private-key @env:AUTH_KEY --certificate-key @env:CERTIFICATE_KEY --create
+      #       keychain add-certificates
+      #       xcode-project use-profiles --code-signing-setup-verbose-logging
+      # Not working properly
+      # - name: Run integration tests in example app
+      #   script: |
+      #     set -ex
+      #     cd example
+      #     flutter emulators; # just to see available simulators
+      #     flutter emulators --launch apple_ios_simulator;
+      #     flutter devices
+      #     flutter devices
+      #     flutter pub get;
+      #     flutter drive --dart-define-from-file=./.env --driver=test_driver/integration_test.dart --target=integration_test/providers_test.dart --screenshot=$CM_EXPORT_DIR/
+      - name: Copy custom artifacts
+        script: | 
+          #!/usr/bin/env sh
+          cp  -r example/test_screenshots $CM_EXPORT_DIR/screenshots
+    artifacts:
+      - flutter_drive.log
+      - example/test_screenshots/*.png
+    publishing:
+      slack:
+        # See the following link about how to connect your Slack account - https://docs.codemagic.io/publishing-yaml/distribution/#slack
+        channel: "#alerts-app_ci-cd"
+        notify_on_build_start: true # To receive a notification when a build starts
+        notify:
+          success: true # To not receive a notification when a build succeeds
+          failure: true # To not receive a notification when a build fails
