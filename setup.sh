@@ -2,6 +2,7 @@
 
 set -ex;
 
+rm -rf internal;
 mkdir -p internal;
 
 cd internal;
