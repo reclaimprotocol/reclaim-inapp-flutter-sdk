@@ -1,0 +1,4 @@
+String
+    $getPlatformName() {
+  return 'web';
+}
