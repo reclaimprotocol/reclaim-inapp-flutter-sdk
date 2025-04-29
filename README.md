@@ -1,23 +1,117 @@
-# reclaim_inapp_flutter_sdk
+# Reclaim InApp Flutter SDK
 
-A new Flutter plugin project.
+A Flutter SDK for integrating Reclaim's verification system directly into your Flutter applications. This SDK allows you to verify user credentials and generate proofs in-app.
 
-## Getting Started
+## Features
 
-The Reclaim InApp Flutter SDK [plug-in package](https://flutter.dev/to/develop-plugins),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS for verification using Reclaim.
+- In-app verification flow
+- Customizable verification options
+- ZK Proof generation
 
-The plugin code is in reclaim_inapp_sdk/lib/reclaim_inapp_sdk.dart.
+## Installation
 
-The example app code is in reclaim_inapp_sdk/example/lib/main.dart.
+Add the following to your `pubspec.yaml`:
 
-Host platform code is in the android, ios directories under reclaim_inapp_sdk.
-To edit platform code in an IDE see https://flutter.dev/to/edit-plugins.
+```yaml
+dependencies:
+  reclaim_inapp_flutter_sdk: ^latest_version
+```
 
-To add platforms, run `flutter create -t plugin --platforms <platforms> .` under reclaim_inapp_sdk.
-For more information, see https://flutter.dev/to/pubspec-plugin-platforms.
+## Usage
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Basic Setup
+
+1. Import the SDK in your Dart file:
+
+```dart
+import 'package:reclaim_inapp_flutter_sdk/reclaim_inapp_flutter_sdk.dart';
+```
+
+2. Initialize the SDK with your app credentials:
+
+Following is an exmaple.
+
+```dart
+const String appId = String.fromEnvironment('APP_ID');
+const String appSecret = String.fromEnvironment('APP_SECRET');
+const String providerId = String.fromEnvironment('PROVIDER_ID');
+```
+
+### Starting Verification
+
+```dart
+final sdk = ReclaimInAppSdk.of(context);
+final proofs = await sdk.startVerification(
+  ReclaimVerificationRequest(
+    appId: appId,
+    providerId: providerId,
+    secret: appSecret,
+    sessionInformation: ReclaimSessionInformation.empty(),
+    contextString: '',
+    parameters: {},
+    claimCreationType: ClaimCreationType.standalone,
+  ),
+);
+```
+
+### Configuration Options
+
+The `ReclaimVerificationRequest` supports the following options:
+
+- `appId`: Your Reclaim application ID
+- `providerId`: The ID of the provider you want to verify against
+- `secret`: Your application secret (optional if using session information)
+- `sessionInformation`: Session information for authentication
+- `contextString`: Additional context for the verification
+- `parameters`: Custom parameters for the verification
+- `claimCreationType`: Type of claim creation (standalone or embedded)
+- `autoSubmit`: Whether to auto-submit the verification
+- `hideCloseButton`: Whether to hide the close button
+- `webhookUrl`: URL for webhook notifications
+- `verificationOptions`: Additional verification options
+
+### Error Handling
+
+The SDK throws specific exceptions that you can handle:
+
+```dart
+try {
+  final proofs = await sdk.startVerification(request);
+} on ReclaimExpiredSessionException {
+  // Handle expired session
+} on ReclaimVerificationManualReviewException {
+  // Handle manual review case
+} catch (error) {
+  // Handle other errors if required
+}
+```
+
+### Pre-warming
+
+For better performance, you can pre-warm the SDK:
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  ReclaimInAppSdk.preWarm();
+  runApp(MyApp());
+}
+```
+
+## Example
+
+Check out the [example](example/lib/main.dart) for a complete implementation.
+
+## Environment Variables
+
+The SDK requires the following environment variables:
+
+- `APP_ID`: Your Reclaim application ID
+- `APP_SECRET`: Your application secret
+- `PROVIDER_ID`: The ID of the provider to verify against
+
+You can provide these values using:
+
+- Dart Define Env file: `--dart-define-from-file=./.env`
+- Hardcoded values (not recommended for production)
+
