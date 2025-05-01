@@ -24,4 +24,17 @@ interface class BuildEnv {
 }
 " > internal/sdk/lib/build_env.dart
 
+file="internal/sdk/pubspec.yaml"
+version_line=$(grep "^version:" $file)
+current_version=$(echo $version_line | cut -d' ' -f2)
+
+# Use different sed syntax for macOS (BSD) and Linux (GNU)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "s/^version:.*/version: $current_version/" pubspec.yaml
+else
+    sed -i "s/^version:.*/version: $current_version/" pubspec.yaml
+fi
+
+echo "Updated version from sdk dependency: $current_version"
+
 flutter pub get;
