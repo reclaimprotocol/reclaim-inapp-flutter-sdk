@@ -64,7 +64,7 @@ The `ReclaimVerificationRequest` supports the following options:
 - `sessionInformation`: Session information for authentication
 - `contextString`: Additional context for the verification
 - `parameters`: Custom parameters for the verification
-- `claimCreationType`: Type of claim creation (standalone or embedded)
+- `claimCreationType`: Type of claim creation (standalone or onMeChain)
 - `autoSubmit`: Whether to auto-submit the verification
 - `hideCloseButton`: Whether to hide the close button
 - `webhookUrl`: URL for webhook notifications
