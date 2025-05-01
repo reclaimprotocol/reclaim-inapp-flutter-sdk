@@ -1,6 +1,6 @@
 enum ClaimCreationType {
   standalone('createClaim'),
-  onMeChain('createClaimOnMechain');
+  meChain('createClaimOnMechain');
 
   const ClaimCreationType(this.type);
 

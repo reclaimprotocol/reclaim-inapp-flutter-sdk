@@ -53,7 +53,7 @@ abstract class AttestorClient {
           onPerformanceReports(List.unmodifiable([..._performanceReports]));
         }
         _clearPerformanceReports();
-        if (options.claimCreationType == ClaimCreationType.onMeChain) {
+        if (options.claimCreationType == ClaimCreationType.meChain) {
           return AttestorClaimResponse.fromMeChainJson(value);
         }
         return [AttestorClaimResponse.fromJson(value)];

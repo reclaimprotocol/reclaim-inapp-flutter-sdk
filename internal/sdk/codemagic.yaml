@@ -70,7 +70,10 @@ workflows:
       - name: Copy custom artifacts
         script: | 
           #!/usr/bin/env sh
-          cp  -r example/test_screenshots $CM_EXPORT_DIR/screenshots
+          if [ ! -z "$CM_EXPORT_DIR" ] && [ -d "example/test_screenshots" ]; then
+            echo "Copying screenshots to $CM_EXPORT_DIR/screenshots"
+            cp -r example/test_screenshots "$CM_EXPORT_DIR/screenshots"
+          fi
     artifacts:
       - flutter_drive.log
       - example/test_screenshots/*.png
