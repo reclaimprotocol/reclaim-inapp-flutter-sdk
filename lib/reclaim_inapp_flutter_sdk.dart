@@ -11,6 +11,7 @@ import 'package:reclaim_gnark_zkoperator/reclaim_gnark_zkoperator.dart';
 import 'package:reclaim_gnark_zkoperator/src/download/download.dart'
     show downloadWithHttp;
 
+import 'data/url_request.dart';
 import 'overrides.dart';
 
 export 'package:reclaim_flutter_sdk/data/providers.dart' show HttpProvider;
@@ -118,6 +119,25 @@ class ReclaimInAppSdk {
     return verification.startVerification();
   }
 
+  Future<List<CreateClaimOutput>?> startVerificationFromUrl(String url) {
+    final request = ReclaimUrlRequest.fromUrl(url);
+    return startVerification(
+      ReclaimVerificationRequest(
+        appId: request.applicationId,
+        providerId: request.providerId,
+        secret: request.signature,
+        sessionInformation: ReclaimSessionInformation(
+          sessionId: request.sessionId ?? '',
+          signature: request.signature,
+          timestamp: request.timestamp,
+        ),
+        contextString: request.context ?? '',
+        parameters: request.parameters ?? const {},
+        webhookUrl: request.callbackUrl,
+      ),
+    );
+  }
+
   Future<void> clearAllOverrides() async {
     ReclaimOverride.clearAll();
   }
@@ -155,6 +175,7 @@ class ReclaimInAppSdk {
 
     if (feature?.attestorBrowserRpcUrl != null ||
         provider != null ||
+        logConsumer?.canSdkPrintLogs == true ||
         logConsumer?.canSdkCollectTelemetry == false ||
         sessionManagement?.enableSdkSessionManagement == true) {
       await canUseCapability('overrides_v1');
@@ -246,7 +267,7 @@ class ReclaimInAppSdk {
       if (logConsumer != null)
         LogConsumerOverride(
           // Setting this to true will print logs from reclaim_flutter_sdk to the console.
-          canPrintLogs: logConsumer.canSdkPrintLogs ?? reclaimCanPrintDebugLogs,
+          canPrintLogs: logConsumer.canSdkPrintLogs == true,
           onRecord: logConsumer.enableLogHandler
               ? (record, identity) {
                   sendLogsToHost(record, identity);
@@ -274,7 +295,7 @@ class ReclaimInAppSdk {
               signature: signature,
             );
           },
-          updateSession: (sessionId, status) async {
+          updateSession: (sessionId, status, metadata) async {
             assert(overridesHandlerApi != null,
                 'ReclaimInAppSdk.setOverrides(overridesHandlerApi:) is required');
             return overridesHandlerApi!.updateSession(

@@ -7,9 +7,6 @@ import 'font/font.dart';
 
 abstract class $ReclaimAssetImageProvider {
   static const _packageName = 'reclaim_flutter_sdk';
-  static const animatedLoading = AssetImage(
-      'assets/animated_icons/animated_loading.gif',
-      package: _packageName);
   static const checkCircle = AssetImage(
       'assets/animated_icons/check_circle.png',
       package: _packageName);

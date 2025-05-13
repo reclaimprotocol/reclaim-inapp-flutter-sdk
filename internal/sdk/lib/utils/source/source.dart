@@ -8,13 +8,14 @@ import 'package:yaml/yaml.dart' as yaml;
 // To avoid breaking builds in web
 import 'os_web.dart' if (dart.library.io) 'os_io.dart';
 
-Future<String> getReclaimFlutterSdkVersion() async {
+Future<String> getReclaimMainSdkVersion() async {
   final logger = logging.child('_getFlutterSdkVersion');
   try {
     final packagePubspec = yaml.loadYaml(await rootBundle.loadString(
       'packages/reclaim_flutter_sdk/pubspec.yaml',
     ));
-    return packagePubspec['version'];
+    final version = packagePubspec['version'];
+    return 'v$version';
   } catch (e, s) {
     logger.severe('Failed to get SDK version', e, s);
     return 'unknown';
@@ -37,12 +38,13 @@ Future<String> _getSdkConsumerIdentifier() async {
   if (isReclaimApp(packageInfo)) {
     return '$_inappModuleIdentifierPrefix$clientAppVersion';
   }
-  final sdkVersion = await getReclaimFlutterSdkVersion();
-  return '${_inappModuleIdentifierPrefix}sdk:v$sdkVersion';
+  final sdkVersion = await getReclaimMainSdkVersion();
+  return '${_inappModuleIdentifierPrefix}sdk/$sdkVersion';
 }
 
 Completer<String>? _sdkConsumerIdentifierCompleter;
 
+/// For use in UI
 Future<String> getSdkConsumerIdentifier() async {
   if (_sdkConsumerIdentifierCompleter == null) {
     final completer = Completer<String>();
@@ -64,21 +66,25 @@ String _getClientAppPackageVersion(PackageInfo packageInfo) {
 }
 
 String _getClientAppInfo(PackageInfo packageInfo) {
-  return '${_getClientAppPackageVersion(packageInfo)}(${$getPlatformName()},${packageInfo.packageName})';
+  return '(${$getPlatformName()},${packageInfo.packageName}/${_getClientAppPackageVersion(packageInfo)})';
 }
 
 Future<String> _getClientSource() async {
   final packageInfo = await PackageInfo.fromPlatform();
   final clientAppInfo = _getClientAppInfo(packageInfo);
+  final String sdkIdentifier;
   if (isReclaimApp(packageInfo)) {
-    return '${_inappModuleIdentifierPrefix}flutter-app:$clientAppInfo';
+    sdkIdentifier = 'verifier-app';
+  } else {
+    final sdkVersion = await getReclaimMainSdkVersion();
+    sdkIdentifier = 'sdk/$sdkVersion';
   }
-  final sdkVersion = await getReclaimFlutterSdkVersion();
-  return '${_inappModuleIdentifierPrefix}flutter-sdk:v${sdkVersion}_$clientAppInfo';
+  return '$_inappModuleIdentifierPrefix$sdkIdentifier $clientAppInfo';
 }
 
 Completer<String>? _sourceCompleter;
 
+/// For use in headers and logs for tracking the source
 Future<String> getClientSource() async {
   if (_sourceCompleter == null) {
     final completer = Completer<String>();

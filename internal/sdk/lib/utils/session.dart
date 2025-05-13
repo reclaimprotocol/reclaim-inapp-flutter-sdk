@@ -38,8 +38,9 @@ abstract interface class SessionUpdateHandler {
 
   Future<void> updateSession(
     String sessionId,
-    SessionStatus status,
-  );
+    SessionStatus status, {
+    Map<String, dynamic>? metadata,
+  });
 
   Future<void> sendLogs({
     required String appId,
@@ -282,7 +283,7 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
 
   @override
   @mustCallSuper
-  Future<void> updateSession(String sessionId, SessionStatus status) async {
+  Future<void> updateSession(String sessionId, SessionStatus status, {Map<String, dynamic>? metadata}) async {
     final logger = logging.child('ReclaimSession.updateSession');
     try {
       final dio = buildDio();
@@ -317,6 +318,7 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
           'deviceId': deviceId,
           'deviceType': '$brand $model',
           'publicIpAddress': publicIpAddress,
+          if (metadata != null && metadata.isNotEmpty) 'metadata': metadata,
         },
       );
 
@@ -446,17 +448,18 @@ class _SessionUpdateHandlerImpl extends _DefaultSessionUpdateHandler {
   @override
   Future<void> updateSession(
     String sessionId,
-    SessionStatus status,
-  ) async {
+    SessionStatus status, {
+    Map<String, dynamic>? metadata,
+  }) async {
     final updateSession = ReclaimOverrides.session?.updateSession;
     if (updateSession != null) {
-      final isSessionOk = await updateSession(sessionId, status);
+      final isSessionOk = await updateSession(sessionId, status, metadata);
       if (!isSessionOk) {
         throw const ReclaimExpiredSessionException();
       }
       return;
     }
-    return super.updateSession(sessionId, status);
+    return super.updateSession(sessionId, status, metadata: metadata);
   }
 
   @override

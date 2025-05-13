@@ -6,6 +6,7 @@ import 'package:reclaim_flutter_sdk/types/create_claim.dart';
 import 'package:reclaim_flutter_sdk/utils/data.dart';
 import 'package:reclaim_flutter_sdk/widgets/claim_creation/claim_creation.dart';
 import 'package:reclaim_flutter_sdk/widgets/icon/icons.dart';
+import 'package:reclaim_flutter_sdk/widgets/resize_observer.dart';
 import 'package:reclaim_flutter_sdk/widgets/spoiler/widget.dart';
 import 'package:reclaim_flutter_sdk/widgets/svg_icon.dart';
 
@@ -110,13 +111,13 @@ class ParamInfo {
       }
     }
 
-    final claims = controller.value.claims;
+    final claimState = controller.value;
+    final claims = claimState.claims;
 
     for (final claim in claims) {
       for (final entry in claim.request.extractedData.witnessParams.entries) {
-        final selection = claim.request.requestData.getResponseSelectionByParameterName(
-          entry.key,
-        );
+        final selection = claim.request.requestData
+            .getResponseSelectionByParameterName(entry.key);
 
         final markedForHashing = selection?.redaction?.markedForHashing == true;
 
@@ -149,9 +150,8 @@ class ParamInfo {
         final key = entry.key;
         final value = entry.value;
         if (entry is! String && value is! String) continue;
-        final selection = claim.request.requestData.getResponseSelectionByParameterName(
-          key,
-        );
+        final selection = claim.request.requestData
+            .getResponseSelectionByParameterName(key);
 
         final markedForHashing = selection?.redaction?.markedForHashing == true;
 
@@ -200,6 +200,13 @@ class ParamInfo {
               return !key.startsWith('REQ_') &&
                   !key.startsWith('URL_') &&
                   !key.startsWith('DYNAMIC_GEO');
+            })
+            .where((entry) {
+              final isCompleted = claimState.isFinished && !claimState.hasError;
+              if (!isCompleted) return true;
+
+              // Only show params that have a value when claim creation is completed
+              return !entry.isPending;
             })
             .toSet()
             .toList();
@@ -257,7 +264,8 @@ class ParamInfo {
         final key = entry.key;
         final value = entry.value;
         if (entry is! String && value is! String) continue;
-        final selection = proof.providerRequest?.getResponseSelectionByParameterName(key);
+        final selection = proof.providerRequest
+            ?.getResponseSelectionByParameterName(key);
 
         final markedForHashing = selection?.redaction?.markedForHashing == true;
 
@@ -316,7 +324,7 @@ class ParamInfo {
   }
 }
 
-class ParamsText extends StatelessWidget {
+class ParamsText extends StatefulWidget {
   final EdgeInsetsGeometry? padding;
   final ParamInfo? info;
   final Iterable<Widget>? tiles;
@@ -356,18 +364,92 @@ class ParamsText extends StatelessWidget {
   }
 
   @override
+  State<ParamsText> createState() => _ParamsTextState();
+}
+
+class _ParamsTextState extends State<ParamsText> {
+  late final ScrollController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ScrollController();
+    Future.microtask(_postBuild);
+  }
+
+  double? _height;
+
+  void _postBuild() {
+    final box = _key.currentContext?.findRenderObject();
+    if (box is RenderBox) {
+      final height = box.size.height;
+
+      if (mounted) {
+        setState(() {
+          _height = height;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  final _key = GlobalKey();
+
+  @override
   Widget build(BuildContext context) {
     final tiles =
-        info != null ? buildTiles(context, info!) : (this.tiles ?? const []);
+        widget.info != null
+            ? ParamsText.buildTiles(context, widget.info!)
+            : (widget.tiles ?? const []);
+
+    final height = MediaQuery.sizeOf(context).height;
+    final maxHeight = height * 0.4;
+    final isScrollbarVisible = _height == null || _height! >= maxHeight;
 
     return Padding(
-      padding: padding ?? const EdgeInsets.all(8.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 4.0,
-        children:
-            tiles.isNotEmpty ? tiles.toList() : const [LoadingParamValue()],
+      padding: widget.padding ?? const EdgeInsets.all(8.0),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Scrollbar(
+          controller: _controller,
+          thumbVisibility: isScrollbarVisible,
+          thickness: 6,
+          radius: const Radius.circular(10),
+          child: ResizeObserver(
+            onResized: (oldSize, newSize) {
+              Future.microtask(() {
+                if (mounted) {
+                  setState(() {
+                    _height = newSize.height;
+                  });
+                }
+              });
+            },
+            child: ListView(
+              key: _key,
+              controller: _controller,
+              shrinkWrap: true,
+              children:
+                  tiles.isNotEmpty
+                      ? tiles.indexed.map((e) {
+                        final index = e.$1;
+
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            bottom: (tiles.length - 1 == index) ? 0 : 8.0,
+                          ),
+                          child: e.$2,
+                        );
+                      }).toList()
+                      : const [LoadingParamValue()],
+            ),
+          ),
+        ),
       ),
     );
   }

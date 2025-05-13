@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:reclaim_flutter_sdk/assets/assets.dart';
 import 'package:reclaim_flutter_sdk/logging/logging.dart';
 import 'package:reclaim_flutter_sdk/types/create_claim.dart';
 import 'package:reclaim_flutter_sdk/widgets/action_button.dart';
@@ -431,31 +430,41 @@ class _WaitingForContinuationWidgetState
       );
     }
 
-    return const Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: EdgeInsets.only(top: 10, bottom: 10),
-          child: Image(
-            image: $ReclaimAssetImageProvider.animatedLoading,
-            height: 56,
-            width: 56,
+    final double height = _LoadingViewState.getEstimateHeight();
+
+    return ConstrainedBox(
+      constraints: BoxConstraints.tightFor(height: height),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Flexible(
+            child: Text(
+              'Continuing verification..',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                height: 1.2,
+                color: Color(0xFF1D2126),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-        ),
-        Text(
-          'Continuing verification..',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 18,
-            height: 1.2,
-            color: Color(0xFF1D2126),
-            fontWeight: FontWeight.w600,
+          Padding(
+            // dimension / 1.6
+            padding: EdgeInsetsDirectional.only(start: 9.4),
+            child: SizedBox.square(
+              // fontSize / text span height
+              dimension: 15,
+              child: CircularProgressIndicator(
+                color: Color(0xFF1D2126),
+                strokeCap: StrokeCap.round,
+                strokeWidth: 2.6,
+              ),
+            ),
           ),
-        ),
-        SizedBox(height: 20.0),
-      ],
+        ],
+      ),
     );
   }
 }

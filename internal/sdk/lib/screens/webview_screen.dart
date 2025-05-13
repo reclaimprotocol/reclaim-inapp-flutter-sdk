@@ -40,6 +40,7 @@ import 'package:reclaim_flutter_sdk/utils/location.dart';
 import 'package:reclaim_flutter_sdk/services/user_script_service.dart';
 
 import '../inapp_sdk_route.dart';
+import '../src/data/manual_review.dart';
 import '../types/verification_options.dart';
 
 class WebviewScreen extends StatefulWidget {
@@ -163,6 +164,7 @@ class WebviewScreenState extends State<WebviewScreen>
   bool aiCheckingLoading = false;
 
   bool _isAiFlowEnabled = false;
+  ManualReviewActionData? _manualReviewMessage;
 
   final Set<Factory<OneSequenceGestureRecognizer>> gestureRecognizers = {
     Factory(() => EagerGestureRecognizer()),
@@ -175,7 +177,6 @@ class WebviewScreenState extends State<WebviewScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _scheduleToShowRequestShareConsentPromptIfRequired();
     SharedPreferences.getInstance().then((prefs) {
       CookieManager cookieManager = CookieManager.instance();
       // PlatformInAppWebViewController.debugLoggingSettings.enabled = false;
@@ -185,6 +186,9 @@ class WebviewScreenState extends State<WebviewScreen>
       idleTimeThreshold = Flags.getIdleTimeThreshold(prefs);
       _isWebInspectable = Flags.isWebInspectable(prefs);
       _isAiFlowEnabled = Flags.isAIFlowEnabled(prefs);
+      _manualReviewMessage = ManualReviewActionData.fromString(
+        Flags.getManualReviewMessage(prefs),
+      );
       setState(() {
         cookiePersist = cookiePersistPref;
         _useSingleRequest = isSingleReclaimRequestPref;
@@ -202,6 +206,7 @@ class WebviewScreenState extends State<WebviewScreen>
       if (mounted) {
         _loadUserScripts();
       }
+      _scheduleToShowRequestShareConsentPromptIfRequired();
     });
 
     claimCreationController = ClaimCreationController(
@@ -224,6 +229,14 @@ class WebviewScreenState extends State<WebviewScreen>
       },
       _handleLoginAiToast,
     );
+  }
+
+  ScaffoldMessengerState? _scaffoldMessenger;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scaffoldMessenger = ScaffoldMessenger.of(context);
   }
 
   void _loadUserScripts() async {
@@ -921,6 +934,22 @@ class WebviewScreenState extends State<WebviewScreen>
       },
     );
     controller.addJavaScriptHandler(
+      handlerName: 'customizeManualReviewMessage',
+      callback: (args) async {
+        final log = logger.child('manual_review_message');
+        try {
+          log.info({'data': args[0]});
+          final data = ManualReviewActionData.fromString(args[0]);
+          _manualReviewMessage = data;
+          if (data != null && data.rule != ManualReviewPromptDisplayRule.TIMEOUT) {
+            _showRequestShareConsentPrompt();
+          }
+        } catch (e, s) {
+          log.severe('Failed to set manual review action data', e, s);
+        }
+      },
+    );
+    controller.addJavaScriptHandler(
       handlerName: 'debugLogs',
       callback: (args) {
         logger.child('debug_logs').info(args.toString());
@@ -1041,6 +1070,8 @@ class WebviewScreenState extends State<WebviewScreen>
   }
 
   void _showRequestShareConsentPromptIfError() {
+    if (!mounted) return;
+    final msg = _scaffoldMessenger!;
     // show prompt immediately if there is an error
     final claimState = claimCreationController.value;
     if (claimState.hasError) {
@@ -1050,13 +1081,32 @@ class WebviewScreenState extends State<WebviewScreen>
         _showRequestShareConsentPromptIfError,
       );
       _showRequestShareConsentPrompt();
+    } else if (claimState.delegate?.isBottomSheetOpen == true) {
+      msg.clearSnackBars();
+      msg.removeCurrentSnackBar();
     }
   }
 
   bool didConsentToShareRequests = false;
 
+  Future<bool> _isCurrentPageLogin() async {
+    final url = (await webViewController?.getUrl())?.toString();
+    final loginUrl = widget.providerData?.loginUrl;
+    if (url != null) {
+      if (loginUrl == null && url_util.isLoginUrl(url)) {
+        return true;
+      } else if (url_util.isUrlsEqual(url, loginUrl)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void _showRequestShareConsentPrompt() async {
     if (!mounted) return;
+    final msg = _scaffoldMessenger!;
+    final log = logger.child('_showRequestShareConsentPrompt');
+    log.finer('Asking for permission to dump requests now');
     if (didConsentToShareRequests) {
       // we already have the consent, so we don't need to show the request share consent prompt
       return;
@@ -1065,12 +1115,25 @@ class WebviewScreenState extends State<WebviewScreen>
       // if the claim is finished, then we don't need to show the request share consent prompt
       return;
     }
-    final log = logger.child('_showRequestShareConsentPrompt');
-    log.finer('Asking for permission to dump requests now');
+
+    final manualReviewMessage = _manualReviewMessage?.message;
+    final canSubmit = _manualReviewMessage?.canSubmit ?? true;
+    final displayRule = _manualReviewMessage?.rule;
+
+    if (displayRule != null && displayRule == ManualReviewPromptDisplayRule.NOT_LOGIN) {
+      if (await _isCurrentPageLogin()) {
+        log.info(
+          'Current page is login page, skipping request share consent prompt',
+        );
+        return;
+      }
+    }
+
     late ScaffoldFeatureController<SnackBar, SnackBarClosedReason> ctrl;
-    final msg = ScaffoldMessenger.of(context);
 
     void onSharePressed() {
+      if (!canSubmit) return;
+
       didConsentToShareRequests = true;
       _sendRequestsForDiagnosisPeriodic();
       ctrl.close();
@@ -1092,6 +1155,7 @@ class WebviewScreenState extends State<WebviewScreen>
       _onReclaimException(const ReclaimVerificationManualReviewException());
     }
 
+    msg.clearSnackBars();
     msg.removeCurrentSnackBar();
     ctrl = msg.showSnackBar(
       SnackBar(
@@ -1099,51 +1163,64 @@ class WebviewScreenState extends State<WebviewScreen>
         content: InkWell(
           onTap: onSharePressed,
           child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(text: 'Tap '),
-                TextSpan(
-                  text: 'Share',
-                  style: TextStyle(
-                    color: ReclaimTheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
+            manualReviewMessage != null
+                ? TextSpan(text: manualReviewMessage)
+                : TextSpan(
+                  children: [
+                    TextSpan(text: 'Tap '),
+                    TextSpan(
+                      text: 'Share',
+                      style: TextStyle(
+                        color: ReclaimTheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextSpan(text: ' to send data for manual review'),
+                  ],
                 ),
-                TextSpan(text: ' to send data for manual review'),
-              ],
-            ),
             style: TextStyle(color: Colors.black),
           ),
         ),
         // show this for a very long time
         duration: const Duration(seconds: 120),
-        action: SnackBarAction(
-          label: 'Share',
-          backgroundColor: ReclaimTheme.primary.withValues(alpha: 0.08),
-          textColor: ReclaimTheme.primary,
-          onPressed: onSharePressed,
-        ),
+        action:
+            !canSubmit
+                ? null
+                : SnackBarAction(
+                  label: _manualReviewMessage?.submitLabel ?? 'Share',
+                  backgroundColor: ReclaimTheme.primary.withValues(alpha: 0.08),
+                  textColor: ReclaimTheme.primary,
+                  onPressed: onSharePressed,
+                ),
       ),
     );
     ctrl.closed.then((value) {
       if (value == SnackBarClosedReason.remove) {
         return;
       }
-      // user dismissed for some reason, so we need to show the prompt again if required after idle time threshold
-      if (!didConsentToShareRequests) {
-        _requestShareConsentPromptTimer?.cancel();
-        _requestShareConsentPromptTimer = Timer(
-          Duration(seconds: idleTimeThreshold),
-          _showRequestShareConsentPrompt,
-        );
-      }
+      _rescheduleRequestShareConsentPromptWithIdleTimeThreshold();
     });
+  }
+
+  void _rescheduleRequestShareConsentPromptWithIdleTimeThreshold() {
+    // user dismissed for some reason, so we need to show the prompt again if required after idle time threshold
+    if (!didConsentToShareRequests) {
+      _requestShareConsentPromptTimer?.cancel();
+      _requestShareConsentPromptTimer = Timer(
+        Duration(seconds: idleTimeThreshold),
+        _showRequestShareConsentPrompt,
+      );
+    }
   }
 
   Future<void> _scheduleToShowRequestShareConsentPromptIfRequired() async {
     final log = logger.child('_showRequestShareConsentPromptIfRequired');
     final prefs = await SharedPreferences.getInstance();
     final canUseAiFlow = Flags.getCanUseAiFlow(prefs);
+    log.info({
+      'canUseAiFlow': canUseAiFlow,
+      'manualReviewMessage': _manualReviewMessage,
+    });
     if (!canUseAiFlow) {
       requestLogs = null;
       log.finest(
@@ -1155,6 +1232,9 @@ class WebviewScreenState extends State<WebviewScreen>
     if (!mounted) return;
     log.finer('scheduling prompting request share consent prompt');
     _requestShareConsentPromptTimer?.cancel();
+    if (_manualReviewMessage?.rule == ManualReviewPromptDisplayRule.IMMEDIATELY) {
+      Future.microtask(_showRequestShareConsentPrompt);
+    }
     final requestShareConsentPromptThreshold =
         Flags.getSessionTimeoutForManualVerificationTrigger(prefs);
     log.finer(
@@ -1291,6 +1371,9 @@ class WebviewScreenState extends State<WebviewScreen>
                                 url?.toString(),
                               );
                               if (mounted) {
+                                if (_manualReviewMessage?.rule == ManualReviewPromptDisplayRule.NOT_LOGIN) {
+                                  _showRequestShareConsentPrompt();
+                                }
                                 if (isAIProvider() && !aiCheckingLoading) {
                                   await waitUntilWebsiteLoaded();
                                   _isAIVerificationStarted = false;

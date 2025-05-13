@@ -765,7 +765,7 @@ packages:
       path: "../internal/sdk"
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.6.0"
   reclaim_gnark_zkoperator:
     dependency: transitive
     description:
@@ -779,7 +779,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.5.0"
+    version: "0.6.0"
   retry:
     dependency: transitive
     description:

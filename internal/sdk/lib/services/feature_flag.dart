@@ -32,7 +32,9 @@ class FeatureFlagService {
       if (featureFlagsOverrides?.isAIFlowEnabled == null)
         'isAIFlowEnabled',
       if (featureFlagsOverrides?.canUseAiFlow == null)
-        'canUseAiFlow'
+        'canUseAiFlow',
+      if (featureFlagsOverrides?.manualReviewMessage == null)
+        'manualReviewMessage',
     ];
 
     logger.info({
@@ -49,6 +51,7 @@ class FeatureFlagService {
         : flags['attestorBrowserRpcUrl'],
       isAIFlowEnabled: featureFlagsOverrides?.isAIFlowEnabled ?? flags['isAIFlowEnabled'] ?? false,
       canUseAiFlow: featureFlagsOverrides?.canUseAiFlow ?? flags['canUseAiFlow'] ?? false,
+      manualReviewMessage: featureFlagsOverrides?.manualReviewMessage ?? flags['manualReviewMessage'],
     );
 
     logger.info({

@@ -221,6 +221,7 @@ class ClaimCreationController
     );
     final sessionId = proofRequest.sessionId;
     final httpProviderId = proofRequest.httpProviderId;
+
     unawaitedSequence([
       ReclaimSession.sendLogs(
         appId: proofRequest.appId,
@@ -231,6 +232,9 @@ class ClaimCreationController
       ReclaimSession.updateSession(
         sessionId,
         SessionStatus.PROOF_GENERATION_FAILED,
+        metadata: {
+          'failing_request': proofRequest.requestData.toJson(),
+        },
       ),
     ]);
     logger.severe(

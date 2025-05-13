@@ -1,6 +1,6 @@
 name: reclaim_flutter_sdk
 description: Pre-built widgets library to export user's data with provable authenticity using HTTPS & Reclaim Protocol Zero-knowledge proof technology
-version: 0.5.0
+version: 0.6.0
 homepage: https://reclaimprotocol.org
 repository: https://github.com/reclaimprotocol/reclaim-inapp-sdk.git
 

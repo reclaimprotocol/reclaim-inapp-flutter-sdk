@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:reclaim_flutter_sdk/data/identity.dart';
 import 'package:reclaim_flutter_sdk/logging/data/log.dart';
 import 'package:reclaim_flutter_sdk/attestor.dart';
@@ -185,11 +186,21 @@ void _onLogsToConsole(LogRecord record) {
   }
 }
 
-const bool reclaimCanPrintDebugLogs = !kReleaseMode;
+Future<bool> _canAppSeeConsoleLogs() async {
+  final packageInfo = await PackageInfo.fromPlatform();
+  return switch (packageInfo.packageName) {
+    'org.reclaimprotocol.app' => true,
+    'org.reclaimprotocol.app.clip' => true,
+    'com.reclaim.example' => true,
+    _ => false,
+  };
+}
 
 void _onLogRecord(LogRecord record) async {
+  // Only print logs if not release mode and app is allowed (when not overriden)
   final canPrintLogs =
-      ReclaimOverrides.logsConsumer?.canPrintLogs ?? reclaimCanPrintDebugLogs;
+      ReclaimOverrides.logsConsumer?.canPrintLogs ??
+      (!kReleaseMode && await _canAppSeeConsoleLogs());
   if (canPrintLogs) {
     _onLogsToConsole(record);
   }
@@ -289,7 +300,7 @@ void initializeReclaimLogging() async {
 
   // an always alive periodic timer
   Timer.periodic(
-    const Duration(seconds: 5),
+    const Duration(seconds: 3),
     _sendAndFlushLogs,
   );
 }

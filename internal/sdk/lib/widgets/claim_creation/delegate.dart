@@ -84,9 +84,9 @@ abstract class ClaimCreationUIDelegate extends State<ClaimCreationScope> {
   @override
   @mustCallSuper
   void dispose() {
-    super.dispose();
     widget.controller._setDelegate(null);
     _claimTriggerIndicatorController.dispose();
+    super.dispose();
   }
 
   bool _isBottomSheetOpen = false;

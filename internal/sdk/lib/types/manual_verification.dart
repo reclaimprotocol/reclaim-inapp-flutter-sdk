@@ -4,11 +4,11 @@ part 'manual_verification.g.dart';
 
 @JsonSerializable()
 class RequestLog {
-  final String url;
-  final String requestBody;
-  final String responseBody;
-  final String method;
-  final String currentPageUrl;
+  final String? url;
+  final String? requestBody;
+  final String? responseBody;
+  final String? method;
+  final String? currentPageUrl;
   final String? contentType;
   final Map<String, Object?>? metadata;
 
