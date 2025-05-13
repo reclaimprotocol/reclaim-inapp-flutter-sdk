@@ -1,6 +1,6 @@
 name: reclaim_inapp_flutter_sdk
 description: Reclaim Protocol's InApp Flutter SDK for ZK proof generations for requests with an in-app experience of web verification
-version: 0.5.0
+version: 0.6.0
 publish_to: none
 
 environment:
@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  json_annotation: ^4.9.0
   reclaim_flutter_sdk:
     path: internal/sdk
   reclaim_gnark_zkoperator:

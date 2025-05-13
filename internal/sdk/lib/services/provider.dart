@@ -37,7 +37,7 @@ class ReclaimProviderService {
     client.options.headers['Content-Type'] = 'application/json';
 
     final response = await client.post<String>(
-      '/applications/$appId/provider//$providerId',
+      '/applications/$appId/provider/$providerId',
       data: json.encode({
         'signature': signature,
         'timestamp': timestamp,

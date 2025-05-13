@@ -30,7 +30,7 @@ class LogConsumerOverride extends ReclaimOverride<LogConsumerOverride> {
   final LogLevelChangeHandler? levelChangeHandler;
 
   const LogConsumerOverride({
-    this.canPrintLogs = reclaimCanPrintDebugLogs,
+    this.canPrintLogs = false,
     this.onRecord,
     this.levelChangeHandler,
   });

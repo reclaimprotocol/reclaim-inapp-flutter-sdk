@@ -7,6 +7,8 @@ import 'package:native_dio_adapter/native_dio_adapter.dart';
 
 import 'package:reclaim_flutter_sdk/logging/logging.dart';
 
+import 'interceptor/api_client.dart';
+
 Dio buildDio() {
   final logger = logging.child('buildDio.RetryInterceptor');
   final dio = Dio();
@@ -25,6 +27,7 @@ Dio buildDio() {
       },
     );
   }
+  dio.interceptors.add(ApiClientInsertionInterceptor());
   dio.interceptors.add(RetryInterceptor(
     dio: dio,
     logPrint: logger.finest,

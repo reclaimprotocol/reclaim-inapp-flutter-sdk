@@ -1,3 +1,7 @@
+## 0.6.0
+
+* Update claim creation updates UI
+
 ## 0.5.0
 
 * Add devtools ordering preference for params displayed in UI 

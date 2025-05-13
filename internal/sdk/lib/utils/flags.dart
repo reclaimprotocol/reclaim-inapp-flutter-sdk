@@ -16,6 +16,7 @@ class Flags {
   static const attestorBrowserRpcUrlKey = 'ATTESTOR_BROWSER_RPC_URL';
   static const isAIFlowEnabledKey = 'IS_AI_FLOW_ENABLED';
   static const _canUseAiFlowKey = 'canUseAiFlow';
+  static const _manualReviewMessageKey = 'manualReviewMessage';
 
   static bool isCookiePersist(SharedPreferences preferences) {
     return ReclaimOverrides.featureFlag?.cookiePersist ??
@@ -50,6 +51,14 @@ class Flags {
 
   static Future<bool> setCanUseAiFlow(SharedPreferences preferences, bool value) {
     return preferences.setBool(_canUseAiFlowKey, value);
+  }
+
+  static Future<bool> setManualReviewMessage(SharedPreferences preferences, String value) {
+    return preferences.setString(_manualReviewMessageKey, value);
+  }
+
+  static String? getManualReviewMessage(SharedPreferences preferences) {
+    return preferences.getString(_manualReviewMessageKey);
   }
 
   static String getAttestorBrowserRpcUrl(SharedPreferences preferences) {
@@ -157,6 +166,9 @@ class Flags {
       final url = getAttestorBrowserRpcUrl(prefs);
       logger.info('Attestor URL: $url');
       Attestor.instance.setAttestorUrl(Uri.parse(url));
+    }
+    if (options.manualReviewMessage != null) {
+      await Flags.setManualReviewMessage(prefs, options.manualReviewMessage!);
     }
     await Flags.setIsAIFlowEnabled(options.isAIFlowEnabled, prefs);
   }

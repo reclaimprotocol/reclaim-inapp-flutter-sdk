@@ -7,11 +7,11 @@ part of 'manual_verification.dart';
 // **************************************************************************
 
 RequestLog _$RequestLogFromJson(Map<String, dynamic> json) => RequestLog(
-  url: json['url'] as String,
-  requestBody: json['requestBody'] as String,
-  responseBody: json['responseBody'] as String,
-  method: json['method'] as String,
-  currentPageUrl: json['currentPageUrl'] as String,
+  url: json['url'] as String?,
+  requestBody: json['requestBody'] as String?,
+  responseBody: json['responseBody'] as String?,
+  method: json['method'] as String?,
+  currentPageUrl: json['currentPageUrl'] as String?,
   contentType: json['contentType'] as String?,
   metadata: json['metadata'] as Map<String, dynamic>?,
 );

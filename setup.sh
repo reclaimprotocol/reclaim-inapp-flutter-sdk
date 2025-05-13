@@ -5,9 +5,12 @@ set -ex;
 rm -rf internal;
 mkdir -p internal;
 
+# SDK_MODULE_VERSION=main
+SDK_MODULE_VERSION=0.6.0
+
 cd internal;
 
-git clone --depth=1 --branch=main git@github.com:reclaimprotocol/reclaim-inapp-sdk.git sdk
+git clone --depth=1 --branch=$SDK_MODULE_VERSION git@github.com:reclaimprotocol/reclaim-inapp-sdk.git sdk
 rm -rf ./sdk/.git
 # remove unnecessary files to avoid confusion
 rm -rf ./sdk/example

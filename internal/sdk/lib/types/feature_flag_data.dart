@@ -8,6 +8,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
   final String? attestorBrowserRpcUrl;
   final bool isAIFlowEnabled;
   final bool? canUseAiFlow;
+  final String? manualReviewMessage;
 
   const ReclaimFeatureFlagData({
     this.cookiePersist,
@@ -17,6 +18,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     this.attestorBrowserRpcUrl,
     this.isAIFlowEnabled = false,
     this.canUseAiFlow = false,
+    this.manualReviewMessage,
   });
   
   @override
@@ -28,6 +30,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     String? attestorBrowserRpcUrl,
     bool? isAIFlowEnabled,
     bool? canUseAiFlow,
+    String? manualReviewMessage,
   }) {
     return ReclaimFeatureFlagData(
       cookiePersist: cookiePersist ?? this.cookiePersist,
@@ -37,11 +40,12 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       attestorBrowserRpcUrl: attestorBrowserRpcUrl ?? this.attestorBrowserRpcUrl,
       isAIFlowEnabled: isAIFlowEnabled ?? this.isAIFlowEnabled,
       canUseAiFlow: canUseAiFlow ?? this.canUseAiFlow,
+      manualReviewMessage: manualReviewMessage ?? this.manualReviewMessage,
     );
   }
 
   @override
   String toString() {
-    return 'ReclaimFeatureFlagData(cookiePersist: $cookiePersist, singleReclaimRequest: $singleReclaimRequest, idleTimeThresholdForManualVerificationTrigger: $idleTimeThresholdForManualVerificationTrigger, sessionTimeoutForManualVerificationTrigger: $sessionTimeoutForManualVerificationTrigger, attestorBrowserRpcUrl: $attestorBrowserRpcUrl, isAIFlowEnabled: $isAIFlowEnabled, canUseAiFlow: $canUseAiFlow)';
+    return 'ReclaimFeatureFlagData(cookiePersist: $cookiePersist, singleReclaimRequest: $singleReclaimRequest, idleTimeThresholdForManualVerificationTrigger: $idleTimeThresholdForManualVerificationTrigger, sessionTimeoutForManualVerificationTrigger: $sessionTimeoutForManualVerificationTrigger, attestorBrowserRpcUrl: $attestorBrowserRpcUrl, isAIFlowEnabled: $isAIFlowEnabled, canUseAiFlow: $canUseAiFlow, manualReviewMessage: $manualReviewMessage)';
   }
 }

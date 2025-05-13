@@ -27,8 +27,11 @@ typedef SessionCreateRequest =
 /// It returns a boolean value indicating whether the session was updated successfully.
 /// When false, the caller will throw [ReclaimExpiredSessionException], resulting in reclaim verification to close with this exception.
 /// {@endtemplate}
-typedef SessionUpdateCallback =
-    Future<bool> Function(String sessionId, SessionStatus status);
+typedef SessionUpdateCallback = Future<bool> Function(
+  String sessionId,
+  SessionStatus status,
+  Map<String, dynamic>? metadata,
+);
 
 /// {@template session_log_record_callback}
 /// A signature of a function that is called when a session log record needs to be logged.
