@@ -1,23 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reclaim_flutter_sdk/overrides/overrides.dart';
+import 'package:reclaim_inapp_sdk/src/overrides/overrides.dart';
 
 class _TestingOverride extends ReclaimOverride<_TestingOverride> {
   final String? attestorBrowserRpcUrl;
   final bool? isInspectable;
 
-  const _TestingOverride({
-    required this.attestorBrowserRpcUrl,
-    required this.isInspectable,
-  });
+  const _TestingOverride({required this.attestorBrowserRpcUrl, required this.isInspectable});
 
   @override
-  _TestingOverride copyWith({
-    String? attestorBrowserRpcUrl,
-    bool? isInspectable,
-  }) {
+  _TestingOverride copyWith({String? attestorBrowserRpcUrl, bool? isInspectable}) {
     return _TestingOverride(
-      attestorBrowserRpcUrl:
-          attestorBrowserRpcUrl ?? this.attestorBrowserRpcUrl,
+      attestorBrowserRpcUrl: attestorBrowserRpcUrl ?? this.attestorBrowserRpcUrl,
       isInspectable: isInspectable ?? this.isInspectable,
     );
   }
@@ -31,10 +24,7 @@ void main() {
     });
 
     test('set single override', () {
-      final override = _TestingOverride(
-        attestorBrowserRpcUrl: 'https://test.com',
-        isInspectable: true,
-      );
+      final override = _TestingOverride(attestorBrowserRpcUrl: 'https://test.com', isInspectable: true);
 
       ReclaimOverride.set(override);
 
@@ -45,14 +35,8 @@ void main() {
     });
 
     test('setAll overrides', () {
-      final override1 = _TestingOverride(
-        attestorBrowserRpcUrl: 'https://test1.com',
-        isInspectable: true,
-      );
-      final override2 = _TestingOverride(
-        attestorBrowserRpcUrl: 'https://test2.com',
-        isInspectable: false,
-      );
+      final override1 = _TestingOverride(attestorBrowserRpcUrl: 'https://test1.com', isInspectable: true);
+      final override2 = _TestingOverride(attestorBrowserRpcUrl: 'https://test2.com', isInspectable: false);
 
       ReclaimOverride.setAll([override1, override2]);
 
@@ -69,16 +53,10 @@ void main() {
     });
 
     test('override can be updated', () {
-      final override1 = _TestingOverride(
-        attestorBrowserRpcUrl: 'https://test1.com',
-        isInspectable: true,
-      );
+      final override1 = _TestingOverride(attestorBrowserRpcUrl: 'https://test1.com', isInspectable: true);
       ReclaimOverride.set(override1);
 
-      final override2 = _TestingOverride(
-        attestorBrowserRpcUrl: 'https://test2.com',
-        isInspectable: false,
-      );
+      final override2 = _TestingOverride(attestorBrowserRpcUrl: 'https://test2.com', isInspectable: false);
       ReclaimOverride.set(override2);
 
       final retrieved = ReclaimOverride.get<_TestingOverride>();
@@ -89,24 +67,16 @@ void main() {
 
   group('_TestingOverride', () {
     test('copyWith updates specified fields', () {
-      final original = _TestingOverride(
-        attestorBrowserRpcUrl: 'https://test.com',
-        isInspectable: true,
-      );
+      final original = _TestingOverride(attestorBrowserRpcUrl: 'https://test.com', isInspectable: true);
 
-      final copied = original.copyWith(
-        attestorBrowserRpcUrl: 'https://new.com',
-      );
+      final copied = original.copyWith(attestorBrowserRpcUrl: 'https://new.com');
 
       expect(copied.attestorBrowserRpcUrl, 'https://new.com');
       expect(copied.isInspectable, true); // Should retain original value
     });
 
     test('copyWith with null parameters retains original values', () {
-      final original = _TestingOverride(
-        attestorBrowserRpcUrl: 'https://test.com',
-        isInspectable: true,
-      );
+      final original = _TestingOverride(attestorBrowserRpcUrl: 'https://test.com', isInspectable: true);
 
       final copied = original.copyWith();
 
@@ -115,10 +85,7 @@ void main() {
     });
 
     test('type getter returns correct type', () {
-      final override = _TestingOverride(
-        attestorBrowserRpcUrl: 'https://test.com',
-        isInspectable: true,
-      );
+      final override = _TestingOverride(attestorBrowserRpcUrl: 'https://test.com', isInspectable: true);
 
       expect(override.type, _TestingOverride);
     });

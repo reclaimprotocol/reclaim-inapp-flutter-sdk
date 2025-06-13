@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:json_annotation/json_annotation.dart';
-import 'package:reclaim_flutter_sdk/logging/logging.dart';
+
+import '../logging/logging.dart';
 
 part 'manual_review.g.dart';
 
@@ -12,11 +13,7 @@ String? _nonBlankStringFromJson(Object? o) {
   return it;
 }
 
-enum ManualReviewPromptDisplayRule {
-  IMMEDIATELY,
-  NOT_LOGIN,
-  TIMEOUT,
-}
+enum ManualReviewPromptDisplayRule { IMMEDIATELY, NOT_LOGIN, TIMEOUT }
 
 @JsonSerializable()
 class ManualReviewActionData {
@@ -38,8 +35,7 @@ class ManualReviewActionData {
     required this.rule,
   });
 
-  factory ManualReviewActionData.fromJson(Map<String, dynamic> json) =>
-      _$ManualReviewActionDataFromJson(json);
+  factory ManualReviewActionData.fromJson(Map<String, dynamic> json) => _$ManualReviewActionDataFromJson(json);
 
   Map<String, dynamic> toJson() => _$ManualReviewActionDataToJson(this);
 
@@ -52,5 +48,10 @@ class ManualReviewActionData {
       _logging.warning('Failed to parse manual review action data', e, s);
     }
     return null;
+  }
+
+  @override
+  String toString() {
+    return 'ManualReviewActionData(message: $message, submitLabel: $submitLabel, canSubmit: $canSubmit, rule: $rule)';
   }
 }

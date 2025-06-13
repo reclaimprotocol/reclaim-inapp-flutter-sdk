@@ -1,1 +1,1 @@
-export './scripts/scripts.dart';
+export 'scripts/scripts.dart';

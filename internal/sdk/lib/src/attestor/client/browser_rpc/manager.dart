@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 
-import '../base.dart';
-import '../../exception/exception.dart';
 import '../../data/process.dart';
+import '../../exception/exception.dart';
+import '../base.dart';
 
 class AttestorRpcProcessManager<REQUEST, RESPONSE> {
   final Sink<Map<String, Object?>> emitUpdate;

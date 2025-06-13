@@ -18,8 +18,7 @@ class AttestorData {
 
   const AttestorData({required this.type, required this.value});
 
-  factory AttestorData.fromJson(Map<String, dynamic> json) =>
-      _$AttestorDataFromJson(json);
+  factory AttestorData.fromJson(Map<String, dynamic> json) => _$AttestorDataFromJson(json);
 
   Map<String, dynamic> toJson() => _$AttestorDataToJson(this);
 }

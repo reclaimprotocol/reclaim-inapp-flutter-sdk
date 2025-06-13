@@ -1,17 +1,17 @@
 import 'dart:async';
 
 import 'package:meta/meta.dart';
-import 'package:reclaim_flutter_sdk/src/utils/provider_performance_report.dart';
 
+import '../../data/claim_creation_type.dart';
+import '../../data/create_claim.dart';
+import '../../utils/provider_performance_report.dart';
 import '../claim/options.dart';
 import '../claim/request.dart';
 import '../data/data.dart';
 import '../data/request.dart';
 import '../operator/operator.dart';
-import 'package:reclaim_flutter_sdk/types/claim_creation_type.dart';
 
-typedef AttestorResponseTransformer<RESPONSE> =
-    FutureOr<RESPONSE> Function(dynamic value);
+typedef AttestorResponseTransformer<RESPONSE> = FutureOr<RESPONSE> Function(dynamic value);
 typedef AttestorCreateClaimPerformanceReportCallback =
     void Function(Iterable<ZKComputePerformanceReport> performanceReports);
 
@@ -33,7 +33,7 @@ abstract class AttestorClient {
     _performanceReports.clear();
   }
 
-  AttestorProcess<AttestorClaimRequest, List<AttestorClaimResponse>> createClaim({
+  AttestorProcess<AttestorClaimRequest, List<CreateClaimOutput>> createClaim({
     required Map<String, Object?> request,
     required AttestorClaimOptions options,
     AttestorCreateClaimPerformanceReportCallback? onPerformanceReports,
@@ -43,10 +43,7 @@ abstract class AttestorClient {
       request: AttestorClaimRequest.create(
         request: request,
         options: options,
-        operationType:
-            zkOperator != null
-                ? ZKOperationType.gnarkRpc
-                : ZKOperationType.snarkJs,
+        operationType: zkOperator != null ? ZKOperationType.gnarkRpc : ZKOperationType.snarkJs,
       ),
       transformResponse: (value) {
         if (onPerformanceReports != null) {
@@ -54,26 +51,19 @@ abstract class AttestorClient {
         }
         _clearPerformanceReports();
         if (options.claimCreationType == ClaimCreationType.meChain) {
-          return AttestorClaimResponse.fromMeChainJson(value);
+          return CreateClaimOutput.fromMeChainJson(value);
         }
-        return [AttestorClaimResponse.fromJson(value)];
+        return [CreateClaimOutput.fromJson(value)];
       },
     );
 
     return result;
   }
 
-  AttestorProcess<ExtractHtmlElementRequest, String> extractHtmlElement(
-    String htmlString,
-    String xPathExpression,
-  ) {
+  AttestorProcess<ExtractHtmlElementRequest, String> extractHtmlElement(String htmlString, String xPathExpression) {
     return sendRequest(
       type: 'extractHtmlElement',
-      request: ExtractHtmlElementRequest(
-        html: htmlString,
-        xpathExpression: xPathExpression,
-        contentsOnly: false,
-      ),
+      request: ExtractHtmlElementRequest(html: htmlString, xpathExpression: xPathExpression, contentsOnly: false),
       transformResponse: (value) => value?.toString() ?? '',
     );
   }
@@ -84,10 +74,7 @@ abstract class AttestorClient {
   ) {
     return sendRequest(
       type: 'extractJSONValueIndex',
-      request: ExtractJsonValueIndexRequest(
-        jsonString: jsonString,
-        jsonPath: jsonPathExpression,
-      ),
+      request: ExtractJsonValueIndexRequest(jsonString: jsonString, jsonPath: jsonPathExpression),
       transformResponse: (value) {
         final start = (value['start'] as num).toInt();
         final end = (value['end'] as num).toInt();
@@ -97,15 +84,10 @@ abstract class AttestorClient {
     );
   }
 
-  AttestorProcess<SetAttestorDebugLevelRequest, Object?> setAttestorDebugLevel(
-    String level,
-  ) {
+  AttestorProcess<SetAttestorDebugLevelRequest, Object?> setAttestorDebugLevel(String level) {
     return sendRequest(
       type: 'setLogLevel',
-      request: SetAttestorDebugLevelRequest(
-        logLevel: level,
-        sendLogsToApp: false,
-      ),
+      request: SetAttestorDebugLevelRequest(logLevel: level, sendLogsToApp: false),
       transformResponse: (value) => value,
     );
   }

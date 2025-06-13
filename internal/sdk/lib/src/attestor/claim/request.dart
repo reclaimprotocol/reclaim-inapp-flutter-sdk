@@ -8,10 +8,7 @@ class AttestorClaimRequest {
   final ZKOperationType operationType;
   final UnmodifiableMapView<String, Object?> message;
 
-  const AttestorClaimRequest({
-    required this.operationType,
-    required this.message,
-  });
+  const AttestorClaimRequest({required this.operationType, required this.message});
 
   factory AttestorClaimRequest.create({
     required final ZKOperationType operationType,
@@ -28,10 +25,7 @@ class AttestorClaimRequest {
     if (authRequest != null) {
       message["authRequest"] = authRequest;
     }
-    return AttestorClaimRequest(
-      operationType: operationType,
-      message: UnmodifiableMapView(message),
-    );
+    return AttestorClaimRequest(operationType: operationType, message: UnmodifiableMapView(message));
   }
 
   Map<String, Object?> toJson() {

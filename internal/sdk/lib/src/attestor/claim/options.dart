@@ -1,5 +1,5 @@
-import 'package:reclaim_flutter_sdk/src/attestor/data/attestor/auth.dart';
-import 'package:reclaim_flutter_sdk/types/claim_creation_type.dart';
+import '../../data/claim_creation_type.dart';
+import '../data/attestor/auth.dart';
 
 class AttestorClaimOptions {
   /// {@macro AttestorAuthenticationRequest}
@@ -22,8 +22,7 @@ class AttestorClaimOptions {
     ClaimCreationType? claimCreationType,
   }) {
     return AttestorClaimOptions(
-      attestorAuthenticationRequest:
-          attestorAuthenticationRequest ?? this.attestorAuthenticationRequest,
+      attestorAuthenticationRequest: attestorAuthenticationRequest ?? this.attestorAuthenticationRequest,
       claimCreationType: claimCreationType ?? this.claimCreationType,
     );
   }

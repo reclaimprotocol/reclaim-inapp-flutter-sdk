@@ -1,1 +1,1 @@
-export './provider_script_environment.dart';
+export 'provider_script_environment.dart';

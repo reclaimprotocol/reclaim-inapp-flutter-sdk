@@ -12,18 +12,16 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart'
         UserScript,
         UserScriptInjectionTime,
         WebUri;
-import 'package:reclaim_flutter_sdk/logging/logging.dart';
-import 'package:reclaim_flutter_sdk/src/attestor/data/data.dart';
-import 'package:reclaim_flutter_sdk/widgets/claim_creation/claim_creation.dart';
 
+import '../../../logging/logging.dart';
+import '../../../widgets/claim_creation/claim_creation.dart';
+import '../../data/data.dart';
+import '../../data/process.dart';
+import '../../exception/exception.dart' show AttestorRequestException, AttestorRequestMessagingException;
+import '../../operator/operator.dart';
+import '../base.dart';
 import 'manager.dart';
 import 'message.dart';
-
-import '../base.dart';
-import '../../data/process.dart';
-import '../../exception/exception.dart'
-    show AttestorRequestException, AttestorRequestMessagingException;
-import '../../operator/operator.dart';
 
 const _rpcModule = 'witness-sdk';
 
@@ -32,11 +30,8 @@ class AttestorWebViewClient extends AttestorClient {
   final Uri attestorBrowserRpcUrl;
   final StreamController<bool> _isInspectableStreamController;
 
-  AttestorWebViewClient({
-    required this.attestorBrowserRpcUrl,
-    bool isInspectable = kDebugMode,
-  }) : _isInspectableStreamController =
-           StreamController.broadcast()..add(isInspectable) {
+  AttestorWebViewClient({required this.attestorBrowserRpcUrl, bool isInspectable = kDebugMode})
+    : _isInspectableStreamController = StreamController.broadcast()..add(isInspectable) {
     _buildWebViewForAttestor(isInspectable: isInspectable);
   }
 
@@ -59,9 +54,7 @@ class AttestorWebViewClient extends AttestorClient {
 
     _processManagers[process.id] = manager;
 
-    _postMessage(
-      process.createRequest(module: _rpcModule, channel: 'HostMessenger'),
-    ).catchError((e, s) {
+    _postMessage(process.createRequest(module: _rpcModule, channel: 'HostMessenger')).catchError((e, s) {
       final completer = manager.completer;
       if (completer.isCompleted) return;
       completer.completeError(AttestorRequestMessagingException(e), s);
@@ -90,12 +83,7 @@ class AttestorWebViewClient extends AttestorClient {
     }
   }
 
-  Future<bool> _onComputeZKProve(
-    String id,
-    AttestorZkOperator opr,
-    String type,
-    Map<String, Object?> message,
-  ) async {
+  Future<bool> _onComputeZKProve(String id, AttestorZkOperator opr, String type, Map<String, Object?> message) async {
     final dynamic requestArgs = message['request'];
     final String fnName = requestArgs['fn'];
     final args = requestArgs['args'];
@@ -111,22 +99,12 @@ class AttestorWebViewClient extends AttestorClient {
 
     final result = await opr.compute(fnName, args, addPerformanceReport);
 
-    await _postMessage(
-      RpcResponse(
-        id: id,
-        type: '${type}Done',
-        module: _rpcModule,
-        response: json.decode(result),
-      ),
-    );
+    await _postMessage(RpcResponse(id: id, type: '${type}Done', module: _rpcModule, response: json.decode(result)));
 
     return true;
   }
 
-  Future<bool> _onUpdateProviderParams(
-    String id,
-    Map<String, dynamic> decodedArgs,
-  ) async {
+  Future<bool> _onUpdateProviderParams(String id, Map<String, dynamic> decodedArgs) async {
     final log = logging.child('AttestorWebViewClient._onUpdateProviderParams');
     log.info('attestor request provider params update');
 
@@ -163,14 +141,8 @@ class AttestorWebViewClient extends AttestorClient {
         module: _rpcModule,
         response: {
           "params": {
-            "responseMatches":
-                result.extractedData.responseMatches
-                    .map((e) => e.toJson())
-                    .toList(),
-            "responseRedactions":
-                result.extractedData.responseRedactions
-                    .map((e) => e.toJson())
-                    .toList(),
+            "responseMatches": result.extractedData.responseMatches.map((e) => e.toJson()).toList(),
+            "responseRedactions": result.extractedData.responseRedactions.map((e) => e.toJson()).toList(),
             "paramValues": publicWitnessParams,
           },
           "secretParams": {"paramValues": privateWitnessParams},
@@ -181,11 +153,7 @@ class AttestorWebViewClient extends AttestorClient {
     return true;
   }
 
-  Future<bool> _handleRequest(
-    String id,
-    String type,
-    Map<String, Object?> message,
-  ) async {
+  Future<bool> _handleRequest(String id, String type, Map<String, Object?> message) async {
     final log = logging.child('AttestorWebViewClient.handleRequest');
 
     switch (type.toString().toLowerCase().trim()) {
@@ -198,9 +166,7 @@ class AttestorWebViewClient extends AttestorClient {
         final opr = zkOperator;
         if (opr == null) {
           log.warning('No operator for handling request type $type');
-          throw StateError(
-            'No ZK operator available to handle request type $type',
-          );
+          throw StateError('No ZK operator available to handle request type $type');
         }
         return _onComputeZKProve(id, opr, type, message);
       case 'updateproviderparams':
@@ -220,8 +186,7 @@ class AttestorWebViewClient extends AttestorClient {
 
         controller.completer.completeError(
           AttestorRequestException(error),
-          AttestorRequestException.tryParseStackTrace(stack) ??
-              StackTrace.current,
+          AttestorRequestException.tryParseStackTrace(stack) ?? StackTrace.current,
         );
 
         return true;
@@ -270,11 +235,7 @@ class AttestorWebViewClient extends AttestorClient {
       } catch (e, s) {
         final controller = _processManagers[id];
         // notify this error as an update using the controller
-        controller?.emitUpdate.add({
-          'type': 'error',
-          'error': e,
-          'stackTrace': s,
-        });
+        controller?.emitUpdate.add({'type': 'error', 'error': e, 'stackTrace': s});
         // we rethrow the error so that the wrapping try-catch block can log the error
         rethrow;
       }
@@ -296,9 +257,7 @@ class AttestorWebViewClient extends AttestorClient {
     _isInspectableStreamController.close();
     _loadingProgressNotifier.dispose();
     if (!_webviewLoadCompleter.isCompleted) {
-      _webviewLoadCompleter.completeError(
-        Exception('_innerWebView disposed before initialization completed'),
-      );
+      _webviewLoadCompleter.completeError(Exception('_innerWebView disposed before initialization completed'));
     }
 
     for (final controller in _processManagers.values) {
@@ -351,18 +310,9 @@ class AttestorWebViewClient extends AttestorClient {
       initialSettings: initialSettings,
       initialUrlRequest: URLRequest(url: WebUri.uri(attestorBrowserRpcUrl)),
       onWebViewCreated: (controller) async {
-        controller.addJavaScriptHandler(
-          handlerName: 'AttestorRpcLogHandler',
-          callback: _handleRpcLog,
-        );
-        controller.addJavaScriptHandler(
-          handlerName: 'HostRpcMessageHandler',
-          callback: _handleHostRpcMessage,
-        );
-        controller.addJavaScriptHandler(
-          handlerName: 'ClientReadyHandler',
-          callback: _handleClientReady,
-        );
+        controller.addJavaScriptHandler(handlerName: 'AttestorRpcLogHandler', callback: _handleRpcLog);
+        controller.addJavaScriptHandler(handlerName: 'HostRpcMessageHandler', callback: _handleHostRpcMessage);
+        controller.addJavaScriptHandler(handlerName: 'ClientReadyHandler', callback: _handleClientReady);
         controller.addUserScript(
           userScript: UserScript(
             source: _attestorInAppWebViewUserScript,
@@ -387,8 +337,7 @@ class AttestorWebViewClient extends AttestorClient {
         log.warning('Webview controller is null');
         return;
       }
-      final settings =
-          (await controller.getSettings() ?? initialSettings).copy();
+      final settings = (await controller.getSettings() ?? initialSettings).copy();
       settings.isInspectable = it;
       controller.setSettings(settings: settings);
     });

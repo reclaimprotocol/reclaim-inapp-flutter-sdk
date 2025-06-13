@@ -27,6 +27,8 @@ ValueListenable<Set<ProverAlgorithmType>> get initializedAlgorithmsNotifier {
   return _initializedAlgorithms;
 }
 
+bool get _hasAllAlgorithmsInitialized => _initializedAlgorithms.value.length == ProverAlgorithmType.values.length;
+
 Future<bool> _initialize(ProverAlgorithmType algorithm, ProverAlgorithmAssetUrlsProvider getAssetUrls) async {
   if (_algorithmInitializerFutureCache[algorithm] == null) {
     final completer = Completer<bool>();
@@ -56,8 +58,6 @@ Future<bool> _initialize(ProverAlgorithmType algorithm, ProverAlgorithmAssetUrls
   return _algorithmInitializerFutureCache[algorithm]!;
 }
 
-bool _hasAllAlgorithmsInitialized = false;
-
 enum ProverAlgorithmInitializationPriority {
   /// Initialize non-OPRF algorithms first, then OPRF algorithms.
   nonOprfFirst,
@@ -68,49 +68,12 @@ enum ProverAlgorithmInitializationPriority {
 
 class ProverAlgorithmInitializer {
   final ProverAlgorithmAssetUrlsProvider getAssetUrls;
-  final ProverAlgorithmInitializationPriority downloadPriority;
 
-  ProverAlgorithmInitializer(
-    this.getAssetUrls, [
-    this.downloadPriority = ProverAlgorithmInitializationPriority.nonOprfFirst,
-  ]) {
-    unawaited(_startAllInitialized());
+  ProverAlgorithmInitializer(this.getAssetUrls) {
+    unawaited(ensureInitialized(ProverAlgorithmType.CHACHA20));
   }
 
   Future<bool> ensureInitialized(ProverAlgorithmType algorithm) {
     return _initialize(algorithm, getAssetUrls);
-  }
-
-  Future<void> _startAllInitialized() async {
-    if (_hasAllAlgorithmsInitialized) return;
-    final stopwatch = Stopwatch();
-    _initializerLog.info('Initializing all gnark zk operator algorithms');
-    stopwatch.start();
-    await _initializeAllAlgorithms();
-    _hasAllAlgorithmsInitialized = true;
-    stopwatch.stop();
-    _initializerLog.info('All gnark zk operator algorithms initialized in ${stopwatch.elapsed}');
-  }
-
-  /// Initializes the prover by loading the necessary algorithms asynchronously.
-  Future<void> _initializeAllAlgorithms() async {
-    final canDownloadChachaOprfWithNonOprf =
-        downloadPriority == ProverAlgorithmInitializationPriority.chachaOprfWithNonOprf;
-
-    // Download and initialize in order of importance without starving event queue.
-    // TODO: Find a better concurrency model to do all parallely without starving event queue.
-
-    await Future.wait(
-      [
-        ProverAlgorithmType.CHACHA20,
-        if (canDownloadChachaOprfWithNonOprf) ProverAlgorithmType.CHACHA20_OPRF,
-      ].map(ensureInitialized),
-    );
-
-    await Future.wait([ProverAlgorithmType.AES_128, ProverAlgorithmType.AES_256].map(ensureInitialized));
-
-    await ensureInitialized(ProverAlgorithmType.CHACHA20_OPRF);
-
-    await Future.wait([ProverAlgorithmType.AES_128_OPRF, ProverAlgorithmType.AES_256_OPRF].map(ensureInitialized));
   }
 }

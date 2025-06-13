@@ -1,14 +1,10 @@
-/// Base class for all RPC messages in the Attestor RPC messaging.
-///
-/// This sealed class defines the common properties for all RPC messages
-/// and enforces implementation of the `toJson` method for serialization.
+// Base class for all RPC messages in the Attestor RPC messaging.
+//
+// This sealed class defines the common properties for all RPC messages
+// and enforces implementation of the `toJson` method for serialization.
 
 sealed class RpcMessage {
-  const RpcMessage({
-    required this.id,
-    required this.type,
-    required this.module,
-  });
+  const RpcMessage({required this.id, required this.type, required this.module});
 
   final String id;
   final String type;
@@ -18,7 +14,7 @@ sealed class RpcMessage {
   Map<String, dynamic> toJson();
 }
 
-class RpcRequest<REQUEST extends Object?> extends RpcMessage {
+final class RpcRequest<REQUEST extends Object?> extends RpcMessage {
   const RpcRequest({
     required super.id,
     required super.type,
@@ -32,34 +28,17 @@ class RpcRequest<REQUEST extends Object?> extends RpcMessage {
 
   @override
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'type': type,
-      'module': module,
-      'channel': channel,
-      'request': request,
-    };
+    return {'id': id, 'type': type, 'module': module, 'channel': channel, 'request': request};
   }
 }
 
-class RpcResponse<RESPONSE extends Object?> extends RpcMessage {
-  const RpcResponse({
-    required super.id,
-    required super.type,
-    required super.module,
-    required this.response,
-  });
+final class RpcResponse<RESPONSE extends Object?> extends RpcMessage {
+  const RpcResponse({required super.id, required super.type, required super.module, required this.response});
 
   final RESPONSE response;
 
   @override
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'type': type,
-      'module': module,
-      'response': response,
-      'isResponse': true,
-    };
+    return {'id': id, 'type': type, 'module': module, 'response': response, 'isResponse': true};
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reclaim_flutter_sdk/widgets/params/string.dart';
+import 'package:reclaim_inapp_sdk/src/widgets/params/string.dart';
 
 void main() {
   group('formatParamsLabel', () {

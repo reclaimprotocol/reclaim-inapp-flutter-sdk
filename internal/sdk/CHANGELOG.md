@@ -1,5 +1,14 @@
+## 0.8.0
+
+* Support for provider versions
+
+## 0.7.0
+
+* Bug fixes and performance improvements
+
 ## 0.6.0
 
+* Update ReclaimVerification apis
 * Update claim creation updates UI
 
 ## 0.5.0

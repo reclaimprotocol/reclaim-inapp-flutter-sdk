@@ -14,27 +14,20 @@ typedef ComputeProofForAttestorCallback =
       OnZKComputePerformanceReportCallback onPerformanceReport,
     );
 
-typedef IsReadyForAttestorCallback =
-    FutureOr<bool> Function(String fnName, List<dynamic> args);
-typedef IsSupportedByAttestorCallback =
-    FutureOr<bool> Function(String fnName, Object? args);
+typedef IsSupportedByAttestorCallback = FutureOr<bool> Function(String fnName, Object? args);
 
-class CallbackAttestorZkOperator implements AttestorZkOperator {
+class AttestorZkOperatorWithCallback implements AttestorZkOperator {
   final ComputeProofForAttestorCallback _onComputeProof;
   final IsSupportedByAttestorCallback _onIsSupported;
 
-  const CallbackAttestorZkOperator({
+  const AttestorZkOperatorWithCallback({
     required ComputeProofForAttestorCallback onComputeProof,
     required IsSupportedByAttestorCallback onIsSupported,
   }) : _onIsSupported = onIsSupported,
        _onComputeProof = onComputeProof;
 
   @override
-  FutureOr<String> compute(
-    String fnName,
-    List args,
-    OnZKComputePerformanceReportCallback onPerformanceReport,
-  ) {
+  FutureOr<String> compute(String fnName, List args, OnZKComputePerformanceReportCallback onPerformanceReport) {
     return _onComputeProof(fnName, args, onPerformanceReport);
   }
 
@@ -43,17 +36,13 @@ class CallbackAttestorZkOperator implements AttestorZkOperator {
     return _onIsSupported(fnName, args);
   }
 
-  factory CallbackAttestorZkOperator.withComputeProof(
-    ComputeProofForAttestorCallback onComputeProof,
-  ) {
-    return CallbackAttestorZkOperator(
+  factory AttestorZkOperatorWithCallback.withReclaimZKOperator({
+    required ComputeProofForAttestorCallback onComputeProof,
+  }) {
+    return AttestorZkOperatorWithCallback(
       onComputeProof: onComputeProof,
       onIsSupported: (fnName, _) {
-        const supportedFunctions = {
-          'groth16Prove',
-          'finaliseOPRF',
-          'generateOPRFRequestData',
-        };
+        const supportedFunctions = {'groth16Prove', 'finaliseOPRF', 'generateOPRFRequestData'};
         return supportedFunctions.contains(fnName);
       },
     );

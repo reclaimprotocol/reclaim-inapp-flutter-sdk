@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reclaim_flutter_sdk/services/capability/access_token.dart';
+import 'package:reclaim_inapp_sdk/src/services/capability/access_token.dart';
 
 void main() {
   group('CapabilityAccessToken', () {
@@ -23,10 +23,7 @@ void main() {
       expect(token.capabilities, containsAll({'capability1', 'capability2'}));
       expect(
         token.authorizedParties.map((e) => e.toString()),
-        containsAll({
-          'android://org.reclaimprotocol.example',
-          'ios://org.reclaimprotocol.example',
-        }),
+        containsAll({'android://org.reclaimprotocol.example', 'ios://org.reclaimprotocol.example'}),
       );
     });
 
@@ -35,17 +32,11 @@ void main() {
         'eyJraWQiOiI2NTMwYzVlMC1hNjViLTRkYzEtOWE4OS00MzIzZmM4YzZhMjEiLCJrZXlfb3BzIjpbInZlcmlmeSJdLCJleHQiOnRydWUsImt0eSI6IkVDIiwieCI6Im5pb0RsVjF4YWt4WFlZYnM0cEtFc2ZFN3FXQTk0SVRWdDdrM2VDZDU3S3MiLCJ5IjoiTzlOaTAxMzBzUE5FVUJ3VkY5d0FpaENJUDA0S08xQXZDRmF6Y3dweFJKQSIsImNydiI6IlAtMjU2In0',
         'eyJhbGciOiJFUzI1NiIsImtpZCI6IjY1MzBjNWUwLWE2NWItNGRjMS05YTg5LTQzMjNmYzhjNmEyMSIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmNTQyYjVmYS05NDdjLTQwOTYtODkzMi1hMTdjMjlmNGY0YTIiLCJpc3MiOiJodHRwczovL2Rldi5yZWNsYWltcHJvdG9jb2wub3JnIiwiYXVkIjoib3JnLnJlY2xhaW1wcm90b2NvbC5pbmFwcF9zZGsiLCJpYXQiOjE3NDA2NjEzMDQsIm5iZiI6MTc0MDY2MTMwNCwiZXhwIjoxNzc1MjIxMzA0LCJzdWIiOiJleGFtcGxlLmNvbSIsInNjb3BlIjoiaGVsbG8gd29ybGQiLCJhenAiOiJhbmRyb2lkOi8vb3JnLnJlY2xhaW1wcm90b2NvbC5leGFtcGxlIGlvczovL29yZy5yZWNsYWltcHJvdG9jb2wuZXhhbXBsZSJ9.GkbkWtDp2KeKIMosmqu_7u9MF9JBlAC-stdCi7_aIr7iAeRFnKR1Gcsalj2XoOMZxpaZ--SGKUtlUcA0bSFC0A',
       ];
-      final jws = CapabilityAccessToken.import(
-        accessTokenString,
-        publicKeyString,
-      );
+      final jws = CapabilityAccessToken.import(accessTokenString, publicKeyString);
       expect(jws.capabilities, containsAll({'hello', 'world'}));
       expect(
         jws.authorizedParties.map((e) => e.toString()),
-        containsAll({
-          'android://org.reclaimprotocol.example',
-          'ios://org.reclaimprotocol.example',
-        }),
+        containsAll({'android://org.reclaimprotocol.example', 'ios://org.reclaimprotocol.example'}),
       );
     });
 
@@ -54,10 +45,7 @@ void main() {
         'eyJraWQiOiI2NTMwYzVlMC1hNjViLTRkYzEtOWE4OS00MzIzZmM4YzZhMjEiLCJrZXlfb3BzIjpbInZlcmlmeSJdLCJleHQiOnRydWUsImt0eSI6IkVDIiwieCI6Im5pb0RsVjF4YWt4WFlZYnM0cEtFc2ZFN3FXQTk0SVRWdDdrM2VDZDU3S3MiLCJ5IjoiTzlOaTAxMzBzUE5FVUJ3VkY5d0FpaENJUDA0S08xQXZDRmF6Y3dweFJKQSIsImNydiI6IlAtMjU2In0',
         'eyJhbGciOiJFUzI1NiIsImtpZCI6IjY1MzBjNWUwLWE2NWItNGRjMS05YTg5LTQzMjNmYzhjNmEyMSIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJmYjg3NWFlNi1iZTI0LTRiZWEtOGMxZS01NzZiY2JlMTE3NWYiLCJpc3MiOiJodHRwczovL2Rldi5yZWNsYWltcHJvdG9jb2wub3JnIiwiYXVkIjoib3JnLnJlY2xhaW1wcm90b2NvbC5pbmFwcF9zZGsiLCJpYXQiOjE3NDA2NjEzODYsIm5iZiI6MTc0MDY2MTM4NiwiZXhwIjoxNzc1MjIxMzg2LCJzdWIiOiJleGFtcGxlLmNvbSIsInNjb3BlIjoiaGVsbG8gd29ybGQifQ.-04sO_2_RLHsZvK7Ebuu94TUJNdXbMuttfQcw89Il4o9tLlsA7DenppUhwOVQio3h39EqOVuCNkxbF-kxYWnDg',
       ];
-      final jws = CapabilityAccessToken.import(
-        accessTokenString,
-        publicKeyString,
-      );
+      final jws = CapabilityAccessToken.import(accessTokenString, publicKeyString);
       expect(jws.capabilities, containsAll({'hello', 'world'}));
       expect(jws.authorizedParties, isEmpty);
     });

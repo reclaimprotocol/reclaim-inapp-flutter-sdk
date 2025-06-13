@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reclaim_flutter_sdk/utils/strings.dart';
+import 'package:reclaim_inapp_sdk/src/utils/strings.dart';
 
 void main() {
   group('interpolateParamsInTemplate', () {
@@ -16,8 +16,7 @@ void main() {
 
     test('Interpolate params in template', () {
       expect(
-        interpolateParamsInTemplate(
-            'https://{{PARAMS_URL}}.com/dashboard/{{DATA_1}}/{{DATA_2}}', {
+        interpolateParamsInTemplate('https://{{PARAMS_URL}}.com/dashboard/{{DATA_1}}/{{DATA_2}}', {
           'PARAMS_URL': 'example',
           'DATA_1': 'data1',
           'DATA_2': 'data2',
@@ -27,35 +26,23 @@ void main() {
     });
 
     test('Handle empty params map', () {
-      expect(
-        interpolateParamsInTemplate('https://{{PARAMS_URL}}.com', {}),
-        'https://{{PARAMS_URL}}.com',
-      );
+      expect(interpolateParamsInTemplate('https://{{PARAMS_URL}}.com', {}), 'https://{{PARAMS_URL}}.com');
     });
 
     test('Handle missing params', () {
       expect(
-        interpolateParamsInTemplate(
-            'https://{{PARAMS_URL}}.com/{{MISSING_PARAM}}', {
-          'PARAMS_URL': 'example',
-        }),
+        interpolateParamsInTemplate('https://{{PARAMS_URL}}.com/{{MISSING_PARAM}}', {'PARAMS_URL': 'example'}),
         'https://example.com/{{MISSING_PARAM}}',
       );
     });
 
     test('Handle template with no parameters', () {
-      expect(
-        interpolateParamsInTemplate('https://example.com', {
-          'PARAMS_URL': 'test',
-        }),
-        'https://example.com',
-      );
+      expect(interpolateParamsInTemplate('https://example.com', {'PARAMS_URL': 'test'}), 'https://example.com');
     });
 
     test('Handle multiple occurrences of same parameter', () {
       expect(
-        interpolateParamsInTemplate(
-            'https://{{DOMAIN}}.com/{{PATH}}/{{DOMAIN}}', {
+        interpolateParamsInTemplate('https://{{DOMAIN}}.com/{{PATH}}/{{DOMAIN}}', {
           'DOMAIN': 'example',
           'PATH': 'test',
         }),

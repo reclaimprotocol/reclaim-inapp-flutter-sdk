@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reclaim_flutter_sdk/utils/reusable_resource_pool.dart';
+import 'package:reclaim_inapp_sdk/src/utils/reusable_resource_pool.dart';
 
 class TestResource {
   static int instanceCount = 0;
@@ -40,7 +40,7 @@ void main() {
       // Return and reuse same resource
       pool.returnResource(resource1);
       expect(pool.resourceCount, 1);
-      
+
       final resource2 = await pool.getResource();
       expect(resource2, same(resource1)); // Should reuse resource1
       expect(pool.resourceCount, 0);
@@ -56,7 +56,7 @@ void main() {
       pool.returnResource(resource3);
       expect(pool.resourceCount, 2);
       expect(TestResource.instanceCount, 2); // Only 2 resources created total
-      
+
       // Verify no resources were disposed
       expect(resource1.isDisposed, false);
       expect(resource3.isDisposed, false);
@@ -82,7 +82,12 @@ void main() {
       // Resource3 should be disposed as it exceeds pool size
       expect(resource1.isDisposed, false);
       expect(resource2.isDisposed, false);
-      expect(resource3.isDisposed, true, reason: 'resource3 should be disposed as it exceeds pool size. Pool size is ${pool.poolSize} and resource count is ${pool.resourceCount}');
+      expect(
+        resource3.isDisposed,
+        true,
+        reason:
+            'resource3 should be disposed as it exceeds pool size. Pool size is ${pool.poolSize} and resource count is ${pool.resourceCount}',
+      );
       expect(pool.resourceCount, 2);
     });
 
@@ -112,12 +117,9 @@ void main() {
       // Should have created only 2 resources (pool size)
       expect(TestResource.instanceCount, 2);
       expect(pool.resourceCount, 2);
-      
+
       // Verify no resources were disposed
-      final resources = [
-        await pool.getResource(),
-        await pool.getResource(),
-      ];
+      final resources = [await pool.getResource(), await pool.getResource()];
       expect(resources.every((r) => !r.isDisposed), true);
     });
 

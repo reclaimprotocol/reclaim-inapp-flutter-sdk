@@ -1,6 +1,6 @@
 name: reclaim_gnark_zkoperator
 description: Reclaim Protocol's implementation of Zero-Knowledge (ZK) SNARK Operator powered by a Gnark Prover library
-version: 1.2.0
+version: 1.3.0
 homepage: https://reclaimprotocol.org
 publish_to: none
 
@@ -22,10 +22,10 @@ dependencies:
   measure_performance: ^1.1.0
 
 dev_dependencies:
-  ffigen: ^18.1.0
+  ffigen: ^19.0.0
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   yaml_edit: ^2.2.1
   version: ^3.0.2
 

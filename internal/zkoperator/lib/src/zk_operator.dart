@@ -1,5 +1,8 @@
 import 'dart:typed_data';
 
+import 'algorithm/algorithm.dart';
+export 'algorithm/algorithm.dart' show ProverAlgorithmType;
+
 /// {@template reclaim_gnark_zkoperator.ZkOperator}
 /// A ZK Operator that can compute proofs and OPRF functions
 /// for [Reclaim Protocol's Attestor](https://github.com/reclaimprotocol/attestor-core).
@@ -15,6 +18,16 @@ abstract class ZkOperator {
   ///
   /// {@endtemplate}
   Future<String> computeAttestorProof(String fnName, List<dynamic> args);
+
+  /// {@template reclaim_gnark_zkoperator.ZkOperator.getAlgorithmFromOperationRequest}
+  /// Gets the algorithm type required for the operation if it can be identified from the operation request.
+  /// {@endtemplate}
+  ProverAlgorithmType? getAlgorithmFromOperationRequest(String fnName, List<dynamic> args);
+
+  /// {@template reclaim_gnark_zkoperator.ZkOperator.ensureInitialized}
+  /// Ensures that the [algorithm] is initialized and completes with `true` if successful.
+  /// {@endtemplate}
+  Future<bool> ensureInitialized(ProverAlgorithmType algorithm);
 
   /// {@template reclaim_gnark_zkoperator.ZkOperator.groth16Prove}
   /// Computes a Groth16 proof for the given bytes.

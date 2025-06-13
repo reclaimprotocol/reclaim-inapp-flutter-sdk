@@ -1,30 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:reclaim_flutter_sdk/src/attestor/attestor.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'src/attestor/operator/callback.dart';
-import 'utils/flags.dart';
-import 'utils/reusable_resource_pool.dart';
+import 'src/attestor/attestor.dart';
+import 'src/constants.dart';
+import 'src/data/create_claim.dart';
+import 'src/utils/reusable_resource_pool.dart';
 
+export 'src/attestor/attestor.dart';
 export 'src/attestor/operator/callback.dart';
-export 'package:reclaim_flutter_sdk/src/attestor/attestor.dart'
-    show
-        AttestorClient,
-        AttestorClaimOptions,
-        AttestorProcess,
-        AttestorClaimResponse;
 
 class Attestor {
   Attestor();
 
   static final instance = Attestor();
 
-  Future<AttestorClient> _createAttestorWebView() async {
-    final prefs = await SharedPreferences.getInstance();
-    final effectiveUrl =
-        _attestorUrl ?? Uri.parse(Flags.getAttestorBrowserRpcUrl(prefs));
+  FutureOr<AttestorClient> _createAttestorWebView() async {
+    final effectiveUrl = _attestorUrl ?? Uri.parse(ReclaimUrls.DEFAULT_ATTESTOR_WEB_URL);
     _attestorUrl = effectiveUrl;
 
     final attestor = AttestorWebViewClient(attestorBrowserRpcUrl: effectiveUrl);
@@ -33,12 +25,7 @@ class Attestor {
       attestor.setAttestorDebugLevel(_level!);
     }
 
-    final callback = _computeAttestorProof;
-    if (callback != null) {
-      attestor.zkOperator = CallbackAttestorZkOperator.withComputeProof(
-        callback,
-      );
-    }
+    attestor.zkOperator = _attestorZkOperator;
 
     return attestor;
   }
@@ -60,8 +47,7 @@ class Attestor {
     return _attestorPool.compute(use);
   }
 
-  Future<AttestorProcess<AttestorClaimRequest, List<AttestorClaimResponse>>>
-  createClaim(
+  Future<AttestorProcess<AttestorClaimRequest, List<CreateClaimOutput>>> createClaim(
     Map<String, dynamic> claimRequest, {
     required AttestorClaimOptions options,
     void Function(double progress)? onInitializationProgress,
@@ -119,9 +105,7 @@ class Attestor {
 
   Future<void> setAttestorDebugLevel(String level) {
     _level = level;
-    return Future.wait(
-      pool.resources.map((e) => e.setAttestorDebugLevel(level).response),
-    );
+    return Future.wait(pool.resources.map((e) => e.setAttestorDebugLevel(level).response));
   }
 
   Uri? _attestorUrl;
@@ -135,17 +119,13 @@ class Attestor {
     pool.peekResource;
   }
 
-  ComputeProofForAttestorCallback? _computeAttestorProof;
+  AttestorZkOperator? _attestorZkOperator;
 
-  Future<void> setComputeAttestorProof(
-    ComputeProofForAttestorCallback callback,
-  ) async {
-    if (_computeAttestorProof == callback) return;
-    _computeAttestorProof = callback;
+  Future<void> setZkOperator(AttestorZkOperator? operator) async {
+    if (_attestorZkOperator == operator) return;
+    _attestorZkOperator = operator;
     return useAttestor((attestor) async {
-      attestor.zkOperator = CallbackAttestorZkOperator.withComputeProof(
-        callback,
-      );
+      attestor.zkOperator = operator;
     });
   }
 

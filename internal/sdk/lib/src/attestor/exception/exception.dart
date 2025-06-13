@@ -1,4 +1,4 @@
-import 'package:reclaim_flutter_sdk/logging/logging.dart';
+import '../../logging/logging.dart';
 
 class AttestorException implements Exception {
   const AttestorException(this.message);
@@ -22,9 +22,7 @@ class AttestorRequestException implements AttestorException {
       try {
         return StackTrace.fromString(stack);
       } catch (e, s) {
-        final log = logging.child(
-          'AttestorRequestException.tryParseStackTrace',
-        );
+        final log = logging.child('AttestorRequestException.tryParseStackTrace');
         log.warning('Error parsing stack trace', e, s);
         return null;
       }
@@ -52,8 +50,7 @@ class AttestorRequestCancelledException implements AttestorException {
 }
 
 class AttestorRequestMessagingException implements AttestorException {
-  const AttestorRequestMessagingException(Object error)
-    : message = 'Request messaging exception caused by $error';
+  const AttestorRequestMessagingException(Object error) : message = 'Request messaging exception caused by $error';
 
   @override
   final String message;

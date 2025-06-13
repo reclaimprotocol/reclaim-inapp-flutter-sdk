@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:reclaim_flutter_sdk/data/providers.dart';
+import '../../data/providers.dart';
 
 String _objectToJsObject(Object object) {
   final jsonEncodedObject = json.encode(object);
@@ -8,13 +8,8 @@ String _objectToJsObject(Object object) {
   return 'JSON.parse($jsonString)';
 }
 
-String getProviderScriptEnvironment(
-  HttpProvider providerData,
-  Map<String, String> parameters,
-) {
-  final providerJsObject = _objectToJsObject(
-    providerData.toJson()..remove('customInjection'),
-  );
+String getProviderScriptEnvironment(HttpProvider providerData, Map<String, String> parameters) {
+  final providerJsObject = _objectToJsObject(providerData.toJson()..remove('customInjection'));
 
   return """
 window.ReclaimMessenger = {
@@ -56,8 +51,11 @@ window.Reclaim = {
     requestClaim: (claim) => {
         window.ReclaimMessenger.send('extractedData', claim);
     },
+    requiresUserInteraction: (isUserInteractionRequired) => {
+        window.ReclaimMessenger.send('requiresUserInteraction', { value: !!isUserInteractionRequired });
+    },
     canExpectManyClaims: (canExpectManyClaims) => {
-        window.ReclaimMessenger.send('canExpectManyClaims', { value: canExpectManyClaims });
+        window.ReclaimMessenger.send('canExpectManyClaims', { value: !!canExpectManyClaims });
     },
     updatePublicData: (data) => {
         window.ReclaimMessenger.send('publicData', data);

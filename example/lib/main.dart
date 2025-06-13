@@ -60,35 +60,38 @@ class _ExampleState extends State<Example> {
     super.dispose();
   }
 
-  List<CreateClaimOutput>? proofs;
+  ReclaimApiVerificationResponse? response;
 
   void onStartClaimButtonPressed(BuildContext context) async {
     setState(() {
-      proofs = null;
+      response = null;
     });
     final msg = ScaffoldMessenger.of(context);
     try {
       print("Starting proof for provider: $effectiveProviderId");
       final sdk = ReclaimInAppSdk.of(context);
-      proofs = await sdk.startVerification(
+      response = await sdk.startVerification(
         ReclaimVerificationRequest(
-          appId: appId,
+          applicationId: appId,
           providerId: effectiveProviderId,
-          secret: appSecret,
-          sessionInformation: ReclaimSessionInformation.empty(),
+          sessionProvider: () {
+            return ReclaimSessionInformation.generateNew(
+              applicationId: appId,
+              applicationSecret: appSecret,
+              providerId: providerId,
+            );
+          },
           contextString: '',
           parameters: {},
-          claimCreationType: ClaimCreationType.standalone,
         ),
       );
-      if (proofs != null) {
-        setState(() {
-          // trigger rebuild to show received proofs
-        });
-      }
-      print({'proof.length': proofs?.length, 'proofs': json.encode(proofs)});
+      setState(() {
+        // trigger rebuild to show received proofs
+      });
+      print({'proof.length': response?.proofs.length, 'proofs': json.encode(response)});
       msg.removeCurrentSnackBar();
-      if (proofs == null) {
+      final proofs = response?.proofs;
+      if (proofs == null || proofs.isEmpty) {
         msg.showSnackBar(const SnackBar(content: Text('example verification closed')));
       } else {
         msg.showSnackBar(const SnackBar(content: Text('example verification completed')));
@@ -141,7 +144,7 @@ class _ExampleState extends State<Example> {
             },
             child: const Text('Start Claim'),
           ),
-          if (proofs != null)
+          if (response != null)
             Padding(
               padding: const EdgeInsets.only(top: 16.0),
               child: Column(
@@ -152,7 +155,7 @@ class _ExampleState extends State<Example> {
                     readOnly: true,
                     maxLines: 10,
                     style: TextStyle(fontFamily: "monospace", fontFamilyFallback: <String>["Courier"]),
-                    controller: TextEditingController.fromValue(TextEditingValue(text: json.encode(proofs))),
+                    controller: TextEditingController.fromValue(TextEditingValue(text: json.encode(response))),
                     decoration: InputDecoration(
                       label: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -163,7 +166,7 @@ class _ExampleState extends State<Example> {
                   ),
                   OutlinedButton.icon(
                     onPressed: () {
-                      Clipboard.setData(ClipboardData(text: json.encode(proofs)));
+                      Clipboard.setData(ClipboardData(text: json.encode(response)));
                     },
                     label: Text('Copy Proof'),
                     icon: const Icon(Icons.copy),
