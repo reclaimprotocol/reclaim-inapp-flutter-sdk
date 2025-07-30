@@ -17,6 +17,16 @@ dependencies:
   reclaim_inapp_flutter_sdk: ^latest_version
 ```
 
+Or, when installing from git source, add the following to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  reclaim_inapp_flutter_sdk:
+    git:
+      url: https://github.com/reclaimprotocol/reclaim-inapp-flutter-sdk.git
+      ref: 0.10.13
+```
+
 ## Usage
 
 ### Basic Setup

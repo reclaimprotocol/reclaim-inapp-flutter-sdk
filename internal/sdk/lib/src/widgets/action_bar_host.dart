@@ -409,10 +409,9 @@ class _SnackBarActionState extends State<_SnackBarAction> {
         overlayColor: resolveForegroundColor(),
       ).copyWith(foregroundColor: resolveForegroundColor(), backgroundColor: resolveBackgroundColor()),
       onPressed: _haveTriggeredAction ? null : _handlePressed,
-      child:
-          _haveTriggeredAction
-              ? SizedBox.square(dimension: 16, child: CircularProgressIndicator())
-              : Text(widget.label),
+      child: _haveTriggeredAction
+          ? SizedBox.square(dimension: 16, child: CircularProgressIndicator())
+          : Text(widget.label),
     );
   }
 }

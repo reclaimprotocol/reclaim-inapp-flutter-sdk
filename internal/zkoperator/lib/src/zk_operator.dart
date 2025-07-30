@@ -44,6 +44,11 @@ abstract class ZkOperator {
   /// {@endtemplate}
   Future<String> generateOPRFRequestData(Uint8List bytes);
 
+  /// {@template reclaim_gnark_zkoperator.ZkOperator.isPlatformSupported}
+  /// Checks if the platform is supported for the ZK Operator.
+  /// {@endtemplate}
+  Future<bool> isPlatformSupported();
+
   /// {@template reclaim_gnark_zkoperator.ZkOperator.close}
   /// Disposes of the ZK Operator by closing the worker.
   ///

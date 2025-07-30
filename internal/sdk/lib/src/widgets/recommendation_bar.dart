@@ -30,7 +30,10 @@ class RecommendationBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Padding(padding: const EdgeInsets.only(left: 20.0), child: Icon(Icons.arrow_back, color: foregroundColor)),
+            Padding(
+              padding: const EdgeInsets.only(left: 20.0),
+              child: Icon(Icons.arrow_back, color: foregroundColor),
+            ),
             Padding(
               padding: const EdgeInsets.only(right: 20.0),
               child: Icon(Icons.arrow_forward, color: foregroundColor),
@@ -54,10 +57,9 @@ class RecommendationBar extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-              child:
-                  isLoading
-                      ? SpinKitFadingCircle(color: foregroundColor, size: 24.0)
-                      : Icon(Icons.swipe, color: foregroundColor),
+              child: isLoading
+                  ? SpinKitFadingCircle(color: foregroundColor, size: 24.0)
+                  : Icon(Icons.swipe, color: foregroundColor),
             ),
           ],
         ),

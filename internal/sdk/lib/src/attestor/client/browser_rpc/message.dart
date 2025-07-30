@@ -42,3 +42,32 @@ final class RpcResponse<RESPONSE extends Object?> extends RpcMessage {
     return {'id': id, 'type': type, 'module': module, 'response': response, 'isResponse': true};
   }
 }
+
+class RpcResponseErrorData {
+  const RpcResponseErrorData({required this.message, required this.stack});
+  final String message;
+  final String stack;
+
+  factory RpcResponseErrorData.fromException(Object exception, StackTrace? stackTrace) {
+    return RpcResponseErrorData(message: exception.toString(), stack: stackTrace?.toString() ?? '');
+  }
+
+  factory RpcResponseErrorData.fromJson(Map<String, dynamic> json) {
+    return RpcResponseErrorData(message: json['message'] as String? ?? '', stack: json['stack'] as String? ?? '');
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'message': message, 'stack': stack};
+  }
+}
+
+final class RpcResponseError<RpcResponseErrorData> extends RpcMessage {
+  const RpcResponseError({required super.id, required super.module, required this.data}) : super(type: 'error');
+
+  final RpcResponseErrorData data;
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'type': type, 'module': module, 'data': data, 'isResponse': true};
+  }
+}

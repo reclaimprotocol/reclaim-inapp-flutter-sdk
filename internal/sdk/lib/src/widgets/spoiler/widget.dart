@@ -12,7 +12,9 @@ class HashedValueSpoilerTextSpan extends WidgetSpan {
   final String? realValue;
 
   HashedValueSpoilerTextSpan({required this.value, required this.realValue, required super.style})
-    : super(child: HashedValueTextSpanWidget.handleLargeText(value: value, realValue: realValue, style: style));
+    : super(
+        child: HashedValueTextSpanWidget.handleLargeText(value: value, realValue: realValue, style: style),
+      );
 }
 
 class HashedValueTextSpanWidget extends StatefulWidget {
@@ -42,10 +44,16 @@ class _HashedValueTextSpanWidgetState extends State<HashedValueTextSpanWidget> {
     switch (_revealType) {
       case _HashedValueRevealType.unrevealed:
       case _HashedValueRevealType.displayUnsharedValue:
-        return widget.realValue ?? widget.value;
+        final realValue = widget.realValue;
+        if (realValue != null) {
+          return realValue;
+        }
+        break;
       case _HashedValueRevealType.displayHash:
-        return widget.value;
+        break;
     }
+    // This unicode character is on purpose, it's a better looking asterisk than the regular one
+    return List.filled(widget.value.length, '∗').join();
   }
 
   bool _isGestureAllowed() {
@@ -55,11 +63,7 @@ class _HashedValueTextSpanWidgetState extends State<HashedValueTextSpanWidget> {
     final previous = _revealType;
     switch (_revealType) {
       case _HashedValueRevealType.unrevealed:
-        if (widget.realValue != null) {
-          _revealType = _HashedValueRevealType.displayUnsharedValue;
-        } else {
-          _revealType = _HashedValueRevealType.displayHash;
-        }
+        _revealType = _HashedValueRevealType.displayUnsharedValue;
         break;
       case _HashedValueRevealType.displayUnsharedValue:
         _revealType = _HashedValueRevealType.displayHash;
@@ -91,22 +95,18 @@ class _HashedValueTextSpanWidgetState extends State<HashedValueTextSpanWidget> {
 
     final infoTextStyle = effectiveTextStyle.merge(const TextStyle(color: Colors.grey, fontWeight: FontWeight.normal));
 
-    final realValue = widget.realValue;
-
     return Text.rich(
       SpoilerTextSpan(
         text: text,
         canAllowGesture: _isGestureAllowed,
         children: [
-          if (realValue != null)
-            TextSpan(
-              text:
-                  _revealType != _HashedValueRevealType.displayHash
-                      ? ' (not shared)'
-                      // for a better transition to the spoiler, we add text of same length that's shown when witness value is present and revealed
-                      : '             ',
-              style: infoTextStyle,
-            ),
+          TextSpan(
+            text: _revealType != _HashedValueRevealType.displayHash
+                ? ' (not shared)'
+                // for a better transition to the spoiler, we add text of same length that's shown when witness value is present and revealed
+                : '             ',
+            style: infoTextStyle,
+          ),
         ],
         style: effectiveTextStyle,
       ),

@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import '../overrides/override.dart';
+import '../web_scripts/hawkeye/interception_method.dart';
 
 class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
   const ReclaimFeatureFlagData({
@@ -10,6 +13,9 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     this.canUseAiFlow,
     this.manualReviewMessage,
     this.loginPromptMessage,
+    this.hawkeyeInterceptionMethod,
+    this.claimCreationTimeoutDurationInMins,
+    this.sessionNoActivityTimeoutDurationInMins,
   });
 
   final bool? cookiePersist;
@@ -20,6 +26,9 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
   final bool? canUseAiFlow;
   final String? manualReviewMessage;
   final String? loginPromptMessage;
+  final HawkeyeInterceptionMethod? hawkeyeInterceptionMethod;
+  final int? claimCreationTimeoutDurationInMins;
+  final int? sessionNoActivityTimeoutDurationInMins;
 
   @override
   ReclaimFeatureFlagData copyWith({
@@ -31,6 +40,9 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     bool? canUseAiFlow,
     String? manualReviewMessage,
     String? loginPromptMessage,
+    HawkeyeInterceptionMethod? hawkeyeInterceptionMethod,
+    int? claimCreationTimeoutDurationInMins,
+    int? sessionNoActivityTimeoutDurationInMins,
   }) {
     return ReclaimFeatureFlagData(
       cookiePersist: cookiePersist ?? this.cookiePersist,
@@ -43,6 +55,10 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       canUseAiFlow: canUseAiFlow ?? this.canUseAiFlow,
       manualReviewMessage: manualReviewMessage ?? this.manualReviewMessage,
       loginPromptMessage: loginPromptMessage ?? this.loginPromptMessage,
+      hawkeyeInterceptionMethod: hawkeyeInterceptionMethod ?? this.hawkeyeInterceptionMethod,
+      claimCreationTimeoutDurationInMins: claimCreationTimeoutDurationInMins ?? this.claimCreationTimeoutDurationInMins,
+      sessionNoActivityTimeoutDurationInMins:
+          sessionNoActivityTimeoutDurationInMins ?? this.sessionNoActivityTimeoutDurationInMins,
     );
   }
 
@@ -56,6 +72,9 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       canUseAiFlow: json['canUseAiFlow'] as bool?,
       manualReviewMessage: json['manualReviewMessage'] as String?,
       loginPromptMessage: json['loginPromptMessage'] as String?,
+      hawkeyeInterceptionMethod: HawkeyeInterceptionMethod.fromString(json['hawkeyeInterceptionMethod'] as String?),
+      claimCreationTimeoutDurationInMins: json['claimCreationTimeoutDurationInMins'] as int?,
+      sessionNoActivityTimeoutDurationInMins: json['sessionNoActivityTimeoutDurationInMins'] as int?,
     );
   }
 
@@ -69,11 +88,14 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       'canUseAiFlow': canUseAiFlow,
       'manualReviewMessage': manualReviewMessage,
       'loginPromptMessage': loginPromptMessage,
+      'hawkeyeInterceptionMethod': hawkeyeInterceptionMethod?.name,
+      'claimCreationTimeoutDurationInMins': claimCreationTimeoutDurationInMins,
+      'sessionNoActivityTimeoutDurationInMins': sessionNoActivityTimeoutDurationInMins,
     };
   }
 
   @override
   String toString() {
-    return 'ReclaimFeatureFlagData(cookiePersist: $cookiePersist, singleReclaimRequest: $singleReclaimRequest, attestorBrowserRpcUrl: $attestorBrowserRpcUrl, idleTimeThresholdForManualVerificationTrigger: $idleTimeThresholdForManualVerificationTrigger, sessionTimeoutForManualVerificationTrigger: $sessionTimeoutForManualVerificationTrigger, canUseAiFlow: $canUseAiFlow, manualReviewMessage: $manualReviewMessage, loginPromptMessage: $loginPromptMessage)';
+    return 'ReclaimFeatureFlagData(${json.encode(this)})';
   }
 }

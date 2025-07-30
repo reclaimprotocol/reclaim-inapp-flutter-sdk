@@ -2,12 +2,13 @@ part of '../../reclaim_gnark_zkoperator.dart';
 
 class KeyAlgorithmAssetUrls {
   /// URL of the key asset
-  final String keyAssetUrl;
+  final List<String> keyAssetUrls;
 
   /// URL of the rank-1 constraint system (r1cs) circuit
-  final String r1csAssetUrl;
+  final List<String> r1csAssetUrls;
 
-  const KeyAlgorithmAssetUrls(this.keyAssetUrl, this.r1csAssetUrl);
+  KeyAlgorithmAssetUrls(String keyAssetUrl, String r1csAssetUrl) : this.mirrors([keyAssetUrl], [r1csAssetUrl]);
+  const KeyAlgorithmAssetUrls.mirrors(this.keyAssetUrls, this.r1csAssetUrls);
 }
 
 typedef ProverAlgorithmAssetUrlsProvider = KeyAlgorithmAssetUrls Function(ProverAlgorithmType algorithm);
@@ -40,7 +41,7 @@ Future<bool> _initialize(ProverAlgorithmType algorithm, ProverAlgorithmAssetUrls
       final stopwatch = Stopwatch();
       stopwatch.start();
       _initializerLog.info('Initializing algorithm $algorithm');
-      await worker.initializeAlgorithmInBackground(algorithm, assetUrls.keyAssetUrl, assetUrls.r1csAssetUrl);
+      await worker.initializeAlgorithmInBackground(algorithm, assetUrls.keyAssetUrls, assetUrls.r1csAssetUrls);
       stopwatch.stop();
       _initializerLog.info('Initialized algorithm $algorithm in ${stopwatch.elapsed}');
       completer.complete(true);

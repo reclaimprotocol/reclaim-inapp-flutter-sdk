@@ -67,11 +67,12 @@ class ClaimCreationUIScopeState extends State<ClaimCreationUIScope> {
   void _onClaimCreationControllerChange(ChangedValues<ClaimCreationControllerState> change) {
     final (oldValue, value) = change.record;
     if ((oldValue?.hasError != value.hasError && value.hasError) ||
-        (oldValue?.providerError != value.providerError && value.providerError != null) ||
+        (oldValue?.providerError != value.providerError && value.hasProviderScriptError) ||
+        (oldValue?.clientError != value.clientError && value.hasClientError) ||
         (oldValue?.isFinished != value.isFinished && value.isFinished)) {
       logging.info('notifying error');
       final messenger = actionBarMessengerKey.currentState;
-      messenger?.show(ActionBarMessage(type: ActionMessageType.claim));
+      messenger?.show(ActionBarMessage(type: value.hasError ? ActionMessageType.error : ActionMessageType.claim));
       showReview();
     }
   }
@@ -106,6 +107,10 @@ class ClaimCreationUIScopeState extends State<ClaimCreationUIScope> {
     final claimCreationController = ClaimCreationController.of(context, listen: false);
     if (claimCreationController.value.hasProviderScriptError) {
       // don't discard review screen if there's a provider script error
+      return;
+    }
+    if (claimCreationController.value.hasClientError) {
+      // don't discard review screen if there's a client error
       return;
     }
     VerificationReviewController.readOf(context).setIsVisible(false);

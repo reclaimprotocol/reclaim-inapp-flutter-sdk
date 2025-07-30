@@ -142,40 +142,31 @@ class _LiveBackgroundState extends State<LiveBackground> with SingleTickerProvid
                   (0.5, 0.88).v.to((0.5, 0.95).v, dt),
                   (1.0, 0.82).v.to((1.0, 1.0).v, dt), //
                 ],
-                colors:
-                    [
-                      null, null, null, //
+                colors: [
+                  null, null, null, //
 
-                      if (hasError) ...[
-                        C.red[500]
-                            ?.withAlpha((255 * 0.8).floor())
-                            .to(theme.colorScheme.primary.withValues(alpha: 0.5), dt),
-                        C.red[200]
-                            ?.withAlpha((255 * 0.8).floor())
-                            .to(theme.colorScheme.primary.withValues(alpha: 0.2), dt),
-                        C.red[400]
-                            ?.withAlpha((255 * 0.9).floor())
-                            .to(theme.colorScheme.primary.withValues(alpha: 0.4), dt),
-                      ] else ...[
-                        C.yellow[500]
-                            ?.withAlpha((255 * 0.8).floor())
-                            .to(theme.colorScheme.primary.withValues(alpha: 0.5), dt),
-                        C.yellow[200]
-                            ?.withAlpha((255 * 0.8).floor())
-                            .to(theme.colorScheme.primary.withValues(alpha: 0.2), dt),
-                        C.yellow[400]
-                            ?.withAlpha((255 * 0.9).floor())
-                            .to(theme.colorScheme.primary.withValues(alpha: 0.4), dt),
-                      ], //
+                  if (hasError) ...[
+                    C.red[500]?.withAlpha((255 * 0.8).floor()).to(theme.colorScheme.primary.withValues(alpha: 0.5), dt),
+                    C.red[200]?.withAlpha((255 * 0.8).floor()).to(theme.colorScheme.primary.withValues(alpha: 0.2), dt),
+                    C.red[400]?.withAlpha((255 * 0.9).floor()).to(theme.colorScheme.primary.withValues(alpha: 0.4), dt),
+                  ] else ...[
+                    C.yellow[500]
+                        ?.withAlpha((255 * 0.8).floor())
+                        .to(theme.colorScheme.primary.withValues(alpha: 0.5), dt),
+                    C.yellow[200]
+                        ?.withAlpha((255 * 0.8).floor())
+                        .to(theme.colorScheme.primary.withValues(alpha: 0.2), dt),
+                    C.yellow[400]
+                        ?.withAlpha((255 * 0.9).floor())
+                        .to(theme.colorScheme.primary.withValues(alpha: 0.4), dt),
+                  ], //
 
-                      C.red[900].to(theme.colorScheme.primary.withValues(alpha: 0.9), dt),
-                      C.red[800]
-                          ?.withAlpha((255 * 0.4).floor())
-                          .to(theme.colorScheme.primary.withValues(alpha: 0.8), dt),
-                      C.red[900].to(theme.colorScheme.primary.withValues(alpha: 0.9), dt), //
+                  C.red[900].to(theme.colorScheme.primary.withValues(alpha: 0.9), dt),
+                  C.red[800]?.withAlpha((255 * 0.4).floor()).to(theme.colorScheme.primary.withValues(alpha: 0.8), dt),
+                  C.red[900].to(theme.colorScheme.primary.withValues(alpha: 0.9), dt), //
 
-                      null, null, null, //
-                    ].map((e) => e?.withValues(alpha: e.a * 0.35)).toList(),
+                  null, null, null, //
+                ].map((e) => e?.withValues(alpha: e.a * 0.35)).toList(),
               ),
             );
           },

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../assets/assets.dart';
@@ -48,10 +49,9 @@ class ReclaimAddressBar extends StatelessWidget {
                           final isVisible = VerificationReviewController.of(context).value.isVisible;
                           return AnimatedSwitcher(
                             duration: Durations.medium1,
-                            child:
-                                isVisible
-                                    ? SizedBox(width: 16)
-                                    : SvgImageIcon($ReclaimAssetImageProvider.lock, color: Colors.green, size: 16),
+                            child: isVisible
+                                ? SizedBox(width: 16)
+                                : SvgImageIcon($ReclaimAssetImageProvider.lock, color: Colors.green, size: 16),
                           );
                         },
                       ),
@@ -79,7 +79,7 @@ class ReclaimAddressBar extends StatelessWidget {
               ),
             ),
           ),
-          if (isCloseButtonVisible)
+          if (isCloseButtonVisible || kDebugMode)
             Align(
               alignment: AlignmentDirectional.centerEnd,
               child: IconButton(
@@ -127,7 +127,10 @@ class _AddressBarUrl extends StatelessWidget {
     return Text.rich(
       TextSpan(
         children: [
-          TextSpan(text: uri.authority, style: TextStyle(color: Colors.black87)),
+          TextSpan(
+            text: uri.authority,
+            style: TextStyle(color: Colors.black87),
+          ),
           TextSpan(text: uri.path),
           if (uri.query.isNotEmpty) TextSpan(text: '?${uri.query}'),
         ],

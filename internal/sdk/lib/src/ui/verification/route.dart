@@ -35,12 +35,11 @@ class VerificationViewPageRoute extends PageRoute<dynamic> with CupertinoRouteTr
           view: View.of(context),
           child: FractionallyPaddedSafeArea(
             top: false,
-            bottomFraction:
-                Theme.of(context).platform == TargetPlatform.iOS
-                    // Eyeballed on iphone that ~32% of safe area bottom padding should be safe
-                    ? 0.32
-                    // Androids always provide bottom padding as 0.
-                    : 1,
+            bottomFraction: Theme.of(context).platform == TargetPlatform.iOS
+                // Eyeballed on iphone that ~32% of safe area bottom padding should be safe
+                ? 0.32
+                // Androids always provide bottom padding as 0.
+                : 1,
             child: VerificationView(),
           ),
         ),

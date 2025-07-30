@@ -1,27 +1,26 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../attestor.dart';
-import '../../controller.dart';
 import '../../data/create_claim.dart';
-import '../../data/login_message.dart';
 import '../../data/providers.dart';
 import '../../exception/exception.dart';
 import '../../logging/logging.dart';
-import '../../repository/feature_flags.dart';
 import '../../services/reclaim_owner_keys.dart';
 import '../../services/session.dart';
-import '../../ui/claim_creation_webview/view_model.dart';
+import '../../ui/dev/dev.dart';
 import '../../utils/future.dart';
+import '../../utils/list.dart';
 import '../../utils/observable_notifier.dart';
 import '../../utils/provider_performance_report.dart';
+import '../../utils/result.dart';
 import '../../utils/single_work.dart';
 import '../../webview_utils.dart';
 import '../action_bar.dart';
-import '../feature_flags.dart';
 import '../verification_review/controller.dart';
 import 'request.dart';
 import 'state.dart';
@@ -32,8 +31,6 @@ export 'state.dart';
 export 'status.dart';
 
 part 'delegate.dart';
-
-const _claimCreationTimeoutDuration = Duration(minutes: 15);
 
 class ClaimCreationCancelledException implements Exception {
   const ClaimCreationCancelledException({this.message = 'Claim creation cancelled'});
@@ -121,6 +118,14 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     );
   }
 
+  void setClientError(ReclaimException? clientError) {
+    value = value.copyWith(clientError: Optional.value(clientError));
+  }
+
+  void removeClientError() {
+    value = value.copyWith(clientError: const Optional.value(null));
+  }
+
   void _setDelegate(ClaimCreationUIScopeState? delegate) {
     if (value.delegate == delegate) return;
 
@@ -175,10 +180,9 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
           sessionId: sessionId,
           providerId: httpProviderId,
           logType: 'PROOF_GENERATED',
-          metadata:
-              ProviderRequestPerformanceMeasurements(
-                reports: value.claims.map((e) => e.performanceReports).whereType<ProviderRequestPerformanceReport>(),
-              ).toJson(),
+          metadata: ProviderRequestPerformanceMeasurements(
+            reports: value.claims.map((e) => e.performanceReports).whereType<ProviderRequestPerformanceReport>(),
+          ).toJson(),
         ),
         ReclaimSession.updateSession(sessionId, SessionStatus.PROOF_GENERATION_SUCCESS),
       ]);
@@ -208,7 +212,9 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     logger.severe('proof generation failed error at ${StackTrace.current}', e, s);
     final claimStatus = value
         .maybeGet(proofRequest.requestData.requestIdentifier)
-        ?.createNext(error: ClaimCreationErrorDetails(error: e, stackTrace: s));
+        ?.createNext(
+          error: ClaimCreationErrorDetails(error: e, stackTrace: s),
+        );
     value = value.copyWith(
       // need to notify session as retry when proof generation fails
       didNotifySessionAsRetry: false,
@@ -228,67 +234,89 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     // a copy of witnessParams to avoid mutating the original
     final params = {...request.witnessParams};
 
-    final logger = logging.child(
+    final log = logging.child(
       'ClaimCreationController.createRequestWithUpdatedProviderParams.${request.requestData.requestIdentifier}',
     );
-    final Iterable<ResponseMatch> responseMatches = request.requestData.responseMatches ?? const [];
-    final List<ResponseRedaction> responseRedactions = [...?request.requestData.responseRedactions];
+    final List<ResponseMatch> responseMatches = [...request.requestData.responseMatches];
+    final List<ResponseRedaction> responseRedactions = [...request.requestData.responseRedactions];
     final args = <String, String>{...request.initialWitnessParams, ...request.witnessParams};
+
+    log.info('starting request creation with provider params. redactions: ${responseRedactions.length}');
+
+    final selectionLength = math.max(responseRedactions.length, responseMatches.length);
+
     await Future.wait(
-      List.generate(responseRedactions.length, (index) async {
-        final responseRedactionI = responseRedactions.elementAt(index);
-        final responseMatchI = responseMatches.elementAt(index);
+      List.generate(selectionLength, (index) async {
+        final logger = log.child('responseRedaction.$index');
+        logger.info('start');
+        final responseRedactionI = maybeGetAtIndex(responseRedactions, index);
+        final responseMatchI = maybeGetAtIndex(responseMatches, index);
         String element = response;
-        final responseSelectionXPath = responseRedactionI.xPath;
+        final responseSelectionXPath = responseRedactionI?.xPath;
         if (responseSelectionXPath != null && responseSelectionXPath.isNotEmpty) {
+          logger.info('extracting html element with xpath: $responseSelectionXPath');
           try {
             element = await Attestor.instance.extractHtmlElement(
               element,
               interpolateTemplateWithValues(responseSelectionXPath, args),
             );
+            logger.info('did extract html element: ${element.isNotEmpty}');
           } catch (e) {
-            if (e.toString().contains('Failed to find')) {
+            logger.info('Coult not extract xpath for $responseSelectionXPath');
+            if (e.toString().contains('Failed to find') || e.toString().contains('not found')) {
               throw const ReclaimVerificationRequirementException();
             } else {
               rethrow;
             }
           }
         } else {
-          logger.child('responseSelection').info('response selection xpath is empty');
+          logger.info('response selection xpath is empty');
         }
-        final responseSelectionJsonPath = responseRedactionI.jsonPath;
+        final responseSelectionJsonPath = responseRedactionI?.jsonPath;
         if (responseSelectionJsonPath != null && responseSelectionJsonPath.isNotEmpty) {
+          logger.info('extracting json value with json path: $responseSelectionJsonPath');
           try {
             element = await Attestor.instance.extractJSONValueIndex(
               element,
               interpolateTemplateWithValues(responseSelectionJsonPath, args),
             );
+            logger.info('did extract json value: ${element.isNotEmpty}');
           } catch (e) {
-            if (e.toString().contains('Failed to find')) {
+            logger.info('Coult not extract jsonpath for $responseSelectionJsonPath');
+            if (e.toString().contains('Failed to find') || e.toString().contains('not found')) {
               throw const ReclaimVerificationRequirementException();
             } else {
               rethrow;
             }
           }
+        } else {
+          logger.info('response selection json path is empty');
         }
-        final responseMatchParamKeys = getTemplateVariables(responseMatchI.value ?? '');
-        String? responseMatchRegex = responseRedactionI.regex;
+        logger.info('value extraction completed');
+        final responseMatchParamKeys = getTemplateVariables(responseMatchI?.value ?? '');
+        logger.info('response match param keys (${responseMatchParamKeys.length}): $responseMatchParamKeys');
+        String? responseMatchRegex = responseRedactionI?.regex;
         if (responseMatchRegex == null) {
+          logger.info('response match regex is null, converting template to regex template');
           // if regex is not provided, we need to fallback by converting template to regex template
           // This may not be needed if all providers have regex in responseMatch post migration
           final (regex, _, _) = convertTemplateToRegex(
-            template: responseMatchI.value ?? '',
+            template: responseMatchI?.value ?? '',
             parameters: request.initialWitnessParams,
-            matchTypeOverride: responseRedactionI.matchType,
+            matchTypeOverride: responseRedactionI?.matchType,
           );
           responseMatchRegex = regex;
         }
 
+        logger.info('evaluating response match regex with element: $responseMatchRegex');
+
         final responseSelectionParamRegexMatch = RegExp(responseMatchRegex, dotAll: true).firstMatch(element);
+        logger.info('responseSelectionParamRegexMatches groupCount ${responseSelectionParamRegexMatch?.groupCount}');
         final List<String?>? responseSelectionParamValue = responseSelectionParamRegexMatch?.groups(
           // generate list of indices from 1 to length of responseMatchParamKeys
           List<int>.generate(responseMatchParamKeys.length, (i) => i + 1),
         );
+        logger.info('selection count: ${responseSelectionParamValue?.length}');
         if (responseSelectionParamValue == null || responseSelectionParamValue.isEmpty) {
           if (responseSelectionParamRegexMatch == null || responseSelectionParamRegexMatch.groupCount == 0) {
             logger.info('No regex matches for `$responseMatchRegex`');
@@ -303,6 +331,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
           });
           throw const ReclaimVerificationRequirementException();
         }
+        logger.info('setting params from responseMatch param keys and its values from selections');
         for (var i = 0; i < responseMatchParamKeys.length; i++) {
           final value = responseMatchParamKeys.elementAt(i);
           final paramValue = responseSelectionParamValue[i];
@@ -312,20 +341,23 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
           }
           params[value] = paramValue;
         }
-        responseRedactions[index] = ResponseRedaction(
-          xPath: responseRedactionI.xPath,
-          jsonPath: responseRedactionI.jsonPath,
-          hash: responseRedactionI.hash,
-          matchType: responseRedactionI.matchType,
-          regex: responseMatchRegex,
-        );
+        logger.info('updating response redaction with regex: $responseMatchRegex');
+        if (responseRedactionI != null) {
+          responseRedactions[index] = ResponseRedaction(
+            xPath: responseRedactionI.xPath,
+            jsonPath: responseRedactionI.jsonPath,
+            hash: responseRedactionI.hash,
+            matchType: responseRedactionI.matchType,
+            regex: responseMatchRegex,
+          );
+        }
       }),
       eagerError: true,
     );
 
-    logger.info({
-      'responseMatches.pre': request.requestData.responseMatches?.map((e) => e.toJson()).toList(),
-      'responseRedactions.pre': request.requestData.responseRedactions?.map((e) => e.toJson()).toList(),
+    log.info({
+      'responseMatches.pre': request.requestData.responseMatches.map((e) => e.toJson()).toList(),
+      'responseRedactions.pre': request.requestData.responseRedactions.map((e) => e.toJson()).toList(),
       'responseMatches': responseMatches.map((e) => e.toJson()).toList(),
       'responseRedactions': responseRedactions.map((e) => e.toJson()).toList(),
     });
@@ -397,6 +429,8 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
         'createClaimOptions': proofRequest.createClaimOptions,
       });
 
+      DevController.shared.push('createClaimInput', createClaimInput);
+
       final List<Future> delegateCallbackFutures = [];
 
       final requestMeasurePerformance = MeasurePerformance();
@@ -404,23 +438,32 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
 
       requestMeasurePerformance.start();
 
-      final attestorRequest = await futureWithTimeout(
-        Attestor.instance.createClaim(
-          createClaimInput,
-          options: proofRequest.createClaimOptions,
-          onInitializationProgress: (progress) {
-            _onAttestorInitializationProgress(requestIdentifier, progress);
-          },
-          onPerformanceReports: (Iterable<ZKComputePerformanceReport> performanceReports) {
-            requestPerformanceReports = performanceReports;
-          },
-        ),
-        timeout: _claimCreationTimeoutDuration,
+      log.info('Starting attestor claim creation');
+
+      final attestorRequest = await Attestor.instance.createClaim(
+        createClaimInput,
+        options: proofRequest.createClaimOptions,
+        onInitializationProgress: (progress) {
+          _onAttestorInitializationProgress(requestIdentifier, progress);
+        },
+        onPerformanceReports: (Iterable<ZKComputePerformanceReport> performanceReports) {
+          requestPerformanceReports = performanceReports;
+        },
+        timeoutAfter: proofRequest.claimCreationTimeoutDuration,
       );
+
+      log.info('Started attestor claim creation, request id: $requestIdentifier');
 
       _requestHashByAttestorRequestId[attestorRequest.id] = requestIdentifier;
 
+      const responseWaitDuration = Duration(seconds: 10);
+      Timer? responseWaitTimer = Timer(responseWaitDuration, () {
+        log.warning('No response received from attestor in $responseWaitDuration since claim creation started');
+      });
+
       attestorRequest.updateStream.listen((data) {
+        responseWaitTimer?.cancel();
+        responseWaitTimer = null;
         final logger = log.child('update-create-claim');
         _onStep(requestIdentifier, data);
         final delegate = value.delegate;

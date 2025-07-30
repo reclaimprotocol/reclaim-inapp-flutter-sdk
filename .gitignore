@@ -34,3 +34,6 @@ build/
 
 # uncomment to include internal sdk dependencies
 # internal/
+
+# For overriding dependencies without making any changes in pubspec.yaml
+pubspec_overrides.yaml

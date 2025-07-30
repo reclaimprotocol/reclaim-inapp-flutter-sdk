@@ -13,6 +13,8 @@ ManualReviewActionData _$ManualReviewActionDataFromJson(Map<String, dynamic> jso
   rule:
       $enumDecodeNullable(_$ManualReviewPromptDisplayRuleEnumMap, json['rule']) ??
       ManualReviewPromptDisplayRule.TIMEOUT,
+  confirmationDialogTitle: _nonBlankStringFromJson(json['confirmationDialogTitle']),
+  confirmationDialogMessage: _nonBlankStringFromJson(json['confirmationDialogMessage']),
 );
 
 Map<String, dynamic> _$ManualReviewActionDataToJson(ManualReviewActionData instance) => <String, dynamic>{
@@ -20,6 +22,8 @@ Map<String, dynamic> _$ManualReviewActionDataToJson(ManualReviewActionData insta
   'submitLabel': instance.submitLabel,
   'canSubmit': instance.canSubmit,
   'rule': _$ManualReviewPromptDisplayRuleEnumMap[instance.rule]!,
+  'confirmationDialogTitle': instance.confirmationDialogTitle,
+  'confirmationDialogMessage': instance.confirmationDialogMessage,
 };
 
 const _$ManualReviewPromptDisplayRuleEnumMap = {

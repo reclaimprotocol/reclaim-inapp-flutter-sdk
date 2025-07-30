@@ -6,7 +6,7 @@ rm -rf internal;
 mkdir -p internal;
 
 # SDK_MODULE_VERSION=main
-SDK_MODULE_VERSION=0.8.3
+SDK_MODULE_VERSION=0.10.13
 
 cd internal;
 

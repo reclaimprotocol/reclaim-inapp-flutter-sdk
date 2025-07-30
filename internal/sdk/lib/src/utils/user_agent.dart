@@ -9,7 +9,7 @@ class WebViewUserAgentUtil {
   static bool get _isPlatformDarwin => Platform.isIOS || Platform.isMacOS;
 
   // ref https://www.chromium.org/updates/ua-reduction/
-  static String generateChromeAndroidUserAgent({int chromeMajorVersion = 135, bool isMobile = true}) {
+  static String generateChromeAndroidUserAgent({int chromeMajorVersion = 136, bool isMobile = true}) {
     if (chromeMajorVersion <= 0) {
       chromeMajorVersion = 135;
     }

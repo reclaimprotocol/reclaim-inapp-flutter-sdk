@@ -8,6 +8,7 @@ import '../logging/logging.dart';
 import '../overrides/overrides.dart';
 import '../services/feature_flag.dart';
 import '../utils/restoration_identifier.dart';
+import '../web_scripts/hawkeye/interception_method.dart';
 
 typedef FeatureFlagSelector<T> = T? Function(ReclaimFeatureFlagData data);
 
@@ -95,6 +96,27 @@ class FeatureFlag<T> {
     canFetchFromRemote: true,
     valueIfNull: false,
     selector: (data) => data.canUseAiFlow,
+  );
+
+  static final hawkeyeInterceptionMethod = FeatureFlag<String>(
+    key: 'hawkeyeInterceptionMethod',
+    canFetchFromRemote: true,
+    valueIfNull: HawkeyeInterceptionMethod.PROXY.name,
+    selector: (data) => data.hawkeyeInterceptionMethod?.name,
+  );
+
+  static final claimCreationTimeoutDurationInMins = FeatureFlag<int>(
+    key: 'claimCreationTimeoutDurationInMins',
+    canFetchFromRemote: true,
+    valueIfNull: 2,
+    selector: (data) => data.claimCreationTimeoutDurationInMins,
+  );
+
+  static final sessionNoActivityTimeoutDurationInMins = FeatureFlag<int>(
+    key: 'sessionNoActivityTimeoutDurationInMins',
+    canFetchFromRemote: true,
+    valueIfNull: 2,
+    selector: (data) => data.sessionNoActivityTimeoutDurationInMins,
   );
 
   T _select(ReclaimFeatureFlagData data) => _selector?.call(data) ?? _valueIfNull;

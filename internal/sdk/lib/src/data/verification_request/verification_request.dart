@@ -43,8 +43,11 @@ class ClientSdkVerificationRequest {
     this.resolvedProviderVersion,
   });
 
-  factory ClientSdkVerificationRequest.fromJson(Map<String, dynamic> json) =>
-      _$ClientSdkVerificationRequestFromJson(json);
+  factory ClientSdkVerificationRequest.fromJson(Map<dynamic, dynamic> json) {
+    return _$ClientSdkVerificationRequestFromJson(<String, dynamic>{
+      for (final key in json.keys) key.toString(): json[key],
+    });
+  }
 
   factory ClientSdkVerificationRequest.fromUrl(String url) {
     final data =

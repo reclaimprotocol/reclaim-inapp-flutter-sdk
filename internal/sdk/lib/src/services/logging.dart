@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:uuid/uuid.dart';
@@ -15,9 +16,9 @@ class DiagnosticLogging {
 
   DiagnosticLogging([http.Client? client]) : client = client ?? ReclaimHttpClient();
 
-  final Preference<String?, String> _deviceLoggingIdPreference = Preference(key: '_DEVICE_LOGGING_ID');
+  static final Preference<String?, String> _deviceLoggingIdPreference = Preference(key: '_DEVICE_LOGGING_ID');
 
-  Future<String> getDeviceLoggingId() async {
+  static Future<String> getDeviceLoggingId() async {
     final id = await _deviceLoggingIdPreference.value;
     if (id != null) {
       return id;
@@ -44,9 +45,23 @@ class DiagnosticLogging {
           'Failed to send ${entries.length} logs [${utf8.encode(body).lengthInBytes} B] (batch ${entries.hashCode})',
           response.body,
         );
+      } else {
+        return;
       }
     } catch (e, s) {
       logging.severe('Failed to send logs (batch ${entries.hashCode})', e, s);
+    }
+    try {
+      debugPrint(
+        json.encode({
+          'logs': entries,
+          'source': await getClientSource().catchError((_) => 'unknown'),
+          'deviceId': await getDeviceLoggingId(),
+        }),
+      );
+    } catch (e, s) {
+      debugPrint(e.toString());
+      debugPrintStack(stackTrace: s);
     }
   }
 

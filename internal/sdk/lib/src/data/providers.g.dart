@@ -10,8 +10,9 @@ ReclaimDataProvidersResponse _$ReclaimDataProvidersResponseFromJson(Map<String, 
     ReclaimDataProvidersResponse(
       messsage: json['messsage'] as String?,
       isSucces: json['isSucces'] as bool?,
-      providers:
-          json['providers'] == null ? null : ReclaimDataProviders.fromJson(json['providers'] as Map<String, dynamic>),
+      providers: json['providers'] == null
+          ? null
+          : ReclaimDataProviders.fromJson(json['providers'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ReclaimDataProvidersResponseToJson(ReclaimDataProvidersResponse instance) => <String, dynamic>{
@@ -22,8 +23,9 @@ Map<String, dynamic> _$ReclaimDataProvidersResponseToJson(ReclaimDataProvidersRe
 
 ReclaimDataProviders _$ReclaimDataProvidersFromJson(Map<String, dynamic> json) => ReclaimDataProviders(
   appId: json['appId'] as String?,
-  httpProvider:
-      (json['httpProvider'] as List<dynamic>?)?.map((e) => HttpProvider.fromJson(e as Map<String, dynamic>)).toList(),
+  httpProvider: (json['httpProvider'] as List<dynamic>?)
+      ?.map((e) => HttpProvider.fromJson(e as Map<String, dynamic>))
+      .toList(),
 );
 
 Map<String, dynamic> _$ReclaimDataProvidersToJson(ReclaimDataProviders instance) => <String, dynamic>{
@@ -49,6 +51,7 @@ HttpProvider _$HttpProviderFromJson(Map<String, dynamic> json) => HttpProvider(
   additionalClientOptions: json['additionalClientOptions'] as Map<String, dynamic>?,
   verificationType: json['verificationType'] as String?,
   pageTitle: json['pageTitle'] as String?,
+  version: json['version'],
   requestData:
       (json['requestData'] as List<dynamic>?)
           ?.map((e) => DataProviderRequest.fromJson(e as Map<String, dynamic>))
@@ -77,11 +80,17 @@ Map<String, dynamic> _$HttpProviderToJson(HttpProvider instance) => <String, dyn
   'pageTitle': instance.pageTitle,
   'requestData': instance.requestData,
   'useIncognitoWebview': instance.useIncognitoWebview,
+  'version': instance.version,
 };
 
 const _$ProviderTypeEnumMap = {ProviderType.PRIVATE: 'PRIVATE', ProviderType.PUBLIC: 'PUBLIC'};
 
-const _$InjectionTypeEnumMap = {InjectionType.MSWJS: 'MSWJS', InjectionType.NONE: 'NONE', InjectionType.XHOOK: 'XHOOK'};
+const _$InjectionTypeEnumMap = {
+  InjectionType.MSWJS: 'MSWJS',
+  InjectionType.HAWKEYE: 'HAWKEYE',
+  InjectionType.NONE: 'NONE',
+  InjectionType.XHOOK: 'XHOOK',
+};
 
 BodySniff _$BodySniffFromJson(Map<String, dynamic> json) =>
     BodySniff(enabled: json['enabled'] as bool?, template: json['template'] as String?);
@@ -108,6 +117,9 @@ DataProviderRequest _$DataProviderRequestFromJson(Map<String, dynamic> json) => 
   bodySniff: json['bodySniff'] == null ? null : BodySniff.fromJson(json['bodySniff'] as Map<String, dynamic>),
   requestHash: json['requestHash'] as String?,
   expectedPageUrl: json['expectedPageUrl'] as String?,
+  credentials: json['credentials'] == null
+      ? WebCredentialsType.INCLUDE
+      : WebCredentialsType.fromString(json['credentials'] as String?),
 );
 
 Map<String, dynamic> _$DataProviderRequestToJson(DataProviderRequest instance) => <String, dynamic>{
@@ -117,6 +129,7 @@ Map<String, dynamic> _$DataProviderRequestToJson(DataProviderRequest instance) =
   'responseMatches': instance.responseMatches,
   'responseRedactions': instance.responseRedactions,
   'bodySniff': instance.bodySniff,
+  'credentials': _$WebCredentialsTypeEnumMap[instance.credentials]!,
   'requestHash': instance.requestHash,
   'expectedPageUrl': instance.expectedPageUrl,
 };
@@ -124,6 +137,12 @@ Map<String, dynamic> _$DataProviderRequestToJson(DataProviderRequest instance) =
 const _$UrlTypeEnumMap = {UrlType.REGEX: 'REGEX', UrlType.CONSTANT: 'CONSTANT', UrlType.TEMPLATE: 'TEMPLATE'};
 
 const _$RequestMethodTypeEnumMap = {RequestMethodType.GET: 'GET', RequestMethodType.POST: 'POST'};
+
+const _$WebCredentialsTypeEnumMap = {
+  WebCredentialsType.OMIT: 'omit',
+  WebCredentialsType.SAME_ORIGIN: 'same-origin',
+  WebCredentialsType.INCLUDE: 'include',
+};
 
 ResponseMatch _$ResponseMatchFromJson(Map<String, dynamic> json) => ResponseMatch(
   value: json['value'] as String?,
@@ -151,7 +170,7 @@ Map<String, dynamic> _$ResponseRedactionToJson(ResponseRedaction instance) => <S
   'xPath': instance.xPath,
   'jsonPath': instance.jsonPath,
   'regex': instance.regex,
-  if (instance.hash case final value?) 'hash': value,
+  'hash': ?instance.hash,
 };
 
 const _$MatchTypeEnumMap = {MatchType.GREEDY: 'greedy', MatchType.LAZY: 'lazy'};

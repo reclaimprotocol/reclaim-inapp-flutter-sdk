@@ -21,6 +21,7 @@ class ClaimCreationRequest {
   final ExtractedData extractedData;
   final AttestorClaimOptions createClaimOptions;
   final DataProviderRequest requestData;
+  final Duration claimCreationTimeoutDuration;
 
   String get hostUrl {
     String url = url_utils.extractHost(extractedData.url);
@@ -40,6 +41,7 @@ class ClaimCreationRequest {
     required this.extractedData,
     required this.createClaimOptions,
     required this.requestData,
+    required this.claimCreationTimeoutDuration,
   });
 
   Map<String, dynamic> get additionalClientOptions {
@@ -65,6 +67,7 @@ class ClaimCreationRequest {
     required DataProviderRequest requestData,
     String? geoLocation,
     bool isRequestFromProviderScript = false,
+    required Duration claimCreationTimeoutDuration,
   }) {
     final logger = logging.child('ClaimCreationRequest.${requestData.requestIdentifier}');
 
@@ -120,9 +123,10 @@ class ClaimCreationRequest {
         },
         // These will be provided to the Witness SDK by the witness webview
         // through RPC. Below values are placeholders.
-        responseRedactions: requestData.responseRedactions ?? const [],
-        responseMatches: requestData.responseMatches ?? const [],
+        responseRedactions: requestData.responseRedactions,
+        responseMatches: requestData.responseMatches,
       ),
+      claimCreationTimeoutDuration: claimCreationTimeoutDuration,
     );
   }
 
@@ -138,6 +142,7 @@ class ClaimCreationRequest {
     DataProviderRequest? requestData,
     ExtractedData? extractedData,
     AttestorClaimOptions? createClaimOptions,
+    Duration? claimCreationTimeoutDuration,
   }) {
     return ClaimCreationRequest._(
       appId: appId ?? this.appId,
@@ -151,6 +156,7 @@ class ClaimCreationRequest {
       requestData: requestData ?? this.requestData,
       extractedData: extractedData ?? this.extractedData,
       createClaimOptions: createClaimOptions ?? this.createClaimOptions,
+      claimCreationTimeoutDuration: claimCreationTimeoutDuration ?? this.claimCreationTimeoutDuration,
     );
   }
 
@@ -196,11 +202,14 @@ class ClaimCreationRequest {
       template: requestTemplate,
       parameters: initialWitnessParams,
     );
-    List<String?> requestBodyParamValues =
-        RegExp(requestBodyRegex)
-            .firstMatch(proofData['requestBody'])!
-            .groups(List<int>.generate(requestBodyParamKeys.length, (i) => i + 1))
-            .toList();
+    final log = logging.child('extractRequestBodyTemplateParams');
+    log.debug(
+      'request-url: ${dataRequest.url}, caught-url: ${proofData['url']}, requestBodyRegex: $requestBodyRegex, requestBody: ${json.encode(proofData['requestBody'])}',
+    );
+    List<String?> requestBodyParamValues = RegExp(requestBodyRegex)
+        .firstMatch(proofData['requestBody'])!
+        .groups(List<int>.generate(requestBodyParamKeys.length, (i) => i + 1))
+        .toList();
     requestBodyParamKeys.asMap().forEach((key, value) {
       params[value] = requestBodyParamValues[key]!;
     });

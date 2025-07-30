@@ -6,16 +6,18 @@ import 'package:flutter/material.dart';
 import 'package:simple_shimmer/simple_shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../assets/assets.dart';
 import '../../constants.dart';
 import '../../controller.dart';
 import '../../data/data.dart';
 import '../../logging/logging.dart';
 import '../../ui/claim_creation_webview/view_model.dart';
+import '../../usecase/login_detection.dart';
+import '../../utils/observable_notifier.dart';
 import '../../utils/url.dart';
 import '../animated_icon/check.dart';
 import '../claim_creation/claim_creation.dart';
 import '../claim_creation/trigger_indicator.dart';
+import '../loading/shimmer_shader.dart';
 import '../widgets.dart';
 import 'controller.dart';
 import 'live_background.dart';
@@ -63,7 +65,7 @@ class _VerificationReviewState extends State<VerificationReview> {
         IgnorePointer(
           ignoring: !isEffectivelyVisible,
           child: AnimatedOpacity(
-            duration: Durations.medium1,
+            duration: Durations.extralong4,
             opacity: isEffectivelyVisible ? 1 : 0,
             curve: Curves.fastEaseInToSlowEaseOut,
             child: VerificationReviewPage(key: verificationReviewPageKey),
@@ -170,57 +172,29 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
   Widget build(BuildContext context) {
     final value = controller.value;
 
-    final isPageLoading = webClientViewModel.value.isLoading;
-
     final providerData = value.httpProvider;
-    final hasVerifiedAtleastOneClaim = value.hasVerifiedAtleastOneClaim;
 
-    final itemAlignment = ItemAlignment.start;
+    final itemAlignment = ItemAlignment.center;
 
     final shimmerTheme = SimpleShimmerTheme.of(context);
-
-    final appInfoTitleTextStyle = TextStyle(
-      fontWeight: FontWeight.w900,
-      height: 1.2,
-      fontSize: 22,
-      color: Colors.black,
-      fontFamily: $ReclaimFont.inter.description.name,
-    );
 
     return SimpleShimmerTheme(
       data: shimmerTheme.copyWith(decoration: shimmerTheme.decoration.copyWith(borderRadius: _borderRadius)),
       child: VerificationReviewPageSurface(
         alignment: itemAlignment,
         children: [
+          const SizedBox(height: 16.0),
           _AppProviderIconsBar(
             key: _animatedAppProviderIconsBarKey,
             itemAlignment: itemAlignment,
             appInfo: appInfo,
             providerData: providerData,
-            hasVerifiedAtleastOneClaim: hasVerifiedAtleastOneClaim,
           ),
-          const SizedBox(height: 8.0),
-          AnimatedSwitcher(
-            key: ValueKey('key-review-title'),
-            duration: Durations.short3,
-            switchInCurve: Curves.easeIn,
-            switchOutCurve: Curves.easeOut,
-            child: Row(
-              mainAxisAlignment: itemAlignment.isStarting ? MainAxisAlignment.start : MainAxisAlignment.center,
-              children: [
-                Text(
-                  key: ValueKey('key-has-app-info-${appInfo != null}'),
-                  appInfo == null ? 'Starting verification' : 'Sharing with ${appInfo?.appName ?? 'App'}',
-                  textAlign: itemAlignment.isStarting ? TextAlign.start : TextAlign.center,
-                  style: appInfoTitleTextStyle,
-                ),
-              ],
-            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: _VerificationStatusMessage(itemAlignment: itemAlignment, appInfo: appInfo),
           ),
-          const SizedBox(height: 20.0),
-          _VerificationStatusMessage(itemAlignment: itemAlignment),
-          Divider(),
-          SizedBox(height: 10),
+          const SizedBox(height: 16.0),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -233,12 +207,16 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
                     duration: Durations.medium1,
                     switchInCurve: Curves.easeIn,
                     switchOutCurve: Curves.easeOut,
-                    child:
-                        providerData == null ||
-                                (isPageLoading && value.claims.every((e) => e.isIdle)) ||
-                                paramInfo.params.isEmpty
-                            ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [CupertinoActivityIndicator()])
-                            : AnimatedOpacity(
+                    child: providerData == null || value.claims.every((e) => e.isIdle) || paramInfo.params.isEmpty
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (!value.hasError)
+                                Padding(padding: const EdgeInsets.only(top: 32.0), child: CupertinoActivityIndicator()),
+                            ],
+                          )
+                        : FontsLoaded(
+                            child: AnimatedOpacity(
                               duration: Durations.medium1,
                               curve: Curves.easeIn,
                               opacity: value.hasError ? 0.6 : 1,
@@ -249,12 +227,13 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
                                 shrinkWrap: false,
                               ),
                             ),
+                          ),
                   ),
                 ),
                 Flexible(
                   flex: 0,
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 20.0, bottom: 20.0),
+                    padding: const EdgeInsets.only(top: 0.0, bottom: 20.0),
                     child: _ActionView(isFinished: value.isFinished, hasError: value.hasError),
                   ),
                 ),
@@ -268,9 +247,10 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
 }
 
 class _VerificationStatusMessage extends StatefulWidget {
-  const _VerificationStatusMessage({required this.itemAlignment});
+  const _VerificationStatusMessage({required this.itemAlignment, required this.appInfo});
 
   final ItemAlignment itemAlignment;
+  final AppInfo? appInfo;
 
   @override
   State<_VerificationStatusMessage> createState() => _VerificationStatusMessageState();
@@ -297,17 +277,64 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
 
   String get currentLoadingText => _loadingTextsQueue.first();
 
-  late final AnimationController _controller;
-  late final Animation<double> _animation;
+  final List<StreamSubscription> _subscriptions = [];
+
+  late final ClaimCreationWebClientViewModel webViewModel;
 
   @override
   void initState() {
     super.initState();
     controller = ClaimCreationController.readOf(context);
     verificationController = VerificationController.readOf(context);
-    _controller = AnimationController(duration: const Duration(milliseconds: 1200), vsync: this);
+    webViewModel = ClaimCreationWebClientViewModel.readOf(context);
+    _subscriptions.add(webViewModel.changesStream.listen(_claimCreationChange));
+    _onWebPageUpdate();
+  }
 
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  Timer? _isLoginEvaluationTimer;
+
+  bool _maybeRequiresLogin = false;
+
+  void _claimCreationChange(ChangedValues<ClaimCreationWebState> changes) {
+    final (oldValue, value) = changes.record;
+    if (oldValue == value) return;
+    if (oldValue?.webAppBarValue == value.webAppBarValue) return;
+    final url = value.webAppBarValue.url;
+    if (value.isLoading) return;
+    if (url.isEmpty) return;
+    _onWebPageUpdate();
+  }
+
+  void _onWebPageUpdate() {
+    final log = logging.child('onWebPageUpdate');
+
+    _isLoginEvaluationTimer?.cancel();
+    _isLoginEvaluationTimer = Timer(Durations.extralong4, () async {
+      if (!mounted) return;
+      if (!canStartWebClient) {
+        // provider is not set yet, so we can't evaluate if current page is login
+        setState(() {
+          _maybeRequiresLogin = true;
+        });
+        return;
+      }
+
+      bool maybeRequiresLogin = false;
+      final loginDetection = LoginDetection.readOf(context);
+      try {
+        if (await webViewModel.maybeCurrentPageRequiresLogin(loginDetection)) {
+          maybeRequiresLogin = true;
+        }
+      } catch (e, s) {
+        log.severe('Failed to evaluate if current page is login', e, s);
+      }
+
+      if (mounted) {
+        setState(() {
+          _maybeRequiresLogin = maybeRequiresLogin;
+        });
+      }
+    });
   }
 
   void _startLoadingTextsTimer() {
@@ -315,24 +342,19 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
     if (t != null && t.isActive) return;
 
     _loadingTextsTimer = Timer.periodic(Duration(seconds: 3), _onTimerTick);
-    Future.microtask(() {
-      if (!mounted) return;
-
-      _controller.reset();
-      _controller.repeat();
-    });
   }
 
   void _stopLoadingTextsTimer() {
-    _controller.stop();
-    _controller.reset();
     _loadingTextsTimer?.cancel();
     _loadingTextsTimer = null;
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
     _loadingTextsTimer?.cancel();
     super.dispose();
   }
@@ -353,98 +375,118 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
 
   final reviewSubtitleKey = GlobalKey(debugLabel: 'reviewSubtitleKey');
 
+  bool get canStartWebClient =>
+      verificationController.value.userScripts != null && verificationController.value.provider != null;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     final value = controller.value;
 
-    String subtitle;
+    final primaryColor = Color(0xFF0000EE); // theme.colorScheme.primary;
+    final secondaryColor = Color(0xFF0000EE).withValues(alpha: 0.4); // theme.colorScheme.secondary;
 
-    final canStartWebClient = verificationController.value.userScripts != null;
+    final TextSpan subtitle;
 
     bool isShowingLoadingText = false;
 
     if (value.hasError) {
       final providerErrorMessage = value.providerError?.message?.trim();
-      subtitle =
-          providerErrorMessage != null && providerErrorMessage.isNotEmpty
-              ? providerErrorMessage
-              : 'Something went wrong';
+      final clientErrorMessage = value.clientError?.message?.toString().trim();
+      if (providerErrorMessage != null && providerErrorMessage.isNotEmpty) {
+        subtitle = TextSpan(text: providerErrorMessage);
+      } else if (clientErrorMessage != null && clientErrorMessage.isNotEmpty) {
+        subtitle = TextSpan(text: clientErrorMessage);
+      } else {
+        subtitle = TextSpan(text: 'Something went wrong');
+      }
     } else if (value.isFinished) {
-      subtitle = 'You are sharing';
+      subtitle = TextSpan(
+        text: 'Sharing with ',
+        children: [
+          TextSpan(
+            text: widget.appInfo?.appName ?? 'App',
+            style: TextStyle(
+              color: primaryColor,
+              fontWeight: FontWeight.w700,
+              fontVariations: [FontVariation.weight(700)],
+            ),
+          ),
+        ],
+      );
     } else if (!canStartWebClient) {
-      subtitle = 'Getting ready..';
+      subtitle = const TextSpan(text: 'Getting ready..');
+    } else if (_maybeRequiresLogin && value.isIdle) {
+      subtitle = TextSpan(text: 'Getting ready to verify');
     } else {
       isShowingLoadingText = true;
 
       _startLoadingTextsTimer();
 
       // page loading or proving or waiting for continuation
-      subtitle = currentLoadingText;
+      subtitle = TextSpan(text: currentLoadingText);
     }
 
     if (!isShowingLoadingText) {
       _stopLoadingTextsTimer();
     }
 
+    final isShimmerAnimationEnabled = !value.hasError && !value.isFinished;
+
     const int lines = 2;
 
-    final primaryColor = Color(0xFF0000EE); // theme.colorScheme.primary;
-    final secondaryColor = Color(0xFF0000EE).withValues(alpha: 0.4); // theme.colorScheme.secondary;
+    const fontSize = 20.0;
+    const lineHeight = 1.2;
 
     return SizedBox(
-      height: 18 * 1.3 * lines,
-      child: AnimatedSwitcher(
-        key: reviewSubtitleKey,
-        duration: Durations.long2,
-        switchInCurve: Curves.easeIn,
-        switchOutCurve: Curves.easeOut,
-        child: Column(
-          key: ValueKey('key-review-subtitle-$subtitle'),
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: widget.itemAlignment.isStarting ? CrossAxisAlignment.start : CrossAxisAlignment.stretch,
-          children: [
-            Flexible(
-              child: Row(
-                mainAxisAlignment: widget.itemAlignment.isStarting ? MainAxisAlignment.start : MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: AnimatedBuilder(
-                      animation: _animation,
-                      builder: (context, child) {
-                        return ShaderMask(
-                          shaderCallback: (bounds) {
-                            final offset = _animation.value * 2;
-                            return LinearGradient(
-                              colors: [primaryColor, secondaryColor, primaryColor, primaryColor],
-                              stops: [-1, -0.5, 0, 1].map((e) => e + offset).toList(),
-                            ).createShader(bounds);
-                          },
-                          child: child,
-                        );
-                      },
-                      child: Text(
-                        subtitle,
-                        textAlign: widget.itemAlignment.isStarting ? TextAlign.start : TextAlign.center,
-                        style: theme.textTheme.titleMedium?.merge(
-                          TextStyle(
-                            fontWeight: FontWeight.w900,
-                            color: value.hasError ? theme.colorScheme.error : const Color.fromARGB(221, 0, 10, 100),
-                            fontSize: 18,
-                            height: 1.2,
-                            fontVariations: value.hasError ? [FontVariation.weight(600)] : null,
+      height: fontSize * lineHeight * lines,
+      child: FontsLoaded(
+        child: AnimatedSwitcher(
+          key: reviewSubtitleKey,
+          duration: Durations.long2,
+          switchInCurve: Curves.easeIn,
+          switchOutCurve: Curves.easeOut,
+          child: Column(
+            key: ValueKey('key-review-subtitle-$subtitle'),
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: widget.itemAlignment.isStarting ? CrossAxisAlignment.start : CrossAxisAlignment.stretch,
+            children: [
+              Flexible(
+                child: Row(
+                  mainAxisAlignment: widget.itemAlignment.isStarting
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: ShimmerShader(
+                        animate: isShimmerAnimationEnabled,
+                        primaryColor: primaryColor,
+                        secondaryColor: secondaryColor,
+                        child: Text.rich(
+                          subtitle,
+                          textAlign: widget.itemAlignment.isStarting ? TextAlign.start : TextAlign.center,
+                          style: theme.textTheme.titleMedium?.merge(
+                            TextStyle(
+                              color: value.hasError ? theme.colorScheme.error : Colors.black,
+                              fontSize: fontSize,
+                              height: lineHeight,
+                              fontWeight: value.hasError ? FontWeight.bold : FontWeight.w500,
+                              fontVariations: value.hasError
+                                  ? [FontVariation.weight(700)]
+                                  : [FontVariation.weight(500)],
+                            ),
                           ),
+                          maxLines: lines,
                         ),
-                        maxLines: lines,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -457,20 +499,16 @@ class _AppProviderIconsBar extends StatelessWidget {
     required this.itemAlignment,
     required this.appInfo,
     required this.providerData,
-    required this.hasVerifiedAtleastOneClaim,
   });
 
   final ItemAlignment itemAlignment;
   final AppInfo? appInfo;
   final HttpProvider? providerData;
-  final bool hasVerifiedAtleastOneClaim;
 
   @override
   Widget build(BuildContext context) {
-    final defaultIconSize = 30.0;
-
-    final double logoSize = 60.0;
-    final verifiedTickAdjustment = 6.0;
+    final double logoSize = 70.0;
+    final double defaultIconSize = logoSize;
 
     final appImage = appInfo?.appImage;
     final providerData = this.providerData;
@@ -482,17 +520,16 @@ class _AppProviderIconsBar extends StatelessWidget {
       borderRadius: _borderRadius,
       child: AnimatedSwitcher(
         duration: Durations.medium1,
-        child:
-            appImage != null && appImage.isNotEmpty
-                ? LogoIcon(logoUrl: appImage, size: logoSize, borderRadius: _borderRadius)
-                : SimpleShimmer(height: logoSize, width: logoSize),
+        child: appImage != null && appImage.isNotEmpty
+            ? LogoIcon(logoUrl: appImage, size: logoSize, borderRadius: _borderRadius)
+            : SimpleShimmer(height: logoSize, width: logoSize),
       ),
     );
 
     final isStartAligned = itemAlignment.isStarting;
 
-    final movementTransitionDuration = Durations.medium1;
-    final maxWidth = (logoSize * 2) + defaultIconSize + (verifiedTickAdjustment * (isStartAligned ? 1 : 2));
+    final movementTransitionDuration = Durations.long4;
+    final maxWidth = (logoSize * 2) + defaultIconSize + (isStartAligned ? 1 : 2);
 
     return Row(
       mainAxisAlignment: isStartAligned ? MainAxisAlignment.start : MainAxisAlignment.center,
@@ -500,17 +537,16 @@ class _AppProviderIconsBar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: logoSize + verifiedTickAdjustment, maxWidth: maxWidth),
+          constraints: BoxConstraints(maxHeight: logoSize, maxWidth: maxWidth),
           child: Stack(
             alignment: AlignmentDirectional.center,
             fit: StackFit.expand,
             children: [
               AnimatedPositioned(
-                top: verifiedTickAdjustment,
-                right:
-                    providerData == null
-                        ? (isStartAligned ? maxWidth - logoSize : ((maxWidth / 2) - (logoSize / 2)))
-                        : verifiedTickAdjustment,
+                top: 0,
+                right: providerData == null
+                    ? (isStartAligned ? maxWidth - logoSize : ((maxWidth / 2) - (logoSize / 2)))
+                    : 0,
                 height: logoSize,
                 width: logoSize,
                 curve: Curves.fastEaseInToSlowEaseOut,
@@ -518,8 +554,8 @@ class _AppProviderIconsBar extends StatelessWidget {
                 child: applicationIcon,
               ),
               AnimatedPositioned(
-                top: 6,
-                left: isStartAligned ? 0 : verifiedTickAdjustment,
+                top: 0,
+                left: 0,
                 height: logoSize,
                 width: logoSize + defaultIconSize,
                 curve: Curves.easeIn,
@@ -528,39 +564,62 @@ class _AppProviderIconsBar extends StatelessWidget {
                   duration: movementTransitionDuration,
                   switchInCurve: Curves.easeIn,
                   switchOutCurve: Curves.easeOut,
-                  child:
-                      providerData == null
-                          ? SizedBox(height: logoSize)
-                          : Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Tooltip(
-                                message: providerData.name ?? 'Provider',
-                                child: LogoIcon(
-                                  logoUrl: providerData.logoUrl,
-                                  size: logoSize,
-                                  borderRadius: _borderRadius,
-                                ),
+                  child: providerData == null
+                      ? SizedBox(height: logoSize)
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Tooltip(
+                              message: providerData.name ?? 'Provider',
+                              child: LogoIcon(
+                                logoUrl: providerData.logoUrl,
+                                size: logoSize,
+                                borderRadius: _borderRadius,
                               ),
-                              Icon(Icons.arrow_forward_rounded, color: Colors.black, size: defaultIconSize),
-                            ],
-                          ),
-                ),
-              ),
-              AnimatedAlign(
-                alignment: AlignmentDirectional.topEnd,
-                curve: Curves.easeIn,
-                duration: movementTransitionDuration,
-                child: AnimatedOpacity(
-                  opacity: hasVerifiedAtleastOneClaim ? 1 : 0,
-                  duration: Durations.medium1,
-                  child: VerifiedIcon(),
+                            ),
+                            _AppVerificationTransferIcon(size: defaultIconSize),
+                          ],
+                        ),
                 ),
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AppVerificationTransferIcon extends StatelessWidget {
+  const _AppVerificationTransferIcon({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final controller = ClaimCreationController.of(context);
+    final claimCreationValue = controller.value;
+
+    if (!claimCreationValue.isFinished) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: size),
+        child: ClaimTriggerIndicator(
+          key: ValueKey('iw-progress-indicator'),
+          color: claimCreationValue.hasError ? colorScheme.error : colorScheme.primary,
+          progress: claimCreationValue.progress ?? 0.0,
+          padding: EdgeInsetsDirectional.symmetric(horizontal: 4),
+          thickness: 3,
+        ),
+      );
+    }
+    final iconSize = size / 1.6;
+    final horizontalPadding = (size - iconSize) / 2;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: Icon(Icons.arrow_forward_rounded, color: Colors.black, size: iconSize),
     );
   }
 }
@@ -604,24 +663,28 @@ class _TermsOfUseNotice extends StatelessWidget {
       duration: Durations.short3,
       curve: Curves.easeIn,
       opacity: isVisible ? 1 : 0,
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(text: 'By continuing, you agree to these '),
-            TextSpan(
-              text: 'Terms of Service',
-              recognizer: TapGestureRecognizer()..onTap = () => _onTermsOfUsePressed(context, TermsType.termsOfService),
-              style: TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
-            ),
-            TextSpan(text: ' and '),
-            TextSpan(
-              text: 'Privacy Policy',
-              recognizer: TapGestureRecognizer()..onTap = () => _onTermsOfUsePressed(context, TermsType.privacyPolicy),
-              style: TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
-            ),
-          ],
+      child: FontsLoaded(
+        child: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: 'By continuing, you agree to these '),
+              TextSpan(
+                text: 'Terms of Service',
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () => _onTermsOfUsePressed(context, TermsType.termsOfService),
+                style: TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
+              ),
+              TextSpan(text: ' and '),
+              TextSpan(
+                text: 'Privacy Policy',
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () => _onTermsOfUsePressed(context, TermsType.privacyPolicy),
+                style: TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
+              ),
+            ],
+          ),
+          textAlign: isLargeScreen ? TextAlign.center : TextAlign.start,
         ),
-        textAlign: isLargeScreen ? TextAlign.center : TextAlign.start,
       ),
     );
   }
@@ -779,7 +842,11 @@ class _DataSharedViewState extends State<_DataSharedView> {
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [Flexible(child: DataSharedCheckAnimatedIcon(key: tickKey, height: widget.height))],
+        children: [
+          Flexible(
+            child: DataSharedCheckAnimatedIcon(key: tickKey, height: widget.height),
+          ),
+        ],
       ),
     );
   }
@@ -818,7 +885,7 @@ class _ErrorWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = ClaimCreationController.of(context);
-    final providerError = controller.value.providerError;
+    final clientError = controller.value.providerError ?? controller.value.clientError;
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -834,7 +901,7 @@ class _ErrorWidget extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            if (providerError == null)
+            if (clientError == null)
               Expanded(
                 child: ActionButton(
                   backgroundColor: colorScheme.error,
@@ -863,7 +930,7 @@ class _ErrorWidget extends StatelessWidget {
                   onPressed: () {
                     Navigator.of(context).pop();
                     final options = ClaimCreationUIDelegateOptions.of(context, listen: false);
-                    options?.onException(providerError);
+                    options?.onException(clientError);
                   },
                   child: Stack(
                     alignment: Alignment.center,

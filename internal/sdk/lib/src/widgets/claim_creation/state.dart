@@ -9,6 +9,7 @@ import '../../logging/logging.dart';
 import '../../utils/chains/me_chain.dart';
 import '../../utils/params.dart';
 import '../../utils/provider_performance_report.dart';
+import '../../utils/result.dart';
 import 'claim_creation.dart';
 
 class ClaimCreationErrorDetails {
@@ -65,10 +66,9 @@ class ClaimStatus {
       stepInformation: stepInformation ?? this.stepInformation,
       proofs: proofs ?? this.proofs,
       performanceReports: performanceReports ?? this.performanceReports,
-      attestorLoadingProgress:
-          (stepInformation != null && stepInformation.isNotEmpty)
-              ? 1.0
-              : attestorLoadingProgress ?? this.attestorLoadingProgress,
+      attestorLoadingProgress: (stepInformation != null && stepInformation.isNotEmpty)
+          ? 1.0
+          : attestorLoadingProgress ?? this.attestorLoadingProgress,
     );
   }
 
@@ -166,6 +166,9 @@ class ClaimCreationControllerState {
   final bool hasRequestedRetry;
   final bool didNotifySessionAsRetry;
   final bool canExpectManyClaims;
+  final ReclaimException? clientError;
+
+  /// An exception raised by provider script that halts any and all verification & proof generation activity.
   final ReclaimVerificationProviderScriptException? providerError;
 
   const ClaimCreationControllerState({
@@ -177,6 +180,7 @@ class ClaimCreationControllerState {
     this.hasRequestedRetry = false,
     this.didNotifySessionAsRetry = false,
     this.providerError,
+    this.clientError,
     this.canExpectManyClaims = false,
   });
 
@@ -221,13 +225,28 @@ class ClaimCreationControllerState {
     return providerError != null;
   }
 
+  bool get hasClientError {
+    return clientError != null;
+  }
+
   bool get hasError {
     if (hasProviderScriptError) {
+      return true;
+    }
+    if (hasClientError) {
       return true;
     }
     return claimsByRequest.values.any((status) {
       return status.error != null;
     });
+  }
+
+  String debugErrorDetails() {
+    return {
+      'provider_script_error': hasProviderScriptError,
+      'client_error': hasClientError,
+      'claim_errors': claimsByRequest.values.map((e) => e.error),
+    }.toString();
   }
 
   double? get progress {
@@ -304,6 +323,7 @@ class ClaimCreationControllerState {
     bool? didNotifySessionAsRetry,
     bool? canExpectManyClaims,
     ReclaimVerificationProviderScriptException? providerError,
+    Optional<ReclaimException?> clientError = const Optional<ReclaimException?>.none(),
   }) {
     return ClaimCreationControllerState(
       httpProvider: httpProvider ?? this.httpProvider,
@@ -316,6 +336,7 @@ class ClaimCreationControllerState {
       didNotifySessionAsRetry: didNotifySessionAsRetry ?? this.didNotifySessionAsRetry,
       canExpectManyClaims: canExpectManyClaims ?? this.canExpectManyClaims,
       providerError: providerError ?? this.providerError,
+      clientError: clientError.map(value: (value) => value, none: () => this.clientError),
     );
   }
 }

@@ -76,7 +76,7 @@ class SessionManager {
         sessionId: sessionId,
         providerId: providerId,
         logType: 'RECLAIM_EXCEPTION',
-        metadata: {'exception': exception.toString()},
+        metadata: {'exception': exception},
       ),
     ]);
   }
@@ -127,6 +127,42 @@ class SessionManager {
       ),
       ReclaimSession.updateSession(sessionId, SessionStatus.PROOF_MANUAL_VERIFICATION_SUBMITED),
     ]);
+  }
+
+  Future<void> onLoginDetected({
+    required String applicationId,
+    required String sessionId,
+    required String providerId,
+    required String url,
+  }) async {
+    await ReclaimSession.sendLogs(
+      appId: applicationId,
+      sessionId: sessionId,
+      providerId: providerId,
+      logType: 'LOGIN_DETECTED',
+      metadata: {'url': url},
+    );
+  }
+
+  Future<void> onLoginRequiredDetected({
+    required String applicationId,
+    required String sessionId,
+    required String providerId,
+    required String url,
+    required bool hasLoginRelatedTokenInUrl,
+    required bool? hasLoginRelatedElementInPage,
+  }) async {
+    await ReclaimSession.sendLogs(
+      appId: applicationId,
+      sessionId: sessionId,
+      providerId: providerId,
+      logType: 'LOGIN_REQUIRED_DETECTED',
+      metadata: {
+        'url': url,
+        'hasLoginRelatedTokenInUrl': hasLoginRelatedTokenInUrl,
+        'hasLoginRelatedElementInPage': hasLoginRelatedElementInPage,
+      },
+    );
   }
 
   Uri getDefaultCallbackUrl(String sessionId) {

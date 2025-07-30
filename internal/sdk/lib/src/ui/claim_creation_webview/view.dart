@@ -1,20 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:retry/retry.dart';
 
 import '../../../attestor.dart';
 import '../../controller.dart';
 import '../../data/http_request_log.dart';
-import '../../data/login_message.dart';
 import '../../data/manual_review.dart';
 import '../../data/providers.dart';
 import '../../exception/exception.dart';
 import '../../logging/logging.dart';
 import '../../repository/feature_flags.dart';
 import '../../services/cookie_service.dart';
-import '../../utils/detection/login.dart';
+import '../../usecase/login_detection.dart';
 import '../../utils/location.dart';
 import '../../utils/observable_notifier.dart';
 import '../../utils/sanitize.dart';
@@ -24,8 +25,8 @@ import '../../utils/webview_state_mixin.dart';
 import '../../widgets/action_bar.dart';
 import '../../widgets/claim_creation/claim_creation.dart';
 import '../../widgets/feature_flags.dart';
-import '../../widgets/verification_review/controller.dart';
 import '../../widgets/verification_review/verification_review.dart';
+import '../dev/dev.dart';
 import 'manual_review/manual_review.dart';
 import 'view_model.dart';
 
@@ -43,30 +44,27 @@ class ClaimCreationWebClient extends StatefulWidget {
 class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     with WebViewCompanionMixin<ClaimCreationWebClient> {
   final List<StreamSubscription> _subscriptions = [];
-  late ManualReviewController _manualReviewController;
+  late final ManualReviewController _manualReviewController = ManualReviewController();
   late ClaimCreationController _claimCreationController;
 
   @override
   void initState() {
     super.initState();
-    _manualReviewController = ManualReviewController();
     _claimCreationController = ClaimCreationController.of(context, listen: false);
     // VerificationController.identity can throw StateError in the beginning, the future that completes with it is [startingSession].
     FeatureFlagsProvider.readAfterSessionStartedOf(context).then((featureFlagProvider) {
       _subscriptions.add(featureFlagProvider.stream(FeatureFlag.isWebInspectable).listen(_onWebViewInspectableChanged));
+      featureFlagProvider.get(FeatureFlag.isWebInspectable).then(_onWebViewInspectableChanged);
+      featureFlagProvider.get(FeatureFlag.sessionNoActivityTimeoutDurationInMins).then(_startNoActivityObserver);
     });
     _subscriptions.add(_claimCreationController.changesStream.listen(_onClaimCreationControllerChanges));
-    _subscriptions.add(
-      VerificationReviewController.readOf(context).changesStream.listen(_onVerificationReviewControllerChanges),
-    );
-    _manualReviewController = ManualReviewController();
     final vm = ClaimCreationWebClientViewModel.readOf(context);
     vm.onUpdateWebView = _onUpdateWebView;
   }
 
   late GlobalKey _webviewKey = GlobalKey();
 
-  void _onUpdateWebView() {
+  Future<void> _onUpdateWebView() async {
     final log = logger.child('onUpdateWebView');
     log.info('updating webview key');
     setState(() {
@@ -76,6 +74,8 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
 
   @override
   void dispose() {
+    _sessionNoActivityObserverTimer?.cancel();
+    _sessionNoActivityObserverTimer = null;
     for (final s in _subscriptions) {
       s.cancel();
     }
@@ -83,7 +83,15 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     super.dispose();
   }
 
+  bool? isInspectablePreference;
+
   void _onWebViewInspectableChanged(bool isInspectable) async {
+    if (mounted) {
+      setState(() {
+        isInspectablePreference = isInspectable;
+      });
+    }
+
     ClaimCreationWebClientViewModel.readOf(context).setWebViewSettings((settings) {
       if (settings.isInspectable != isInspectable) {
         settings.isInspectable = isInspectable;
@@ -170,18 +178,21 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     _hideReviewSheetIfRequired(controller, uri);
   }
 
-  bool _hasWaitedForZKOperatorInit = false;
+  static bool _hasWaitedForZKOperatorInitWithLongDuration = false;
 
-  int _idleWaitDurationInSeconds() {
-    if (!_hasWaitedForZKOperatorInit) {
-      _hasWaitedForZKOperatorInit = true;
-      const estimateZKOperatorInitDuration = 10;
+  int _estimateZKOperatorInitDuration() {
+    if (!_hasWaitedForZKOperatorInitWithLongDuration) {
+      _hasWaitedForZKOperatorInitWithLongDuration = true;
+      // estimate time took to complete download + init on physical device
+      const estimateZKOperatorInitDuration = 4;
 
       return estimateZKOperatorInitDuration;
     } else {
-      return 4;
+      return 2;
     }
   }
+
+  bool _wasPreviouslyLoggedIn = false;
 
   Object? _hideToken;
   void _hideReviewSheetIfRequired(InAppWebViewController controller, WebUri? uri) async {
@@ -191,6 +202,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     _hideToken = token;
     final claimCreationController = ClaimCreationController.of(context, listen: false);
     final vm = ClaimCreationWebClientViewModel.readOf(context);
+    final loginDetection = LoginDetection.readOf(context);
     final url = (uri ?? await controller.getUrl())?.toString();
     log.fine({'url': url, 'isWaitingForContinuation': claimCreationController.value.isWaitingForContinuation});
     if (!claimCreationController.value.isWaitingForContinuation) return;
@@ -203,30 +215,40 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       return;
     }
 
-    if (url != null && (await maybeRequiresLoginInteraction(url, controller))) {
+    if (url != null && (await loginDetection.maybeRequiresLoginInteraction(url, controller))) {
       // Another _hideReviewSheetIfRequired call had been made
       if (_hideToken != token) return;
       log.finest('Closing review sheet because login page');
       requiresUserInteraction(true);
+      _wasPreviouslyLoggedIn = false;
     } else {
-      // The amount of time we take to wait here should be less than the time (6+ seconds) it takes for continue automatically to appear from review sheet.
-      for (var i = 0; i < 3; i++) {
-        final nextLocation = claimCreationController.getNextLocation();
-        if (nextLocation != null) {
-          final fullExpectedUrl = createUrlFromLocation(nextLocation, url);
-          final canContinue = url == null ? true : !isUrlsEqual(url, fullExpectedUrl);
-          if (canContinue) return;
-        }
-
-        // TODO: hide if user interaction is required (from ai suggestion) even if zk operator is not initialized yet
-        await Future.delayed(
-          Duration(seconds: claimCreationController.value.isIdle ? _idleWaitDurationInSeconds() : 5),
-        );
-
-        if (!mounted) return;
-        if (await controller.isLoading()) return;
-        if (!claimCreationController.value.isWaitingForContinuation) return;
+      if (!_wasPreviouslyLoggedIn) {
+        _onActivity();
       }
+      _wasPreviouslyLoggedIn = true;
+      // TODO: hide if user interaction is required (from ai suggestion) even if zk operator is not initialized yet
+      if (claimCreationController.value.isIdle) {
+        // Wait for a few seconds to let any proof generation or js injection activity
+        await Future.delayed(Duration(seconds: 4));
+      } else {
+        for (var i = 0; i < 3; i++) {
+          await Future.delayed(Duration(seconds: _estimateZKOperatorInitDuration()));
+          // exit if proof generation has started
+          if (!claimCreationController.value.isWaitingForContinuation) return;
+        }
+      }
+
+      // The amount of time we take to wait here should be less than the time (6+ seconds) it takes for continue automatically to appear from review sheet.
+      final nextLocation = claimCreationController.getNextLocation();
+      if (nextLocation != null) {
+        final fullExpectedUrl = createUrlFromLocation(nextLocation, url);
+        final canContinue = url == null ? true : !isUrlsEqual(url, fullExpectedUrl);
+        if (canContinue) return;
+      }
+
+      if (!mounted) return;
+      if (await controller.isLoading()) return;
+      if (!claimCreationController.value.isWaitingForContinuation) return;
 
       log.fine('Closing review sheet because no proof generation started. can hide: ${_hideToken == token}');
 
@@ -238,103 +260,14 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     }
   }
 
-  void _onVerificationReviewControllerChanges(ChangedValues<VerificationReviewState> changes) async {
-    if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final (oldValue, value) = changes.record;
-    if (oldValue?.isVisible != value.isVisible && !value.isVisible) {
-      final log = logger.child('_onVerificationReviewControllerChanges');
-      log.info('Verification review controller changed to hidden');
-      final webViewModel = ClaimCreationWebClientViewModel.readOf(context);
-      final isCurrentPageLogin = await webViewModel.isCurrentPageLogin(null);
-      if (!mounted) return;
-      log.info('isCurrentPageLogin: $isCurrentPageLogin');
-      if (isCurrentPageLogin) {
-        _showLoginRequest();
-      } else {
-        messenger.clearSnackBars();
-      }
-    }
-  }
-
-  LoginPromptActionData? _loginPromptMessage;
-
-  void _showLoginRequest() async {
-    final logger = logging.child('ClaimCreationDelegate._showLoginRequest');
-    if (!mounted) return;
-    final actionBarMessenger = ActionBarMessenger.readOf(context);
-    logger.info('actionBarMessenger.hasMessages: ${actionBarMessenger.hasMessages}');
-    try {
-      await Future.delayed(Durations.medium1);
-      if (!mounted) return;
-      logger.info('actionBarMessenger.hasMessages: ${actionBarMessenger.hasMessages}');
-
-      if (_loginPromptMessage == null) {
-        final featureFlags = await FeatureFlagsProvider.readAfterSessionStartedOf(context);
-        try {
-          logger.info('Getting login prompt message');
-          final value = await featureFlags.get(FeatureFlag.loginPromptMessage);
-          logger.info('Fetched login prompt message: ${value.runtimeType} $value');
-          _loginPromptMessage = LoginPromptActionData.fromString(value);
-        } catch (e, s) {
-          logger.severe('Failed to get login prompt message', e, s);
-        }
-      } else {
-        logger.info('Login prompt message already fetched: ${_loginPromptMessage?.message}');
-      }
-
-      actionBarMessenger.show(
-        ActionBarMessage(
-          label: Text(
-            _loginPromptMessage?.message ??
-                'Please login to continue verification. You can check again if you are already logged in.',
-          ),
-          action: ActionBarAction(
-            label: _loginPromptMessage?.ctaLabel ?? "Check Again",
-            onActionPressed: checkAgainAndShowReviewIfRequired,
-          ),
-          rules: const {ActionBarRule.clearAfterLogin},
-        ),
-      );
-    } catch (e, s) {
-      logger.severe('Failed to show login request', e, s);
-    }
-  }
-
-  Future<void> checkAgainAndShowReviewIfRequired() async {
-    final verificationReviewController = VerificationReviewController.readOf(context);
-    final isReviewVisible = verificationReviewController.value.isVisible;
-    if (isReviewVisible) return;
-    if (!mounted) return;
-    final actionBarMessenger = ActionBarMessenger.readOf(context);
-    actionBarMessenger.clear();
-
-    try {
-      // incase snackbar is still shown in the ui
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
-      scaffoldMessenger.clearSnackBars();
-    } catch (e, s) {
-      logging.severe('Failed to clear snack bars', e, s);
-    }
-
-    // TODO: This right now doesn't send feedback to ai nor does it uses ai for login detection. Replace when AI can use this to take feedback.
-    final isLoginPage = await ClaimCreationWebClientViewModel.readOf(context).isCurrentPageLogin(null);
-    if (isLoginPage) {
-      _showLoginRequest();
-      return;
-    }
-
-    verificationReviewController.setIsVisible(true);
-  }
-
   void _onWebViewCreated(InAppWebViewController controller) {
     try {
+      logger.info('onWebViewCreated');
       final vm = ClaimCreationWebClientViewModel.readOf(context);
-      logger.fine('onWebViewCreated');
       _setJSHandlers(controller);
-      logger.debug('added js handlers');
+      logger.info('added js handlers');
       vm.setController(controller);
-      logger.debug('set controller');
+      logger.info('set controller');
     } catch (e, s) {
       logger.severe('Failed to set controller', e, s);
     }
@@ -366,6 +299,8 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
 
   late final _webviewInitializationDelay = Future.delayed(const Duration(milliseconds: 100));
 
+  bool? _wasInitializedWithIncognito;
+
   @override
   Widget build(BuildContext context) {
     return ManualReviewObserver(
@@ -376,8 +311,24 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
           // without this, the webview crashes on react native inapp sdk.
           future: _webviewInitializationDelay,
           builder: (context, asyncSnapshot) {
+            final settings = defaultWebViewSettings.copy();
+            final controller = VerificationController.of(context);
+            final provider = controller.value.provider;
+
             // keep showing blank until the webview init delay has passed.
-            if (asyncSnapshot.connectionState != ConnectionState.done) return const SizedBox.shrink();
+            if (asyncSnapshot.connectionState != ConnectionState.done || provider == null) {
+              return const SizedBox.shrink();
+            }
+
+            final incognito = provider.useIncognitoWebview;
+            settings.incognito = incognito;
+            settings.isInspectable = isInspectablePreference ?? kDebugMode;
+
+            final value = incognito;
+            if (_wasInitializedWithIncognito == null) {
+              logger.info('setting _wasInitializedWithIncognito to $value');
+              _wasInitializedWithIncognito = value;
+            }
 
             return InAppWebView(
               key: _webviewKey,
@@ -392,13 +343,14 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
               onPermissionRequest: onPermissionRequestedFromWeb,
               onWebViewCreated: _onWebViewCreated,
               onLoadStart: _onLoad,
-              initialSettings: defaultWebViewSettings,
+              initialSettings: settings,
               onProgressChanged: (controller, progress) {
                 final vm = ClaimCreationWebClientViewModel.readOf(context);
                 vm.setDisplayProgress(progress / 100);
               },
               onLoadStop: _onLoadStop,
               onCreateWindow: onCreateWindowAction,
+              shouldOverrideUrlLoading: shouldOverrideUrlLoading,
             );
           },
         ),
@@ -410,6 +362,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     controller.addJavaScriptHandler(
       handlerName: 'publicData',
       callback: (args) async {
+        _onActivity();
         final publicData = json.decode(args[0]);
         logger.child('proof_generation_events').info('Received public data ');
         final claimCreationController = ClaimCreationController.of(context, listen: false);
@@ -420,6 +373,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       handlerName: 'canExpectManyClaims',
       callback: (args) async {
         final log = logger.child('canExpectManyClaims');
+        _onActivity();
         log.info('received canExpectManyClaims, args: $args');
         final data = json.decode(args[0]);
         if (data is! Map) {
@@ -469,7 +423,8 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       callback: (args) async {
         final log = logger.child('manual_review_message');
         try {
-          log.info({'data': args[0]});
+          log.info({'customizeManualReviewMessage': args[0]});
+          _onActivity();
           final data = ManualReviewActionData.fromString(args[0]);
           _manualReviewController.onCustomizationFromJSHandler(data);
         } catch (e, s) {
@@ -506,6 +461,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       callback: (args) {
         final log = logging.child('requiresUserInteraction');
         log.info({"args": args});
+        _onActivity();
         final data = json.decode(args[0]);
         if (data is! Map) {
           log.severe('Received requiresUserInteraction is not a map', data);
@@ -529,28 +485,100 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     }
   }
 
+  Timer? _sessionNoActivityObserverTimer;
+  DateTime lastActivityDetectedAt = DateTime.now();
+
+  void _startNoActivityObserver(int durationInMins) {
+    final noActivityDuration = Duration(minutes: durationInMins);
+    _sessionNoActivityObserverTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_claimCreationController.value.canExpectManyClaims) {
+        logger.info('No activity detection skipped because canExpectManyClaims is enabled');
+        _onActivity();
+        return;
+      }
+      if (_claimCreationController.value.isFinished) {
+        logger.info('No activity detection stopped because verification is finished');
+        if (_claimCreationController.value.isFinished) {
+          _sessionNoActivityObserverTimer?.cancel();
+          _sessionNoActivityObserverTimer = null;
+        }
+        return;
+      }
+      if (_claimCreationController.value.hasError) {
+        logger.info('No activity detection skipped because of error');
+        logger.info('Error was: ${_claimCreationController.value.debugErrorDetails()}');
+        return;
+      }
+      final durationSinceLastActivity = DateTime.now().difference(lastActivityDetectedAt).abs();
+      if (durationSinceLastActivity >= noActivityDuration) {
+        logger.info('No activity detected for $durationSinceLastActivity');
+        if (kDebugMode) {
+          // TODO: remove this when we not debug
+          logger.info('Skipping error because of debug mode');
+          return;
+        }
+        _claimCreationController.setClientError(
+          ReclaimVerificationNoActivityDetectedException('Verification could not be completed in time'),
+        );
+        return;
+      }
+    });
+  }
+
+  void _onActivity() {
+    lastActivityDetectedAt = DateTime.now();
+    if (mounted) {
+      _claimCreationController.removeClientError();
+    }
+  }
+
+  Future<Duration> _getClaimCreationTimeoutDuration() async {
+    final timeoutDuration = await () async {
+      try {
+        final timeoutDurationInMins = await FeatureFlagsProvider.readOf(
+          context,
+        ).get(FeatureFlag.claimCreationTimeoutDurationInMins).timeout(Duration(seconds: 5));
+        return Duration(minutes: timeoutDurationInMins);
+      } catch (e, s) {
+        logger.severe('Failed to get claim creation timeout duration', e, s);
+        return const Duration(minutes: 2);
+      }
+    }();
+    logger.info('Using claim creation timeout duration: $timeoutDuration');
+    return timeoutDuration;
+  }
+
   void onProofDataReceived(List<dynamic> args) async {
     final logger = logging.child('webview_screen.onProofDataReceived.${Object().hashCode}');
     logger.info('Completed request matching to start proof generation from webview');
+
+    _onActivity();
 
     final vm = ClaimCreationWebClientViewModel.readOf(context);
     final messenger = ActionBarMessenger.of(context);
     final claimCreationController = ClaimCreationController.of(context, listen: false);
     final verification = VerificationController.readOf(context);
 
+    final claimCreationTimeoutDurationFuture = _getClaimCreationTimeoutDuration();
+
     final userAgent = await vm.getWebViewUserAgent();
     final actionControl = messenger.show(ActionBarMessage(type: ActionMessageType.claim));
     try {
       final proofData = json.decode(args[0]);
 
+      DevController.shared.push('matchedRequest', proofData);
+
       final url = WebUri(proofData['url']);
       final String? requestHash = proofData['matchedRequest']['requestHash'];
       assert(requestHash != null, 'Request hash is null in proofData=${args[0]}');
 
-      final requestData =
-          claimCreationController.value.httpProvider?.requestData.where((it) {
-            return it.requestHash == requestHash;
-          }).firstOrNull;
+      final requestData = claimCreationController.value.httpProvider?.requestData.where((it) {
+        return it.requestHash == requestHash;
+      }).firstOrNull;
 
       if (requestData == null) {
         logger.severe(
@@ -559,6 +587,8 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
         return;
       }
 
+      DevController.shared.push('DataProviderRequest', requestData);
+
       if (claimCreationController.value.isCompleted(requestData.requestIdentifier)) {
         logger.info('Request hash $requestHash is already completed. skipping.');
         return;
@@ -566,9 +596,15 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       logger.info('Matched request with hash $requestHash, evaluating this with id ${requestData.requestIdentifier}');
 
       final cs = CookieService();
-      final String cookieString = await cs.getCookieString(url);
+      final String cookieString = await cs.getCookieString(url, credentials: requestData.credentials);
 
-      final Map<String, String> headers = Map<String, String>.from(proofData['headers']);
+      final headersFromProof = proofData['headers'] as Map;
+
+      logger.debug({'headers': json.encode(headersFromProof)});
+
+      final Map<String, String> headers = Map<String, String>.from({
+        for (final entry in headersFromProof.entries) entry.key.toString(): entry.value.toString(),
+      });
 
       final refererUrl = await vm.getCurrentRefererUrl(verification.value.provider?.loginUrl ?? '');
 
@@ -603,18 +639,41 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
           attestorAuthenticationRequest: verification.value.attestorAuthenticationRequest,
           claimCreationType: verification.options.claimCreationType,
         ),
+        claimCreationTimeoutDuration: await claimCreationTimeoutDurationFuture,
       );
 
       logger.info({'useSingleRequest': isSingleClaimRequest});
 
       if (!isSingleClaimRequest) {
         // update request with extracted data here with response redactions
-        request = await claimCreationController.createRequestWithUpdatedProviderParams(proofData['response'], request);
+        request = await retry(
+          () async {
+            return await claimCreationController.createRequestWithUpdatedProviderParams(proofData['response'], request);
+          },
+          retryIf: (e) {
+            logger.warning('failed to create request with updated provider params, checking if we can retry', e);
+            final canRetry = e is AttestorWebViewClientNotReadyException || e is TimeoutException;
+            if (canRetry) {
+              Attestor.instance
+                  .executeJavascript('(() => { return 0 + 1; })()', timeout: Duration(seconds: 10))
+                  .catchError((e, s) {
+                    logger.severe('Error evaluating test javascript in attestor webview', e, s);
+                    return null;
+                  })
+                  .then((it) {
+                    logger.info('Successfully evaluated test javascript in attestor webview: $it');
+                  })
+                  .ignore();
+            }
+            return canRetry;
+          },
+        );
       }
 
       logger.info('Starting claim creation');
       await claimCreationController.startClaimCreation(request);
       logger.info('Claim creation bottom sheet closed');
+      _onActivity();
     } on ClaimCreationCancelledException {
       logger.info('claim creation was canceled');
     } on WorkCanceledException {
@@ -633,6 +692,8 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     final logger = logging.child('webview_screen.extractedData.${Object().hashCode}');
     logger.info('Received claim request start proof generation from provider script running in webview');
 
+    _onActivity();
+
     final vm = ClaimCreationWebClientViewModel.readOf(context);
     final messenger = ActionBarMessenger.of(context);
     final claimCreationController = ClaimCreationController.of(context, listen: false);
@@ -641,6 +702,8 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     if (claimCreationController.value.hasProviderScriptError) return;
 
     final verification = VerificationController.readOf(context);
+
+    final claimCreationTimeoutDurationFuture = _getClaimCreationTimeoutDuration();
 
     final userAgent = await vm.getWebViewUserAgent();
     final actionControl = messenger.show(ActionBarMessage(type: ActionMessageType.claim));
@@ -652,7 +715,12 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
 
       final extractData = json.decode(args[0]);
 
+      DevController.shared.push('requestedClaim', extractData);
+
       final requestData = DataProviderRequest.fromScriptInvocation(extractData);
+
+      DevController.shared.push('DataProviderRequest', requestData);
+
       if (claimCreationController.value.isCompleted(requestData.requestIdentifier)) {
         logger.info('Request by id ${requestData.requestIdentifier} is already completed. skipping.');
         return;
@@ -662,7 +730,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
 
       final url = WebUri(extractData['url']);
       final cs = CookieService();
-      final String cookieString = await cs.getCookieString(url);
+      final String cookieString = await cs.getCookieString(url, credentials: requestData.credentials);
 
       final Map<String, String> headers =
           (extractData['headers'] is Map ? ensureMap<String, String>(extractData['headers']) : null) ??
@@ -708,11 +776,13 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
         ),
         geoLocation: geoLocation,
         isRequestFromProviderScript: true,
+        claimCreationTimeoutDuration: await claimCreationTimeoutDurationFuture,
       );
 
       logger.info('Starting claim creation');
       await claimCreationController.startClaimCreation(request);
       logger.info('Claim creation bottom sheet closed');
+      _onActivity();
     } on ReclaimException catch (e, s) {
       logger.severe('Claim creation stopped due to a reclaim exception', e, s);
       verification.updateException(e);

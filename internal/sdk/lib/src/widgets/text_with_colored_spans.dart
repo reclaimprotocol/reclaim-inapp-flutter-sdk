@@ -27,6 +27,11 @@ class TextWithColoredSpans extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RichText(text: TextSpan(style: const TextStyle(color: Colors.black), children: _splitString(text)));
+    return RichText(
+      text: TextSpan(
+        style: const TextStyle(color: Colors.black),
+        children: _splitString(text),
+      ),
+    );
   }
 }

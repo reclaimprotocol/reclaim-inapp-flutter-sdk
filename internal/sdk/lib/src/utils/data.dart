@@ -2,20 +2,24 @@ import 'dart:convert';
 
 import '../logging/logging.dart';
 
-Map<String, String>? processPublicData(Object? publicData) {
+Map<String, String?>? processPublicData(Object? publicData) {
   final logger = logging.child('ClaimCreationBottomSheetState._LoadingWidget.processPublicData');
   try {
-    if (publicData == null || (publicData is Map && publicData.isEmpty)) {
+    Object? data = publicData;
+    if (data == null) {
       return null;
     }
-    if (publicData is String) {
-      publicData = jsonDecode(publicData);
+    if (data is String) {
+      try {
+        data = json.decode(data);
+      } on FormatException catch (_) {
+        return {'data': data?.toString()};
+      }
     }
-    if (publicData is Map<String, dynamic>) {
-      return publicData.map((key, value) => MapEntry(key, value.toString()));
+    if (data is Map) {
+      return {for (final entry in data.entries) entry.key.toString(): json.encode(entry.value)};
     }
-    logger.severe('Unsupported type: ${publicData.runtimeType}');
-    return null;
+    return {'data': data?.toString()};
   } catch (e) {
     logger.severe('Error processing publicData: $e');
     return null;

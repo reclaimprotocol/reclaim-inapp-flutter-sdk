@@ -68,17 +68,51 @@ String _getClientAppInfo(PackageInfo packageInfo) {
   return '(${$getPlatformName()},${packageInfo.packageName}/${_getClientAppPackageVersion(packageInfo)})';
 }
 
+class ClientSource {
+  final String source;
+  final String version;
+
+  const ClientSource({required this.source, required this.version});
+
+  @override
+  String toString() {
+    return '$source/$version';
+  }
+
+  static ClientSource? current;
+
+  static void setCurrent(ClientSource source) {
+    current = source;
+    _sourceCompleter = null;
+  }
+}
+
 Future<String> _getClientSource() async {
   final packageInfo = await PackageInfo.fromPlatform();
   final clientAppInfo = _getClientAppInfo(packageInfo);
-  final String sdkIdentifier;
-  if (isReclaimApp(packageInfo)) {
-    sdkIdentifier = 'verifier-app';
-  } else {
+
+  final String sdkIdentifier = await () async {
+    final buffer = StringBuffer();
+
+    if (isReclaimApp(packageInfo)) {
+      buffer.write('verifier-app ');
+    }
+
     final sdkVersion = await getReclaimMainSdkVersion();
-    sdkIdentifier = 'sdk/$sdkVersion';
+    buffer.write('sdk/$sdkVersion');
+
+    return buffer.toString();
+  }();
+
+  final o = StringBuffer();
+  o.write(_inappModuleIdentifierPrefix);
+  o.write(sdkIdentifier);
+  o.write(' $clientAppInfo');
+  final clientSource = ClientSource.current;
+  if (clientSource != null) {
+    o.write(' $clientSource');
   }
-  return '$_inappModuleIdentifierPrefix$sdkIdentifier $clientAppInfo';
+  return o.toString();
 }
 
 Completer<String>? _sourceCompleter;

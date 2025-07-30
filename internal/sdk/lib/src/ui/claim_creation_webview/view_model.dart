@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -7,7 +8,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../data/providers.dart';
 import '../../exception/exception.dart';
 import '../../logging/logging.dart';
-import '../../utils/detection/login.dart';
+import '../../usecase/login_detection.dart';
 import '../../utils/observable_notifier.dart';
 import '../../utils/url.dart' as url_util;
 import '../../utils/user_agent.dart';
@@ -76,16 +77,17 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
     return widget!.notifier!;
   }
 
-  VoidCallback? _onUpdateWebView;
+  Future<void> Function()? _onUpdateWebView;
 
-  set onUpdateWebView(VoidCallback? value) {
-    if (value == null) {
+  set onUpdateWebView(Future<void> Function()? cb) {
+    if (cb == null) {
       _onUpdateWebView = null;
     } else {
-      _onUpdateWebView = () {
-        final oldController = controller;
+      _onUpdateWebView = () async {
+        final oldController = value._controller;
+        log.info('Older controller was: $oldController');
         try {
-          value();
+          await cb();
         } catch (e, s) {
           log.severe('Error updating webview', e, s);
           // ignore because the webview is being updated and it could be a problem with the webview
@@ -93,7 +95,7 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
         // Dispose of the old controller in next microtask
         Future.microtask(() {
           try {
-            if (oldController != controller) {
+            if (oldController != value._controller && oldController != null) {
               oldController.dispose();
             }
           } catch (e, s) {
@@ -113,22 +115,32 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
 
     log.info('load with provider and user scripts');
     log.debug('waiting for webview to initialize');
-    final initializationTimeout = Duration(seconds: 1);
+    final initializationTimeout = Duration(seconds: 5);
     try {
       await ensureInitialized().timeout(initializationTimeout);
+      await Future.delayed(Duration(seconds: 2));
     } catch (e, s) {
-      log.severe('Failed to initialize webview', e, s);
-      _onUpdateWebView?.call();
-      await Future.delayed(initializationTimeout);
-      await ensureInitialized();
+      log.severe('Failed to initialize webview with controller: ${value._controller}', e, s);
+      log.info('Trying to update webview with $_onUpdateWebView');
+      await _onUpdateWebView?.call();
+      await Future.delayed(Duration(seconds: 2));
+      try {
+        await ensureInitialized().timeout(initializationTimeout);
+      } catch (e, s) {
+        log.severe('Failed to reinitialize webview with controller: ${value._controller}', e, s);
+        rethrow;
+      }
     }
 
     log.debug('webview initialized');
 
     log.debug('setting user agent');
+    log.info('using incognito webview: ${provider.useIncognitoWebview}');
+
     await setWebViewSettings((settings) async {
       final String userAgentString = await WebViewUserAgentUtil.getEffectiveUserAgent(provider.userAgent);
       settings.userAgent = userAgentString;
+      settings.incognito = provider.useIncognitoWebview;
       return settings;
     });
 
@@ -163,6 +175,10 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
     if (isDisposed) return;
 
     value = value.copyWith(requestedUrl: initialUrl);
+  }
+
+  Future<InAppWebViewSettings?> getSettings() async {
+    return await controller.getSettings();
   }
 
   Future<void> refresh() async {
@@ -215,22 +231,24 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
     await ensureInitialized();
 
     final currentSettings = ((await controller.getSettings()) ?? defaultWebViewSettings).copy();
+    log.fine(() => 'old webview settings: ${json.encode(currentSettings)}');
     final newSettings = await update(currentSettings);
     if (newSettings == null) {
       return;
     }
+    log.fine(() => 'Setting webview settings: ${json.encode(newSettings)}');
     await controller.setSettings(settings: newSettings);
   }
 
   final log = logging.child('ClaimCreationWebViewModel');
 
-  Future<bool> canContinueWithExpectedUrl(String expectedPageUrl) async {
+  Future<bool> canContinueWithExpectedUrl(LoginDetection loginDetection, String expectedPageUrl) async {
     final log = this.log.child('_canContinueWithExpectedUrl');
     final currentUrl = await controller.getUrl().then((value) {
       return value?.toString();
     });
     if (currentUrl == null) return true;
-    if (await maybeRequiresLoginInteraction(currentUrl, controller)) {
+    if (await loginDetection.maybeRequiresLoginInteraction(currentUrl, controller)) {
       log.finer(
         'Cannot continue to expected page "$expectedPageUrl" because current url is a login url: "$currentUrl"',
       );
@@ -243,11 +261,11 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
     return true;
   }
 
-  Future<bool> onContinue(String nextLocation) async {
+  Future<bool> onContinue(LoginDetection loginDetection, String nextLocation) async {
     await ensureInitialized();
     final currentUrl = await controller.getUrl().then((value) => value?.toString());
     final fullExpectedUrl = url_util.createUrlFromLocation(nextLocation, currentUrl);
-    if (!await canContinueWithExpectedUrl(fullExpectedUrl)) {
+    if (!await canContinueWithExpectedUrl(loginDetection, fullExpectedUrl)) {
       return false;
     }
 
@@ -273,16 +291,16 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
     return url_util.createRefererUrl(url) ?? defaultUrl;
   }
 
-  Future<bool> isCurrentPageLogin(String? loginUrl) async {
+  Future<String?> getCurrentWebPageUrl() async {
     await ensureInitialized();
-    final url = (await controller.getUrl())?.toString();
-    log.finest('isCurrentPageLogin: $loginUrl, $url');
-    if (url != null) {
-      if (url_util.isUrlsEqual(url, loginUrl)) {
-        return true;
-      } else if (await maybeRequiresLoginInteraction(url, controller)) {
-        return true;
-      }
+    return (await controller.getUrl())?.toString();
+  }
+
+  Future<bool> maybeCurrentPageRequiresLogin(LoginDetection loginDetection) async {
+    final url = await getCurrentWebPageUrl();
+    log.finest('checking whether isCurrentPageLogin: $url');
+    if (await loginDetection.maybeRequiresLoginInteraction(url, controller)) {
+      return true;
     }
     return false;
   }

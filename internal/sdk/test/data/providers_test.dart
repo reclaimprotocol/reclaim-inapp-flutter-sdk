@@ -124,6 +124,7 @@ void main() {
         ],
         bodySniff: BodySniff(enabled: false, template: ""),
         expectedPageUrl: "https://example.org",
+        credentials: WebCredentialsType.INCLUDE,
       );
       final request2 = DataProviderRequest(
         url: 'https://example.com',
@@ -141,6 +142,7 @@ void main() {
         ],
         bodySniff: BodySniff(enabled: false, template: ""),
         expectedPageUrl: "https://example.org",
+        credentials: WebCredentialsType.INCLUDE,
       );
       // ensure that objects are different
       expect(identical(request1, request2), isFalse);
@@ -162,8 +164,23 @@ void main() {
         bodySniff: BodySniff(enabled: true, template: ""),
         requestHash: "0xbf6b73c24e3f3c080063601d55fdbfc7062a1b9898c0043b69f44bdf669b8b2f",
         expectedPageUrl: "https://example.com",
+        credentials: WebCredentialsType.INCLUDE,
       );
       expect(request1.requestIdentifier, isNot(equals(request3.requestIdentifier)));
+    });
+  });
+
+  group('WebCredentialsType', () {
+    test('fromString', () {
+      expect(WebCredentialsType.fromString('omit'), equals(WebCredentialsType.OMIT));
+      expect(WebCredentialsType.fromString('same-origin'), equals(WebCredentialsType.SAME_ORIGIN));
+      expect(WebCredentialsType.fromString('include'), equals(WebCredentialsType.INCLUDE));
+      expect(WebCredentialsType.fromString('OMIT'), equals(WebCredentialsType.OMIT));
+      expect(WebCredentialsType.fromString('SAME_ORIGIN'), equals(WebCredentialsType.SAME_ORIGIN));
+      expect(WebCredentialsType.fromString('INCLUDE'), equals(WebCredentialsType.INCLUDE));
+      expect(WebCredentialsType.fromString(null), equals(WebCredentialsType.INCLUDE));
+      expect(WebCredentialsType.fromString(''), equals(WebCredentialsType.INCLUDE));
+      expect(() => WebCredentialsType.fromString('x'), throwsA(isA<ArgumentError>()));
     });
   });
 }

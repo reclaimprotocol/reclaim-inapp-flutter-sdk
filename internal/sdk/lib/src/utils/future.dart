@@ -15,25 +15,6 @@ void unawaitedSequence(Iterable<Future> futures) async {
   }
 }
 
-Future<T> futureWithTimeout<T>(Future<T> future, {required Duration timeout}) async {
-  final logger = logging.child('advancedFutureHandler');
-
-  try {
-    return await future.timeout(
-      timeout,
-      onTimeout: () {
-        throw TimeoutException('Timed out after $timeout');
-      },
-    );
-  } on TimeoutException catch (error, stackTrace) {
-    logger.warning('future timedout', error, stackTrace);
-    rethrow;
-  } catch (error, stackTrace) {
-    logger.warning('future failed to complete', error, stackTrace);
-    rethrow;
-  }
-}
-
 /// Awaits completion of a collection of futures and logs any errors.
 Future<void> awaitFuturesCompletion(Iterable<Future> futures) async {
   if (futures.isEmpty) return;

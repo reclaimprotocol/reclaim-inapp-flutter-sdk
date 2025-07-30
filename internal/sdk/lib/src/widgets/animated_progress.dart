@@ -74,7 +74,7 @@ class _AnimatedLinearProgressIndicatorState extends State<AnimatedLinearProgress
       tween: progressIndicatorTween,
       builder: (context, value, _) {
         return LinearProgressIndicator(
-          value: widget.indeterminateProgress ? null : value,
+          value: widget.indeterminateProgress || value.isInfinite || value.isNaN ? null : value,
           backgroundColor: backgroundColor,
           valueColor: valueColor,
           minHeight: minHeight,
@@ -153,17 +153,15 @@ class _AnimatedCardProgressIndicatorState extends State<AnimatedCardProgressIndi
           decoration: BoxDecoration(
             borderRadius: borderRadius,
             color: widget.showProgress ? null : backgroundColor,
-            gradient:
-                widget.showProgress
-                    ? LinearGradient(
-                      colors: [effectiveValueColor, backgroundColor, backgroundColor],
-                      stops: [value, value + 0.05, 1],
-                    )
-                    : null,
-            boxShadow:
-                kElevationToShadow[9]?.map((e) {
-                  return e.copyWith(color: shadowColor);
-                }).toList(),
+            gradient: widget.showProgress
+                ? LinearGradient(
+                    colors: [effectiveValueColor, backgroundColor, backgroundColor],
+                    stops: [value, value + 0.05, 1],
+                  )
+                : null,
+            boxShadow: kElevationToShadow[9]?.map((e) {
+              return e.copyWith(color: shadowColor);
+            }).toList(),
           ),
           child: widget.child,
         );

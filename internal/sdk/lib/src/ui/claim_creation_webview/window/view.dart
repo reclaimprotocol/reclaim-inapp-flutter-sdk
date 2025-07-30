@@ -55,6 +55,8 @@ class _WebViewWindowState extends State<WebViewWindow> with WebViewCompanionMixi
 
   InAppWebViewController? _controller;
 
+  final logger = logging.child('WebViewWindow');
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -95,6 +97,7 @@ class _WebViewWindowState extends State<WebViewWindow> with WebViewCompanionMixi
             Navigator.of(context).pop();
           },
           onCreateWindow: onCreateWindowAction,
+          shouldOverrideUrlLoading: shouldOverrideUrlLoading,
         ),
         bottomNavigationBar: WebviewBottomBar(),
       ),

@@ -138,24 +138,23 @@ class ProviderRequestPerformanceMeasurements {
       'request_compute_memory_usage_max': requestReports.map((e) => e.maxMemoryUsageBytes).max,
       'request_compute_memory_usage_min': requestReports.map((e) => e.minMemoryUsageBytes).min ?? 0,
       'request_compute_memory_usage_avg': requestReports.map((e) => e.averageMemoryUsageBytes).average,
-      'by_algorithm':
-          algorithmNames.map((algorithmName) {
-            final proofByAlgorithm = reports.map((e) => e.proofs.where((proof) => proof.algorithmName == algorithmName));
+      'by_algorithm': algorithmNames.map((algorithmName) {
+        final proofByAlgorithm = reports.map((e) => e.proofs.where((proof) => proof.algorithmName == algorithmName));
 
-            return {
-              'algorithm_name': algorithmName,
-              'proof_compute_time_elapsed_first': proofByAlgorithm.map((e) => e.firstRecord).firstRecord?.report.elapsed.inMicroseconds,
-              'proof_compute_time_elapsed_last': proofByAlgorithm.map((e) => e.lastRecord).lastRecord?.report.elapsed.inMicroseconds,
-              'proof_compute_time_elapsed_max': proofByAlgorithm.map((e) => e.map((e) => e.report.elapsed.inMicroseconds).max).max,
-              'proof_compute_time_elapsed_min': proofByAlgorithm.map((e) => e.map((e) => e.report.elapsed.inMicroseconds).min).whereType<int>().min,
-              'proof_compute_time_elapsed_avg': proofByAlgorithm.map((e) => e.map((e) => e.report.elapsed.inMicroseconds)).averageNested,
-              'proof_compute_memory_usage_first': proofByAlgorithm.map((e) => e.firstRecord).firstRecord?.report.memoryUsageBytes.firstOrNull,
-              'proof_compute_memory_usage_last': proofByAlgorithm.map((e) => e.firstRecord).lastRecord?.report.memoryUsageBytes.lastOrNull,
-              'proof_compute_memory_usage_max': proofByAlgorithm.map((e) => e.map((e) => e.report.maxMemoryUsageBytes).max).max,
-              'proof_compute_memory_usage_min': proofByAlgorithm.map((e) => e.map((e) => e.report.minMemoryUsageBytes).min).whereType<int>().min,
-              'proof_compute_memory_usage_avg': proofByAlgorithm.map((e) => e.map((e) => e.report.averageMemoryUsageBytes)).averageNested,
-            };
-          }).toList(),
+        return {
+          'algorithm_name': algorithmName,
+          'proof_compute_time_elapsed_first': proofByAlgorithm.map((e) => e.firstRecord).firstRecord?.report.elapsed.inMicroseconds,
+          'proof_compute_time_elapsed_last': proofByAlgorithm.map((e) => e.lastRecord).lastRecord?.report.elapsed.inMicroseconds,
+          'proof_compute_time_elapsed_max': proofByAlgorithm.map((e) => e.map((e) => e.report.elapsed.inMicroseconds).max).max,
+          'proof_compute_time_elapsed_min': proofByAlgorithm.map((e) => e.map((e) => e.report.elapsed.inMicroseconds).min).whereType<int>().min,
+          'proof_compute_time_elapsed_avg': proofByAlgorithm.map((e) => e.map((e) => e.report.elapsed.inMicroseconds)).averageNested,
+          'proof_compute_memory_usage_first': proofByAlgorithm.map((e) => e.firstRecord).firstRecord?.report.memoryUsageBytes.firstOrNull,
+          'proof_compute_memory_usage_last': proofByAlgorithm.map((e) => e.firstRecord).lastRecord?.report.memoryUsageBytes.lastOrNull,
+          'proof_compute_memory_usage_max': proofByAlgorithm.map((e) => e.map((e) => e.report.maxMemoryUsageBytes).max).max,
+          'proof_compute_memory_usage_min': proofByAlgorithm.map((e) => e.map((e) => e.report.minMemoryUsageBytes).min).whereType<int>().min,
+          'proof_compute_memory_usage_avg': proofByAlgorithm.map((e) => e.map((e) => e.report.averageMemoryUsageBytes)).averageNested,
+        };
+      }).toList(),
     };
   }
 }

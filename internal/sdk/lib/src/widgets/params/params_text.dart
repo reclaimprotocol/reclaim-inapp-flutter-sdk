@@ -199,22 +199,21 @@ class ParamInfo {
       }
     }
 
-    final params =
-        provingParams
-            .where((entry) {
-              final key = entry.key.toUpperCase().trim();
-              // Hide entries that starts with 'REQ_' (case insensitive)
-              return !key.startsWith('REQ_') && !key.startsWith('URL_') && !key.startsWith('DYNAMIC_GEO');
-            })
-            .where((entry) {
-              final isCompleted = claimState.isFinished && !claimState.hasError;
-              if (!isCompleted) return true;
+    final params = provingParams
+        .where((entry) {
+          final key = entry.key.toUpperCase().trim();
+          // Hide entries that starts with 'REQ_' (case insensitive)
+          return !key.startsWith('REQ_') && !key.startsWith('URL_') && !key.startsWith('DYNAMIC_GEO');
+        })
+        .where((entry) {
+          final isCompleted = claimState.isFinished && !claimState.hasError;
+          if (!isCompleted) return true;
 
-              // Only show params that have a value when claim creation is completed
-              return !entry.isPending;
-            })
-            .toSet()
-            .toList();
+          // Only show params that have a value when claim creation is completed
+          return !entry.isPending;
+        })
+        .toSet()
+        .toList();
 
     params.sort();
 
@@ -222,10 +221,9 @@ class ParamInfo {
   }
 
   static ProvingParameter _addParamInSet(Set<ProvingParameter> provingParams, ProvingParameter param) {
-    final existingParam =
-        provingParams.where((e) {
-          return e.hashCode == param.hashCode;
-        }).firstOrNull;
+    final existingParam = provingParams.where((e) {
+      return e.hashCode == param.hashCode;
+    }).firstOrNull;
 
     if (existingParam == null) {
       provingParams.add(param);
@@ -306,15 +304,14 @@ class ParamInfo {
       }
     }
 
-    final params =
-        provingParams
-            .where((entry) {
-              final key = entry.key.toUpperCase().trim();
-              // Hide entries that starts with 'REQ_' (case insensitive)
-              return !key.startsWith('REQ_') && !key.startsWith('URL_') && !key.startsWith('DYNAMIC_GEO');
-            })
-            .toSet()
-            .toList();
+    final params = provingParams
+        .where((entry) {
+          final key = entry.key.toUpperCase().trim();
+          // Hide entries that starts with 'REQ_' (case insensitive)
+          return !key.startsWith('REQ_') && !key.startsWith('URL_') && !key.startsWith('DYNAMIC_GEO');
+        })
+        .toSet()
+        .toList();
 
     params.sort();
 
@@ -342,19 +339,17 @@ class ParamsText extends StatefulWidget {
   }) {
     final double size = 20;
 
-    final params =
-        info.params.where((it) {
-            if (!onlyShowPublicAndInProgressParams) {
-              if (pendingOnly) {
-                return it.isPending;
-              }
-              return true;
-            }
-            if (it.isPublic) return true;
-            if (it.isPending) return true;
-            return false;
-          }).toList()
-          ..sort();
+    final params = info.params.where((it) {
+      if (!onlyShowPublicAndInProgressParams) {
+        if (pendingOnly) {
+          return it.isPending;
+        }
+        return true;
+      }
+      if (it.isPublic) return true;
+      if (it.isPending) return true;
+      return false;
+    }).toList()..sort();
 
     return [
       for (final entry in params)
@@ -427,22 +422,29 @@ class _ParamsTextState extends State<ParamsText> {
               shrinkWrap: widget.shrinkWrap,
               physics: AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
               padding: widget.padding ?? const EdgeInsets.all(8.0),
-              children:
-                  tiles.isNotEmpty
-                      ? tiles.indexed.map((e) {
-                        final index = e.$1;
-
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: (tiles.length - 1 == index) ? 0 : 8.0),
-                          child: e.$2,
-                        );
-                      }).toList()
-                      : const [
-                        LoadingParamValue(
-                          // adjustment for size difference when values are available
-                          height: 14 + 5.3,
-                        ),
-                      ],
+              children: tiles.isNotEmpty
+                  ? tiles.indexed.map((e) {
+                      final index = e.$1;
+                      final isLast = index == tiles.length - 1;
+                      final double bottomPadding;
+                      if (tiles.length == 1) {
+                        bottomPadding = 0;
+                      } else if (isLast) {
+                        bottomPadding = 20;
+                      } else {
+                        bottomPadding = 8.0;
+                      }
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: bottomPadding),
+                        child: e.$2,
+                      );
+                    }).toList()
+                  : const [
+                      LoadingParamValue(
+                        // adjustment for size difference when values are available
+                        height: 14 + 5.3,
+                      ),
+                    ],
             ),
           ),
         ],
@@ -468,11 +470,20 @@ class _ParamsTileState extends State<ParamsTile> {
 
   late final String keyPrefix = 'paramstile-$hashCode';
 
+  bool _canShowHumanizedValue = true;
+
   @override
   Widget build(BuildContext context) {
     final label = formatParamsLabel(widget.param.key);
-    final value = formatParamsValue(widget.param.value ?? '');
-    final unhashedValue = formatParamsValue(widget.param.unhashedValue ?? '');
+    final rawValue = widget.param.value;
+
+    final isCollection = rawValue == null && widget.param.isPending ? false : isValueCollection(rawValue ?? '');
+    final value = rawValue == null && widget.param.isPending
+        ? null
+        : formatParamsValue(rawValue ?? '', humanize: _canShowHumanizedValue);
+    final unhashedValue = widget.param.unhashedValue == null
+        ? null
+        : formatParamsValue(widget.param.unhashedValue ?? '');
 
     final isHashedParam = widget.param.markedForHashing;
     final isPublic = widget.param.isPublic;
@@ -507,7 +518,7 @@ class _ParamsTileState extends State<ParamsTile> {
             child: () {
               if (widget.onlyShowPublicAndInProgressParams) {
                 if (isPublic) {
-                  return Icon(key: Key('$keyPrefix-public'), Icons.attachment_rounded, size: widget.size);
+                  return Icon(key: Key('$keyPrefix-public'), Icons.summarize_outlined, size: widget.size);
                 } else {
                   return SvgImageIcon(key: Key('$keyPrefix-encrypted'), AppSvgIcons.encrypted, size: widget.size);
                 }
@@ -521,7 +532,7 @@ class _ParamsTileState extends State<ParamsTile> {
               if (progress < 1) {
                 return loadingWidget;
               }
-              return Icon(key: Key('$keyPrefix-data-object'), Icons.attachment_rounded, size: widget.size);
+              return Icon(key: Key('$keyPrefix-data-object'), Icons.summarize_outlined, size: widget.size);
             }(),
           ),
         ),
@@ -530,9 +541,24 @@ class _ParamsTileState extends State<ParamsTile> {
             children: [
               Flexible(
                 flex: 0,
-                child: Text(
-                  '$label  ',
-                  style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.bold),
+                child: Builder(
+                  builder: (context) {
+                    final width = MediaQuery.of(context).size.width;
+                    final maxWidth = width * 0.5;
+
+                    return ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: maxWidth),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3.0).add(EdgeInsetsDirectional.only(end: 8)),
+                        child: Text(
+                          label,
+                          style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.normal),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               Flexible(
@@ -542,30 +568,71 @@ class _ParamsTileState extends State<ParamsTile> {
                   switchInCurve: Curves.easeIn,
                   switchOutCurve: Curves.easeOut,
                   child: () {
-                    if (isHashedParam) {
+                    if (value == null) {
+                      return LoadingParamValue(color: accentColor.withValues(alpha: 0.4));
+                    } else if (isHashedParam) {
                       return HashedValueTextSpanWidget(
                         value: value,
                         realValue: unhashedValue,
                         style: TextStyle(
                           color: accentColor,
-                          fontWeight: FontWeight.bold,
                           fontSize: 14,
                           overflow: TextOverflow.ellipsis,
+                          fontWeight: FontWeight.w400,
+                          fontVariations: [FontVariation.weight(400)],
                         ),
                       );
-                    } else if (value.isNotEmpty) {
-                      return Text(
+                    } else {
+                      Widget child = Text(
                         value,
                         style: TextStyle(
                           color: accentColor,
-                          fontWeight: FontWeight.bold,
                           fontSize: 14,
                           overflow: TextOverflow.ellipsis,
+                          fontWeight: FontWeight.w500,
+                          fontVariations: [FontVariation.weight(500)],
                         ),
                         maxLines: 1,
                       );
-                    } else {
-                      return LoadingParamValue(color: accentColor.withValues(alpha: 0.4));
+                      if (isCollection) {
+                        final borderRadius = BorderRadius.circular(10);
+
+                        if (_canShowHumanizedValue) {
+                          child = Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.attach_file_rounded, size: 14),
+                                SizedBox(width: 4),
+                                Padding(padding: const EdgeInsetsDirectional.only(end: 4.0), child: child),
+                              ],
+                            ),
+                          );
+                        }
+
+                        child = InkWell(
+                          onTap: () {
+                            setState(() {
+                              _canShowHumanizedValue = !_canShowHumanizedValue;
+                            });
+                          },
+                          borderRadius: borderRadius,
+                          child: child,
+                        );
+
+                        if (_canShowHumanizedValue) {
+                          child = Material(
+                            color: Colors.white30,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: borderRadius,
+                              side: BorderSide(color: Color(0xFFccd6df)),
+                            ),
+                            child: child,
+                          );
+                        }
+                      }
+                      return child;
                     }
                   }(),
                 ),

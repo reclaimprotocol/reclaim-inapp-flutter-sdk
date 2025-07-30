@@ -154,6 +154,7 @@ class _ExampleState extends State<Example> {
                   TextField(
                     readOnly: true,
                     maxLines: 10,
+                    textCapitalization: TextCapitalization.none,
                     style: TextStyle(fontFamily: "monospace", fontFamilyFallback: <String>["Courier"]),
                     controller: TextEditingController.fromValue(TextEditingValue(text: json.encode(response))),
                     decoration: InputDecoration(

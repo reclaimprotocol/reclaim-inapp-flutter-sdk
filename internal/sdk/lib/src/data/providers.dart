@@ -6,6 +6,8 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:meta/meta.dart';
 import 'package:web3dart/crypto.dart';
 
+import '../utils/list.dart';
+
 part 'providers.g.dart';
 
 @JsonSerializable()
@@ -28,6 +30,8 @@ class ReclaimDataProvidersResponse {
 enum InjectionType {
   @JsonValue('MSWJS')
   MSWJS,
+  @JsonValue('HAWKEYE')
+  HAWKEYE,
   @JsonValue('NONE')
   NONE,
   @JsonValue('XHOOK')
@@ -37,6 +41,7 @@ enum InjectionType {
     return switch (value.toLowerCase().trim()) {
       'mswjs' => InjectionType.MSWJS,
       'none' => InjectionType.NONE,
+      'hawkeye' => InjectionType.HAWKEYE,
       'xhook' => InjectionType.XHOOK,
       _ => throw Exception('Invalid injection type: $value'),
     };
@@ -97,6 +102,8 @@ class HttpProvider {
   final List<DataProviderRequest> requestData;
   @JsonKey(name: "useIncognitoWebview", defaultValue: false)
   final bool useIncognitoWebview;
+  @JsonKey(name: "version")
+  final Object? version;
 
   const HttpProvider({
     this.name,
@@ -116,6 +123,7 @@ class HttpProvider {
     this.additionalClientOptions,
     this.verificationType,
     this.pageTitle,
+    this.version,
     required this.requestData,
     required this.useIncognitoWebview,
   });
@@ -167,6 +175,25 @@ class BodySniff {
   Map<String, dynamic> toJson() => _$BodySniffToJson(this);
 }
 
+/// Refer: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch#including_credentials
+enum WebCredentialsType {
+  @JsonValue('omit')
+  OMIT,
+  @JsonValue('same-origin')
+  SAME_ORIGIN,
+  @JsonValue('include')
+  INCLUDE;
+
+  factory WebCredentialsType.fromString(String? value) {
+    return switch (value?.toLowerCase().trim()) {
+      'omit' => WebCredentialsType.OMIT,
+      'same-origin' || 'same_origin' => WebCredentialsType.SAME_ORIGIN,
+      null || 'include' || '' => WebCredentialsType.INCLUDE,
+      _ => throw ArgumentError.value(value, 'value', 'Invalid web credentials type'),
+    };
+  }
+}
+
 @JsonSerializable()
 class DataProviderRequest {
   @JsonKey(name: "url")
@@ -176,11 +203,13 @@ class DataProviderRequest {
   @JsonKey(name: "method")
   final RequestMethodType? method;
   @JsonKey(name: "responseMatches", defaultValue: [])
-  final List<ResponseMatch>? responseMatches;
+  final List<ResponseMatch> responseMatches;
   @JsonKey(name: "responseRedactions", defaultValue: [])
-  final List<ResponseRedaction>? responseRedactions;
+  final List<ResponseRedaction> responseRedactions;
   @JsonKey(name: "bodySniff")
   final BodySniff? bodySniff;
+  @JsonKey(name: "credentials", defaultValue: WebCredentialsType.INCLUDE, fromJson: WebCredentialsType.fromString)
+  final WebCredentialsType credentials;
   @JsonKey(name: "requestHash")
   final String? requestHash;
 
@@ -192,25 +221,26 @@ class DataProviderRequest {
     this.url,
     this.urlType,
     this.method,
-    this.responseMatches,
-    this.responseRedactions,
+    required this.responseMatches,
+    required this.responseRedactions,
     this.bodySniff,
     this.requestHash,
     this.expectedPageUrl,
+    required this.credentials,
   });
 
   Set<String> getParameterNames() {
     final matches = responseMatches;
     final redactions = responseRedactions;
 
-    final length = math.max(matches?.length ?? 0, redactions?.length ?? 0);
+    final length = math.max(matches.length, redactions.length);
     if (length == 0) return const {};
 
     final allParameterNames = <String>{};
 
     for (int i = 0; i < length; i++) {
-      final redaction = redactions?[i];
-      final match = matches?[i];
+      final redaction = maybeGetAtIndex(redactions, i);
+      final match = maybeGetAtIndex(matches, i);
 
       // prefer template param name from match if it exists over redaction.
 
@@ -238,12 +268,12 @@ class DataProviderRequest {
     final matches = responseMatches;
     final redactions = responseRedactions;
 
-    final length = math.max(matches?.length ?? 0, redactions?.length ?? 0);
+    final length = math.max(matches.length, redactions.length);
     if (length == 0) return null;
 
     for (int i = 0; i < length; i++) {
-      final redaction = redactions?[i];
-      final match = matches?[i];
+      final redaction = maybeGetAtIndex(redactions, i);
+      final match = maybeGetAtIndex(matches, i);
 
       // prefer template param name from match if it exists over redaction.
 
@@ -274,6 +304,7 @@ class DataProviderRequest {
     BodySniff? bodySniff,
     String? requestHash,
     String? expectedPageUrl,
+    WebCredentialsType? credentials,
   }) {
     return DataProviderRequest(
       url: url ?? this.url,
@@ -284,6 +315,7 @@ class DataProviderRequest {
       bodySniff: bodySniff ?? this.bodySniff,
       requestHash: requestHash ?? this.requestHash,
       expectedPageUrl: expectedPageUrl ?? this.expectedPageUrl,
+      credentials: credentials ?? this.credentials,
     );
   }
 
@@ -316,7 +348,7 @@ class DataProviderRequest {
       'method': method?.name,
       'responseRedactions': responseRedactions,
       'responseMatches': responseMatches,
-      'reqBody': bodySniff?.template ?? "",
+      'reqBody': bodySniff?.enabled == true ? (bodySniff?.template ?? "") : "",
     });
     final canoncalizedJsonString = json.encode(orderedProviderParams);
     return canoncalizedJsonString;

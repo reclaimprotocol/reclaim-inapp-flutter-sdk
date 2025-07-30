@@ -41,10 +41,9 @@ CreateClaimOutput _$CreateClaimOutputFromJson(Map<String, dynamic> json) => Crea
   witnesses: (json['witnesses'] as List<dynamic>).map((e) => WitnessData.fromJson(e as Map<String, dynamic>)).toList(),
   publicData: json['publicData'],
   taskId: (json['taskId'] as num?)?.toInt(),
-  providerRequest:
-      json['providerRequest'] == null
-          ? null
-          : DataProviderRequest.fromJson(json['providerRequest'] as Map<String, dynamic>),
+  providerRequest: json['providerRequest'] == null
+      ? null
+      : DataProviderRequest.fromJson(json['providerRequest'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$CreateClaimOutputToJson(CreateClaimOutput instance) => <String, dynamic>{
@@ -52,7 +51,7 @@ Map<String, dynamic> _$CreateClaimOutputToJson(CreateClaimOutput instance) => <S
   'claimData': instance.claimData,
   'signatures': instance.signatures,
   'witnesses': instance.witnesses,
-  if (instance.taskId case final value?) 'taskId': value,
+  'taskId': ?instance.taskId,
   'publicData': instance.publicData,
-  if (instance.providerRequest case final value?) 'providerRequest': value,
+  'providerRequest': ?instance.providerRequest,
 };

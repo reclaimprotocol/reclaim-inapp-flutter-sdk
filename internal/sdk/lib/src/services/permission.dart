@@ -9,7 +9,9 @@ class PermissionService {
   Future<PermissionStatus> _requestPermission(Permission permission) async {
     final logger = logging.child('requestPermission');
     try {
-      return await permission.request();
+      final response = await permission.request();
+      logger.info('Permission request response: $response');
+      return response;
     } catch (e, s) {
       logger.severe('Failed to request permission [${permission.value}]', e, s);
     }

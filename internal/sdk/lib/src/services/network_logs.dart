@@ -31,12 +31,14 @@ class NetworkLogsService {
         body: data,
       );
       final statusCode = response.statusCode;
-      log.info('Network logs response: $statusCode');
-      if (logging.isDebugging) {
+      log.info('Manual submission network logs response: $statusCode');
+      try {
         final requestBodySize = utf8.encode(data).lengthInBytes;
         log.info(
           'Network logs request body size: $requestBodySize bytes. Request content length: ${response.request?.headers['content-length'] ?? response.request?.headers['Content-Length']}.',
         );
+      } catch (e, s) {
+        log.severe('Failed to get request body size', e, s);
       }
       if (statusCode >= 200 && statusCode < 300) {
         return true;

@@ -96,13 +96,22 @@ class _Provider extends InheritedNotifier<ClaimTriggerIndicatorController> {
 }
 
 class ClaimTriggerIndicator extends StatelessWidget {
-  const ClaimTriggerIndicator({super.key, required this.color, this.emphasise = false, this.progress});
+  const ClaimTriggerIndicator({
+    super.key,
+    required this.color,
+    this.emphasise = false,
+    this.progress,
+    this.padding,
+    this.thickness = 6,
+  });
 
   final Color color;
   // When true, progress starts from middle and then completes with an animation in 250 milliseconds.
   // Shows indeterminate progress when false.
   final bool emphasise;
   final double? progress;
+  final EdgeInsetsGeometry? padding;
+  final double thickness;
 
   @override
   Widget build(BuildContext context) {
@@ -117,14 +126,14 @@ class ClaimTriggerIndicator extends StatelessWidget {
           AnimatedLinearProgressIndicator(
             progress: progress,
             backgroundColor: Colors.transparent,
-            minHeight: 6,
+            minHeight: thickness,
             valueColor: color,
             borderRadius: BorderRadius.all(Radius.circular(16)),
           ),
           AnimatedLinearProgressIndicator(
             indeterminateProgress: true,
             backgroundColor: Colors.transparent,
-            minHeight: 6,
+            minHeight: thickness,
             valueColor: color.withValues(alpha: 0.2),
             borderRadius: BorderRadius.all(Radius.circular(16)),
           ),
@@ -136,22 +145,42 @@ class ClaimTriggerIndicator extends StatelessWidget {
         indeterminateProgress: !emphasise,
         progress: effectiveProgress,
         backgroundColor: Colors.transparent,
-        minHeight: 4,
+        minHeight: (thickness - 2).clamp(1, 10),
         valueColor: color,
         borderRadius: BorderRadiusDirectional.only(topStart: Radius.circular(16), bottomStart: Radius.circular(16)),
       );
       child = Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [Expanded(child: indicator), Expanded(child: Transform.flip(flipX: true, child: indicator))],
+        children: [
+          Expanded(child: indicator),
+          Expanded(child: Transform.flip(flipX: true, child: indicator)),
+        ],
       );
     }
 
-    return Padding(padding: EdgeInsets.symmetric(horizontal: horizontalPadding), child: child);
+    return Padding(
+      padding: padding ?? EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: child,
+    );
   }
 }
 
 class ClaimCreationIndicatorOverlay extends StatelessWidget {
   const ClaimCreationIndicatorOverlay({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [AnimatedSwitcher(duration: Durations.medium1, child: const ClaimCreationIndicator())],
+    );
+  }
+}
+
+class ClaimCreationIndicator extends StatelessWidget {
+  const ClaimCreationIndicator({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -190,12 +219,6 @@ class ClaimCreationIndicatorOverlay extends StatelessWidget {
           indicator = SizedBox();
       }
     }
-
-    return Column(
-      mainAxisSize: MainAxisSize.max,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [AnimatedSwitcher(duration: Durations.medium1, child: indicator)],
-    );
+    return indicator;
   }
 }

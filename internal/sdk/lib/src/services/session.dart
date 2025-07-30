@@ -11,6 +11,7 @@ import '../logging/logging.dart';
 import '../overrides/overrides.dart';
 import '../utils/dio.dart';
 import '../utils/ip.dart';
+import 'logging.dart';
 
 export '../data/session_init.dart';
 
@@ -90,8 +91,9 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
         'versionNumber': providerVersion,
       });
       logger.info('Creating session: $data');
-      final response =
-          await _sessionHttpClient.post<String>(ReclaimUrls.SESSION_INIT, data: data).logWhenResponseErrors();
+      final response = await _sessionHttpClient
+          .post<String>(ReclaimUrls.SESSION_INIT, data: data)
+          .logWhenResponseErrors();
       logger.info('Session created successfully response :$response');
       final sessionData = json.decode(response.data ?? '');
       return SessionInitResponse.fromJson({...sessionData as Map});
@@ -103,7 +105,9 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
           stackTrace,
         );
         final data = error.response?.data;
-        if (data is String && data.toLowerCase().contains('session already exists')) {
+        final statusCode = error.response?.statusCode;
+        final isInvalidStatus = statusCode != null && statusCode >= 400 && statusCode < 500;
+        if (data is String && data.toLowerCase().contains('session already exists') || isInvalidStatus) {
           throw const ReclaimExpiredSessionException();
         }
       } else {
@@ -138,6 +142,14 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
         model = iosInfo.utsname.machine;
         deviceId = iosInfo.identifierForVendor ?? '';
       }
+      if (deviceId.trim().isEmpty || deviceId.trim().replaceAll('-', '').replaceAll('0', '').isEmpty) {
+        try {
+          final diagnosticLoggingId = await DiagnosticLogging.getDeviceLoggingId();
+          deviceId = 'diagid-$diagnosticLoggingId';
+        } catch (e, s) {
+          logger.warning('Failed to get device logging id', e, s);
+        }
+      }
 
       // Get public IP address
       final String publicIpAddress = await getPublicIp();
@@ -152,18 +164,29 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
       });
 
       logger.info('Updating session: $data');
-      await _sessionHttpClient.post<String>(ReclaimUrls.SESSION_URL, data: data).logWhenResponseErrors();
+      final response = await _sessionHttpClient
+          .post<String>(ReclaimUrls.SESSION_URL, data: data)
+          .logWhenResponseErrors();
+      final statusCode = response.statusCode;
+      final isInvalidStatus = statusCode != null && statusCode >= 400 && statusCode < 500;
+      if (isInvalidStatus) {
+        logger.info('Session expired');
+        throw const ReclaimExpiredSessionException();
+      }
     } catch (error, stackTrace) {
       logger.severe('Error updating session', error, stackTrace);
       if (error is DioException && error.response != null) {
         final data = error.response?.data;
+        final statusCode = error.response?.statusCode;
+        final isInvalidStatus = statusCode != null && statusCode >= 400 && statusCode < 500;
         if (data is String &&
-            [
-              // Response message when using a session id that's has already completed with a failure
-              'session already failed. cannot update it!',
-              // Response message when using a session id that's has already completed successfully
-              'invalid status',
-            ].any(data.toLowerCase().contains)) {
+                [
+                  // Response message when using a session id that's has already completed with a failure
+                  'session already failed. cannot update it!',
+                  // Response message when using a session id that's has already completed successfully
+                  'invalid status',
+                ].any(data.toLowerCase().contains) ||
+            isInvalidStatus) {
           logger.info('Session expired');
           throw const ReclaimExpiredSessionException();
         }
@@ -219,8 +242,9 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
       };
 
       _sessionHttpClient.options.headers['Content-Type'] = 'application/json';
-      final response =
-          await _sessionHttpClient.post<String>(ReclaimUrls.LOGS_API, data: json.encode(data)).logWhenResponseErrors();
+      final response = await _sessionHttpClient
+          .post<String>(ReclaimUrls.LOGS_API, data: json.encode(data))
+          .logWhenResponseErrors();
 
       if (response.statusCode != 200) {
         logger.info('Failed to Send logs, response status: ${response.statusCode}');

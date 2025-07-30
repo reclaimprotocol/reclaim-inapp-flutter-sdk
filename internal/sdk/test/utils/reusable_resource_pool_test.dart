@@ -11,6 +11,12 @@ class TestResource {
   void dispose() {
     isDisposed = true;
   }
+
+  final DateTime createdAt = DateTime.now();
+
+  Duration get age => DateTime.now().difference(createdAt).abs();
+
+  static Duration get ageLimit => const Duration(seconds: 10);
 }
 
 void main() {
@@ -30,6 +36,9 @@ void main() {
         initialPoolSize: 2,
         createResource: () => TestResource(),
         disposeResource: (resource) => resource.dispose(),
+        ageLimit: TestResource.ageLimit,
+        getResourceAge: (resource) => resource.age,
+        isResourceFaulty: (resource) => false,
       );
 
       // First use - creates new resource
@@ -67,6 +76,9 @@ void main() {
         initialPoolSize: 2,
         createResource: () => TestResource(),
         disposeResource: (resource) => resource.dispose(),
+        ageLimit: TestResource.ageLimit,
+        getResourceAge: (resource) => resource.age,
+        isResourceFaulty: (resource) => false,
       );
 
       // Create and return 3 resources (one more than pool size)
@@ -96,6 +108,9 @@ void main() {
         initialPoolSize: 2,
         createResource: () => TestResource(),
         disposeResource: (resource) async => resource.dispose(),
+        ageLimit: TestResource.ageLimit,
+        getResourceAge: (resource) => resource.age,
+        isResourceFaulty: (resource) => false,
       );
 
       // Run multiple computations
@@ -128,6 +143,9 @@ void main() {
         initialPoolSize: 2,
         createResource: () => TestResource(),
         disposeResource: (resource) async => resource.dispose(),
+        ageLimit: TestResource.ageLimit,
+        getResourceAge: (resource) => resource.age,
+        isResourceFaulty: (resource) => false,
       );
 
       final resource1 = await pool.getResource();

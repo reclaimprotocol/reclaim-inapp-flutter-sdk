@@ -163,6 +163,10 @@ class ActionBarController extends ObservableNotifier<ActionBarState> {
   void close() {
     _onClose(ActionBarClosedReason.closed);
   }
+
+  void remove() {
+    _onClose(ActionBarClosedReason.removed);
+  }
 }
 
 /// Manages the display of action bar lifecycle and UI.

@@ -5,6 +5,7 @@ import '../controller.dart';
 import '../logging/logging.dart';
 import '../repository/feature_flags.dart';
 import '../services/source/source.dart';
+import '../ui/dev/dev.dart';
 import '../utils/widget.dart';
 import 'feature_flags.dart';
 
@@ -25,7 +26,9 @@ class DebugBottomSheet extends StatelessWidget {
       isScrollControlled: true,
       isDismissible: true,
       builder: (context) {
-        return controller.wrap(child: DebugBottomSheet(onRefreshPage: refreshPage, copySessionId: copySessionId));
+        return controller.wrap(
+          child: DebugBottomSheet(onRefreshPage: refreshPage, copySessionId: copySessionId),
+        );
       },
     );
   }
@@ -42,7 +45,10 @@ class DebugBottomSheet extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         foregroundBuilder: (context, states, child) {
-          return Row(mainAxisAlignment: MainAxisAlignment.start, children: [Flexible(child: child!)]);
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [Flexible(child: child!)],
+          );
         },
       ).merge(theme.elevatedButtonTheme.style),
     );
@@ -131,7 +137,12 @@ class DebugBottomSheet extends StatelessWidget {
                         featureFlagsProvider.set(FeatureFlag.isWebInspectable, value);
                       },
                     ),
-                    const _ConsumerIdentifierLabel(),
+                    GestureDetector(
+                      onTap: () {
+                        Dev.open(context);
+                      },
+                      child: const _ConsumerIdentifierLabel(),
+                    ),
                   ].map((e) {
                     return Padding(padding: const EdgeInsets.fromLTRB(8, 8, 8, 0), child: e);
                   }).toList(),
@@ -202,10 +213,9 @@ class _ChangeLogLevelTileState extends State<ChangeLogLevelTile> {
               borderRadius: BorderRadius.circular(16),
               iconEnabledColor: theme.colorScheme.onPrimary,
               style: TextStyle(color: theme.colorScheme.onPrimary),
-              items:
-                  levelOptions.map((level) {
-                    return DropdownMenuItem(value: level, child: Text(level.name));
-                  }).toList(),
+              items: levelOptions.map((level) {
+                return DropdownMenuItem(value: level, child: Text(level.name));
+              }).toList(),
             );
           },
         ),

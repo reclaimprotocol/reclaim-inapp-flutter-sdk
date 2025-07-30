@@ -25,4 +25,9 @@ abstract class AttestorZkOperator {
   ///
   /// Returns a string representation of the computation result.
   FutureOr<String> compute(String fnName, List<dynamic> args, OnZKComputePerformanceReportCallback onPerformanceReport);
+
+  /// Checks if the runtime platform is supported for the operator.
+  ///
+  /// Returns `true` if the platform is supported, `false` otherwise.
+  Future<bool> isPlatformSupported();
 }

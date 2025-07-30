@@ -19,6 +19,11 @@ final class ProviderVersionConstraint implements ProviderVersion {
   ProviderVersionExact asExact() {
     return ProviderVersionExact('', versionExpression: versionExpression);
   }
+
+  @override
+  String toString() {
+    return 'ProviderVersionConstraint(versionExpression: $versionExpression)';
+  }
 }
 
 final class ProviderVersionExact implements ProviderVersion {
@@ -29,4 +34,9 @@ final class ProviderVersionExact implements ProviderVersion {
 
   const ProviderVersionExact(this.resolvedVersion, {String? versionExpression})
     : versionExpression = versionExpression ?? resolvedVersion;
+
+  @override
+  String toString() {
+    return 'ProviderVersionExact(resolvedVersion: $resolvedVersion, versionExpression: $versionExpression)';
+  }
 }

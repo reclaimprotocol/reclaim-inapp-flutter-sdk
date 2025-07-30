@@ -14,7 +14,7 @@ class ReclaimStorage {
     try {
       await storage.write(key: key, value: value);
     } catch (e, s) {
-      logger.severe("Error saving data to secure storage", e, s);
+      logger.warning("Warning: could not save data for $key to secure storage", e, s);
     }
   }
 

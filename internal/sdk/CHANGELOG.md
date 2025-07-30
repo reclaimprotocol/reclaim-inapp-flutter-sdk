@@ -1,3 +1,89 @@
+## 0.10.13
+
+* Fix webview re-initialization when initial attempt fails
+* Update verification review screen UI
+* Add handling of local client errors on attestor browser rpc message
+* Fix permissions request dialog on permissions from android webview
+* Fix url loading without trying app link from webview
+* Add cookie `credentials` field in requests
+* Fix verification review UI when oprf is enabled and real value is unavailable
+
+## 0.10.11
+
+* Update activity detection
+* Reduce number of browser rpc clients used for value extraction and claim creation
+* Lazy initialize browser rpc clients
+
+## 0.10.10
+
+* Update attestor client recovery
+* Show a client error screen when no verification activity is detected for some time
+
+## 0.10.9
+
+* Replace old attestor clients before use
+
+## 0.10.8
+
+* Update Hawkeye script
+* Add login detection logging
+* Fix unnecessary rebuilds of webview used for value extraction by path
+
+## 0.10.7
+
+* Update retries during message handling for attestor browser rpc
+* Handle android render process gone
+* Rebuild browser rpc used for value extraction on receiving no response
+
+## 0.10.5
+
+* Fix timeout by moving it inside async lock scope to prevent useless retries
+
+## 0.10.4
+
+* Add a fix to prevent app from launching deeplinks in incognito
+* Update readiness test for attestor 
+* Fix fonts abrupt visual swap when required fonts are loaded 
+
+## 0.10.3
+
+* Fix param key text overflow verification review (#112)
+* Add liveliness checks of javascript calls sent to attestor webview (#111)
+
+## 0.10.2
+
+* Add humanized summary of values shown in the verification review UI
+* Add async lock around json & xml path evaluations to avoid rpc request deadlock
+* Update user login interaction requirement detection
+* Fix handling of requests where response selection either doesn't have match or redaction options
+
+## 0.10.0
+
+* Bug fixes and performance improvements
+* Add retries on timeout when creating claim creation request
+* Throw unsupported warning for non 64 bit runtime platforms
+* Add device logging id as a fallback device identifier
+* Print logs to attached app debugging consoles when logs upload fails 
+* Update exceptions cases
+* Add check for 4xx errors when throwing ReclaimExpiredSessionException exception
+* Fix attestor startup causing requests to get stuck by pre-initializing a separate single browser rpc client for json path and xpath evaluation
+* Update copy for manual review, add feature flags for customizing manual review messages and prompt before manual review submission
+
+## 0.9.2
+
+* Fixing issues with incognito (regression)
+* Fix manual verification
+* Update verification review screen
+* Fix hawkeye headers bug with a workaround
+
+## 0.9.1
+
+* Fixing issues with incognito
+
+## 0.9.0
+
+* Add resolvedVersion to fetch providers override
+
 ## 0.8.0
 
 * Support for provider versions

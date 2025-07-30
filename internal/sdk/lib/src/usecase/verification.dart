@@ -14,6 +14,7 @@ import '../repository/feature_flags.dart';
 import '../services/cookie_service.dart';
 import '../services/provider.dart';
 import '../services/user_script_service.dart';
+import '../web_scripts/hawkeye/interception_method.dart';
 import 'session_manager.dart';
 
 class VerificationFlowManager {
@@ -139,12 +140,14 @@ class VerificationFlowManager {
   Future<UnmodifiableListView<UserScript>> loadUserScripts({
     required HttpProvider provider,
     required Map<String, String> parameters,
+    required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
   }) async {
     try {
       return await UserScriptService.createUserScripts(
         providerData: provider,
         parameters: parameters,
         idleTimeThreshold: 10,
+        hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
       );
     } catch (e, s) {
       log.severe('Error loading user scripts for provider', e, s);

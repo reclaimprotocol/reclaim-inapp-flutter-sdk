@@ -3,14 +3,17 @@ import 'package:reclaim_inapp_sdk/reclaim_inapp_sdk.dart';
 bool _deepEquals(Object? a, Object? b) {
   if (a is List && b is List) {
     return a.length == b.length &&
-        a.indexed
-            .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+        a.indexed.every(
+          ((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]),
+        );
   }
   if (a is Map && b is Map) {
     return a.length == b.length &&
-        a.entries.every((MapEntry<Object?, Object?> entry) =>
-            (b as Map<Object?, Object?>).containsKey(entry.key) &&
-            _deepEquals(entry.value, b[entry.key]));
+        a.entries.every(
+          (MapEntry<Object?, Object?> entry) =>
+              (b as Map<Object?, Object?>).containsKey(entry.key) &&
+              _deepEquals(entry.value, b[entry.key]),
+        );
   }
   return a == b;
 }
@@ -93,7 +96,7 @@ class ClientProviderInformationOverride {
     return <Object?>[
       providerInformationUrl,
       providerInformationJsonString,
-      canFetchProviderInformationFromHost
+      canFetchProviderInformationFromHost,
     ];
   }
 
@@ -253,8 +256,9 @@ class ClientLogConsumerOverride {
 }
 
 class ClientReclaimSessionManagementOverride {
-  ClientReclaimSessionManagementOverride(
-      {this.enableSdkSessionManagement = true});
+  ClientReclaimSessionManagementOverride({
+    this.enableSdkSessionManagement = true,
+  });
 
   bool enableSdkSessionManagement;
 
@@ -269,7 +273,8 @@ class ClientReclaimSessionManagementOverride {
   static ClientReclaimSessionManagementOverride decode(Object result) {
     result as List<Object?>;
     return ClientReclaimSessionManagementOverride(
-        enableSdkSessionManagement: result[0]! as bool);
+      enableSdkSessionManagement: result[0]! as bool,
+    );
   }
 
   @override
@@ -291,10 +296,11 @@ class ClientReclaimSessionManagementOverride {
 }
 
 class ClientReclaimAppInfoOverride {
-  ClientReclaimAppInfoOverride(
-      {required this.appName,
-      required this.appImageUrl,
-      required this.isRecurring});
+  ClientReclaimAppInfoOverride({
+    required this.appName,
+    required this.appImageUrl,
+    required this.isRecurring,
+  });
 
   String appName;
 
@@ -339,8 +345,11 @@ class ClientReclaimAppInfoOverride {
 
 /// Identification information of a session.
 class ReclaimSessionIdentityUpdate {
-  ReclaimSessionIdentityUpdate(
-      {required this.appId, required this.providerId, required this.sessionId});
+  ReclaimSessionIdentityUpdate({
+    required this.appId,
+    required this.providerId,
+    required this.sessionId,
+  });
 
   /// The application id.
   String appId;
@@ -402,6 +411,7 @@ abstract class ReclaimHostOverridesApi {
     required String sessionId,
     required String signature,
     required String timestamp,
+    required String resolvedVersion,
   });
 
   Future<void> logSession({
@@ -416,6 +426,8 @@ abstract class ReclaimHostOverridesApi {
 
   Future<void> onSessionIdentityUpdate(ReclaimSessionIdentityUpdate? update);
 
-  Future<bool> updateSession(
-      {required String sessionId, required SessionStatus status});
+  Future<bool> updateSession({
+    required String sessionId,
+    required SessionStatus status,
+  });
 }

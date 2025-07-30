@@ -11,6 +11,7 @@ typedef ProviderInformationCallback =
       required String sessionId,
       required String signature,
       required String timestamp,
+      required String resolvedVersion,
     });
 
 class ReclaimProviderOverride extends ReclaimOverride<ReclaimProviderOverride> {

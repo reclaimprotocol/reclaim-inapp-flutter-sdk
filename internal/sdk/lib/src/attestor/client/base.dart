@@ -16,7 +16,28 @@ typedef AttestorCreateClaimPerformanceReportCallback =
     void Function(Iterable<ZKComputePerformanceReport> performanceReports);
 
 abstract class AttestorClient {
-  AttestorClient();
+  final String debugLabel;
+  final DateTime createdAt;
+
+  AttestorClient({required this.debugLabel}) : createdAt = DateTime.now();
+
+  static Duration getClientAge(AttestorClient client) {
+    return client.createdAt.difference(DateTime.now()).abs();
+  }
+
+  int _notRespondingCount = 0;
+
+  int get notRespondingCount => _notRespondingCount;
+
+  void markNotResponding() {
+    _notRespondingCount++;
+  }
+
+  void markResponding() {
+    _notRespondingCount = 0;
+  }
+
+  bool get isFaulty => _notRespondingCount > 6;
 
   Future<void> ensureReady();
 
@@ -32,6 +53,8 @@ abstract class AttestorClient {
   void _clearPerformanceReports() {
     _performanceReports.clear();
   }
+
+  Future<Object?> executeJavascript(String js);
 
   AttestorProcess<AttestorClaimRequest, List<CreateClaimOutput>> createClaim({
     required Map<String, Object?> request,
@@ -92,6 +115,10 @@ abstract class AttestorClient {
     );
   }
 
+  AttestorProcess<Object?, Object?> ping() {
+    return sendRequest(type: 'ping', request: null, transformResponse: (value) => value);
+  }
+
   AttestorProcess<REQUEST, RESPONSE> sendRequest<REQUEST, RESPONSE>({
     required String type,
     // request should be json serializable
@@ -100,4 +127,9 @@ abstract class AttestorClient {
   });
 
   Future<void> dispose();
+
+  @override
+  String toString() {
+    return 'AttestorClient(debugLabel: $debugLabel, createdAt: $createdAt, age: ${AttestorClient.getClientAge(this)})';
+  }
 }

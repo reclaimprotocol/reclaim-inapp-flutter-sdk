@@ -25,6 +25,10 @@ class ManualReviewActionData {
   final bool canSubmit;
   @JsonKey(defaultValue: ManualReviewPromptDisplayRule.TIMEOUT)
   final ManualReviewPromptDisplayRule rule;
+  @JsonKey(fromJson: _nonBlankStringFromJson)
+  final String? confirmationDialogTitle;
+  @JsonKey(fromJson: _nonBlankStringFromJson)
+  final String? confirmationDialogMessage;
 
   static final _logging = logging.child('ManualReviewActionData');
 
@@ -33,6 +37,8 @@ class ManualReviewActionData {
     required this.submitLabel,
     required this.canSubmit,
     required this.rule,
+    required this.confirmationDialogTitle,
+    required this.confirmationDialogMessage,
   });
 
   factory ManualReviewActionData.fromJson(Map<String, dynamic> json) => _$ManualReviewActionDataFromJson(json);

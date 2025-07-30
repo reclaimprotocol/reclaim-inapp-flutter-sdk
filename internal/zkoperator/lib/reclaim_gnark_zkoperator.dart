@@ -68,7 +68,7 @@ class ReclaimZkOperator extends ZkOperator {
   }
 
   static KeyAlgorithmAssetUrls defaultProverAlgorithmAssetUrlsProvider(ProverAlgorithmType algorithm) {
-    return KeyAlgorithmAssetUrls(algorithm.defaultKeyAssetUrl, algorithm.defaultR1CSAssetUrl);
+    return KeyAlgorithmAssetUrls.mirrors(algorithm.defaultKeyAssetUrls, algorithm.defaultR1CSAssetUrls);
   }
 
   final ProverAlgorithmInitializer initializer;
@@ -120,15 +120,15 @@ class ReclaimZkOperator extends ZkOperator {
           if (!_hasAllAlgorithmsInitialized) {
             algorithm = identifyAlgorithmFromZKOperationRequest(bytesInput);
             if (algorithm != null) {
-              logger.finest('ensuring prover algorithm "$algorithm" is ready');
+              logger.info('ensuring prover algorithm "$algorithm" is ready');
               // ensure algorithm is initialized
               await initializer.ensureInitialized(algorithm);
-              logger.finest('prover algorithm "$algorithm" is ready');
+              logger.info('prover algorithm "$algorithm" is ready');
             } else {
               logger.finest('no algorithm found in the zk operation request');
             }
           } else {
-            logger.finest('all prover algorithms should be ready');
+            logger.info('all prover algorithms should be ready');
           }
           return groth16Prove(
             bytesInput,
@@ -204,6 +204,23 @@ class ReclaimZkOperator extends ZkOperator {
     final workerFuture = _generateOPRFRequestDataWorkerFuture ??= _GenerateOPRFRequestDataWorker.spawn();
     final worker = await workerFuture;
     return worker.generateOPRFRequestData(bytes);
+  }
+
+  @override
+  Future<bool> isPlatformSupported() async {
+    // check if we are running on a 64 bit runtime.
+    // parses the dart runtime platform version string and checks if the build is 64 bit.
+    final version = Platform.version;
+    try {
+      final index = version.indexOf('"');
+      final lastIndex = version.lastIndexOf('"');
+      final versionString = version.substring(index + 1, lastIndex);
+      final [_, runtimeArch] = versionString.split('_');
+      return runtimeArch.contains('64');
+    } catch (e, s) {
+      _logger.warning('Failed to check if platform is supported for runtime version: $version', e, s);
+      return true;
+    }
   }
 
   @override

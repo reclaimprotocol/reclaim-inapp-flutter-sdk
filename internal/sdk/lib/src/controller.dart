@@ -14,10 +14,13 @@ import 'data/verification/request.dart';
 import 'data/verification/result.dart';
 import 'exception/exception.dart';
 import 'logging/logging.dart';
+import 'repository/feature_flags.dart';
 import 'usecase/session_manager.dart';
 import 'usecase/verification.dart';
 import 'usecase/zkoperator.dart';
 import 'utils/observable_notifier.dart';
+import 'web_scripts/hawkeye/interception_method.dart';
+import 'widgets/feature_flags.dart';
 
 @immutable
 class VerificationState with EquatableMixin {
@@ -180,12 +183,15 @@ class VerificationController extends ObservableNotifier<VerificationState> {
         appInfoFuture,
         options.canClearWebStorage,
       );
+
+      _log.info('Fetching provider ${request.providerId} with version: ${sessionInformation.version}');
       final provider = await verificationFlowManager.fetchRequestedProvider(
         applicationId: request.applicationId,
         providerId: request.providerId,
         sessionInformation: sessionInformation,
         version: sessionInformation.version,
       );
+      _log.info('Provider fetched with version: ${provider.version}');
 
       final canContinueVerificationCallback = options.canContinueVerification;
 
@@ -210,7 +216,7 @@ class VerificationController extends ObservableNotifier<VerificationState> {
 
       await clearingWebStorage;
 
-      await _loadUserScripts(provider);
+      await _loadUserScripts(provider, response.identity);
     } on ReclaimException catch (e, s) {
       updateException(e, s);
     } catch (e, s) {
@@ -219,10 +225,16 @@ class VerificationController extends ObservableNotifier<VerificationState> {
     }
   }
 
-  Future<void> _loadUserScripts(HttpProvider provider) async {
+  Future<void> _loadUserScripts(HttpProvider provider, SessionIdentity identity) async {
+    final featureFlagsProvider = FeatureFlagsProvider(identity);
+    final hawkeyeInterceptionMethod = await featureFlagsProvider
+        .get(FeatureFlag.hawkeyeInterceptionMethod)
+        .then(HawkeyeInterceptionMethod.fromString);
+
     final userScripts = await VerificationFlowManager().loadUserScripts(
       provider: provider,
       parameters: request.parameters,
+      hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
     );
     value = value.copyWith(userScripts: userScripts);
   }
@@ -238,8 +250,8 @@ class VerificationController extends ObservableNotifier<VerificationState> {
     value = value.copyWith(attestorAuthenticationRequest: attestorAuthenticationRequest);
   }
 
-  void cancelVerification() {
-    updateException(const ReclaimVerificationCancelledException());
+  void cancelVerification(String message) {
+    updateException(ReclaimVerificationCancelledException(message));
   }
 
   void dismissVerification() {
@@ -261,7 +273,7 @@ class VerificationController extends ObservableNotifier<VerificationState> {
 
     final newProvider = await fn(requestedProvider, provider);
     value = value.copyWith(provider: newProvider);
-    await _loadUserScripts(newProvider);
+    await _loadUserScripts(newProvider, identity);
     // TODO: Unimplemented recovery from errors.
   }
 

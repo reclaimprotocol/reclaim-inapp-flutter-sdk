@@ -13,7 +13,7 @@ Future<String> getPublicIp() async {
     }
     log.warning({'reason': 'Failed to get public IP address', 'response.data': response.body});
   } catch (e, s) {
-    log.severe('Failed to get public IP address', e, s);
+    log.warning('Failed to get public IP address. Returning 0.0.0.0.', e, s);
   }
   return '0.0.0.0';
 }

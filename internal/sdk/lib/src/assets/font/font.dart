@@ -25,6 +25,20 @@ class TargetFontDescription {
     required this.expectedFileHash,
   });
 
+  static final _loadingFontsFuture = <Future<void>>{};
+
+  static bool get isLoadingFonts => _loadingFontsFuture.isNotEmpty;
+
+  static Future<void> waitForPendingFonts() async {
+    final log = logging.child('waitForPendingFonts');
+
+    try {
+      await Future.wait(_loadingFontsFuture);
+    } catch (e, s) {
+      log.severe('Error waiting for pending fonts', e, s);
+    }
+  }
+
   /// Installs font in flutter app based on the description.
   /// Downloads from network will be cached.
   Future<void> installFontIfRequired() async {
@@ -35,6 +49,10 @@ class TargetFontDescription {
       _loadedFonts.add(name);
     }
 
+    final completer = Completer<void>();
+    final future = completer.future;
+    _loadingFontsFuture.add(future);
+
     try {
       // load font from device
       ByteData? byteData = await file_io.loadFontFromDeviceFileSystem(name: name, fileHash: expectedFileHash);
@@ -44,11 +62,16 @@ class TargetFontDescription {
 
       // Load font in the flutter engine
       await _loadFontInFlutter(name, byteData);
+
+      _loadingFontsFuture.remove(future);
+      completer.complete();
     } catch (e, s) {
       logging
           .child('installFontIfRequired')
           .info('We were unable to load font $name required in reclaim_inapp_sdk package', e, s);
       _loadedFonts.remove(name);
+      _loadingFontsFuture.remove(future);
+      completer.completeError(e);
 
       rethrow;
     }

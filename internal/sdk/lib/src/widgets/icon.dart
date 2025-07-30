@@ -15,7 +15,10 @@ class VerifiedIcon extends StatelessWidget {
         color: Color(0xFF22C55E),
         border: Border.fromBorderSide(BorderSide(color: Colors.white, width: 1.6)),
       ),
-      child: Padding(padding: EdgeInsets.all(3.2), child: Icon(Icons.check_rounded, size: 10.4, color: Colors.white)),
+      child: Padding(
+        padding: EdgeInsets.all(3.2),
+        child: Icon(Icons.check_rounded, size: 10.4, color: Colors.white),
+      ),
     );
   }
 }
@@ -44,7 +47,10 @@ class LogoIcon extends StatelessWidget {
           width: size,
           placeholder: (context, url) => placeholder,
           errorWidget: (BuildContext context, String url, Object error) {
-            return Padding(padding: EdgeInsets.all(size * 0.1), child: Icon(Icons.error, size: size * 0.8));
+            return Padding(
+              padding: EdgeInsets.all(size * 0.1),
+              child: Icon(Icons.error, size: size * 0.8),
+            );
           },
         ),
       ),

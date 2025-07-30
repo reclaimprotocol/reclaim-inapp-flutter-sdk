@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../data/providers.dart';
 import '../logging/logging.dart';
+import '../web_scripts/hawkeye/interception_method.dart';
 import '../web_scripts/scripts/misc.dart';
 import '../web_scripts/web_scripts.dart';
 import '../webview_utils.dart';
@@ -15,6 +16,7 @@ class UserScriptService {
     required HttpProvider providerData,
     required Map<String, String> parameters,
     required int idleTimeThreshold,
+    required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
   }) async {
     try {
       logger.info('Creating user scripts with provider: ${providerData.name}');
@@ -28,7 +30,11 @@ class UserScriptService {
           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
         ),
         UserScript(
-          source: createInterceptorInjection(providerData, parameters),
+          source: createInterceptorInjection(
+            providerData,
+            parameters,
+            hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
+          ),
           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
         ),
       ];
@@ -76,10 +82,9 @@ class UserScriptService {
 
   static String _createPayloadDataScript(HttpProvider? providerData, Map<String, String> parameters) {
     try {
-      final payload =
-          (providerData?.toJson() ?? <String, dynamic>{})
-            ..remove('customInjection')
-            ..addEntries([MapEntry('parameters', parameters)]);
+      final payload = (providerData?.toJson() ?? <String, dynamic>{})
+        ..remove('customInjection')
+        ..addEntries([MapEntry('parameters', parameters)]);
 
       return '''
         try {
@@ -95,15 +100,18 @@ class UserScriptService {
     }
   }
 
-  static String createInterceptorInjection(HttpProvider? providerData, Map<String, String> parameters) {
+  static String createInterceptorInjection(
+    HttpProvider? providerData,
+    Map<String, String> parameters, {
+    required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
+  }) {
     try {
       final injectionRequests = providerData?.requestData.map((e) {
         return InjectionRequest(
           urlRegex: convertTemplateToRegex(template: e.url ?? '', parameters: parameters, extraEscape: true).$1,
-          bodySniffRegex:
-              e.bodySniff?.enabled == true
-                  ? convertTemplateToRegex(template: e.bodySniff?.template ?? '', parameters: parameters).$1
-                  : "",
+          bodySniffRegex: e.bodySniff?.enabled == true
+              ? convertTemplateToRegex(template: e.bodySniff?.template ?? '', parameters: parameters).$1
+              : "",
           bodySniffEnabled: e.bodySniff?.enabled == true,
           method: e.method!,
           requestHash: e.requestHash!,
@@ -116,6 +124,7 @@ class UserScriptService {
         injectionRequests ?? const [],
         providerData?.disableRequestReplay ?? false,
         injectionType ?? InjectionType.MSWJS,
+        hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
       );
     } catch (e, s) {
       logger.severe('Error creating intercepter injection', e, s);

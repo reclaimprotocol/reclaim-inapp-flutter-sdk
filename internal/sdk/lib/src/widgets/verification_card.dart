@@ -33,15 +33,15 @@ class VerificationCard extends StatelessWidget {
               child,
               verifed
                   ? Positioned(
-                    child: Container(
-                      decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(5)),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      child: const Text(
-                        'Verified',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      child: Container(
+                        decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(5)),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: const Text(
+                          'Verified',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
                       ),
-                    ),
-                  )
+                    )
                   : const SizedBox.shrink(),
             ],
           ),

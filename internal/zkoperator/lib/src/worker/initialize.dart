@@ -16,15 +16,15 @@ class InitAlgorithmWorker {
 
   Future<bool> initializeAlgorithmInBackground(
     ProverAlgorithmType algorithm,
-    String keyAssetUrl,
-    String r1csAssetUrl,
+    List<String> keyAssetUrls,
+    List<String> r1csAssetUrls,
   ) async {
     if (_closed) throw StateError('$_debugLabel is disposed');
 
     final completer = Completer<Object?>.sync();
     final id = _idCounter++;
     _activeRequests[id] = completer;
-    _commands.send((id, algorithm, keyAssetUrl, r1csAssetUrl, _httpCacheDirName));
+    _commands.send((id, algorithm, keyAssetUrls, r1csAssetUrls, _httpCacheDirName));
 
     return await completer.future as bool;
   }
@@ -76,28 +76,52 @@ class InitAlgorithmWorker {
     }
   }
 
+  static Future<Uint8List?> downloadWithMirrors({
+    required List<String> mirrors,
+    required String assetNameDebug,
+    required String assetTypeDebug,
+    required String? httpCacheDirName,
+  }) async {
+    final log = Logger('${_logger.fullName}.downloadWithMirrors');
+    log.fine('Downloading $assetTypeDebug asset for $assetNameDebug');
+    final stopwatch = Stopwatch()..start();
+    for (final downloadUrl in mirrors) {
+      try {
+        log.fine('Downloading $assetTypeDebug asset for $assetNameDebug from $downloadUrl');
+        final asset = await downloadWithHttp(downloadUrl, cacheDirName: httpCacheDirName);
+        if (asset == null) continue;
+        stopwatch.stop();
+        log.info(
+          'Downloaded $assetTypeDebug asset for $assetNameDebug from $downloadUrl, elapsed ${stopwatch.elapsed}',
+        );
+        return asset;
+      } catch (e, s) {
+        log.warning('Failed to download $assetTypeDebug asset for $assetNameDebug from $downloadUrl', e, s);
+      }
+    }
+    stopwatch.stop();
+    log.info('Failed to download $assetTypeDebug asset for $assetNameDebug, elapsed ${stopwatch.elapsed}');
+    return null;
+  }
+
   static Future<bool> initializeAlgorithm(
     ProverAlgorithmType algorithm,
-    String keyAssetUrl,
-    String r1csAssetUrl,
+    List<String> keyAssetUrls,
+    List<String> r1csAssetUrls,
     String? httpCacheDirName,
   ) async {
-    final provingKeyFuture = () async {
-      _logger.fine('Downloading key asset for ${algorithm.name}');
-      final stopwatch = Stopwatch()..start();
-      final asset = await downloadWithHttp(keyAssetUrl, cacheDirName: httpCacheDirName);
-      stopwatch.stop();
-      _logger.info('Downloaded key asset for ${algorithm.name}, elapsed ${stopwatch.elapsed}');
-      return asset;
-    }();
-    final r1csFuture = () async {
-      _logger.fine('Downloading r1cs asset for ${algorithm.name}');
-      final stopwatch = Stopwatch()..start();
-      final asset = await downloadWithHttp(r1csAssetUrl, cacheDirName: httpCacheDirName);
-      stopwatch.stop();
-      _logger.info('Downloaded r1cs asset for ${algorithm.name}, elapsed ${stopwatch.elapsed}');
-      return asset;
-    }();
+    final provingKeyFuture = downloadWithMirrors(
+      mirrors: keyAssetUrls,
+      assetNameDebug: algorithm.name,
+      assetTypeDebug: 'key',
+      httpCacheDirName: httpCacheDirName,
+    );
+    final r1csFuture = downloadWithMirrors(
+      mirrors: r1csAssetUrls,
+      assetNameDebug: algorithm.name,
+      assetTypeDebug: 'r1cs',
+      httpCacheDirName: httpCacheDirName,
+    );
 
     await Future.wait([provingKeyFuture, r1csFuture]);
 
@@ -178,10 +202,10 @@ class InitAlgorithmWorker {
         receivePort.close();
         return;
       }
-      final (id, algorithm, keyAssetUrl, r1csAssetUrl, httpCacheDirName) =
-          message as (int, ProverAlgorithmType, String, String, String?);
+      final (id, algorithm, keyAssetUrls, r1csAssetUrls, httpCacheDirName) =
+          message as (int, ProverAlgorithmType, List<String>, List<String>, String?);
       try {
-        final initResponse = await initializeAlgorithm(algorithm, keyAssetUrl, r1csAssetUrl, httpCacheDirName);
+        final initResponse = await initializeAlgorithm(algorithm, keyAssetUrls, r1csAssetUrls, httpCacheDirName);
         sendPort.send((id, initResponse));
       } catch (e) {
         sendPort.send((id, RemoteError(e.toString(), '')));

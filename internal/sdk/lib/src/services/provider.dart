@@ -26,7 +26,7 @@ class ReclaimProviderService {
         sessionId: sessionId,
         signature: signature,
         timestamp: timestamp,
-        // resolvedVersion: resolvedVersion,
+        resolvedVersion: resolvedVersion,
       );
       return ReclaimDataProvidersResponse(
         isSucces: true,

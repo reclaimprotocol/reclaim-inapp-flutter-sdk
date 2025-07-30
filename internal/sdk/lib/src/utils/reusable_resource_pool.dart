@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:logging/logging.dart';
 import 'package:pool/pool.dart';
+
+final _log = Logger('reclaim_inapp_sdk.ReusableResourcePool');
 
 class ReusableResourcePool<RESOURCE> {
   Pool _pool;
@@ -28,11 +31,17 @@ class ReusableResourcePool<RESOURCE> {
 
   final List<RESOURCE> _availableResource = [];
   int get resourceCount => _availableResource.length;
+  final Duration ageLimit;
+  final Duration Function(RESOURCE resource) getResourceAge;
+  final bool Function(RESOURCE resource) isResourceFaulty;
 
   ReusableResourcePool({
     required int initialPoolSize,
     required FutureOr<RESOURCE> Function() createResource,
     required FutureOr<void> Function(RESOURCE resource) disposeResource,
+    required this.ageLimit,
+    required this.getResourceAge,
+    required this.isResourceFaulty,
   }) : _createResource = createResource,
        _disposeResource = disposeResource,
        _poolSize = initialPoolSize,
@@ -44,10 +53,33 @@ class ReusableResourcePool<RESOURCE> {
       return _createResource();
     }
     // reuse existing resource
-    return _availableResource.removeAt(0);
+    final r = _availableResource.removeAt(0);
+    final age = getResourceAge(r);
+    if (age >= ageLimit) {
+      _log.info('disposing resource because it is older than age limit: $age, resource: $r');
+      _disposeResource(r);
+      return _createResource();
+    }
+    if (isResourceFaulty(r)) {
+      _log.info('disposing resource because it is faulty: $r');
+      _disposeResource(r);
+      return _createResource();
+    }
+    return r;
   }
 
   void returnResource(RESOURCE resource) {
+    final age = getResourceAge(resource);
+    if (age >= ageLimit) {
+      _log.info('disposing resource because it is older than age limit: $age');
+      _disposeResource(resource);
+      return;
+    }
+    if (isResourceFaulty(resource)) {
+      _log.info('disposing resource because it is faulty: $resource');
+      _disposeResource(resource);
+      return;
+    }
     if (_availableResource.contains(resource)) {
       return;
     }

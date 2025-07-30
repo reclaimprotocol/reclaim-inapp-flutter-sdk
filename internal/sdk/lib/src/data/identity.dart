@@ -22,6 +22,23 @@ class SessionIdentity {
     );
   }
 
+  static SessionIdentity mergeWithLatest({
+    required String appId,
+    required String providerId,
+    required String sessionId,
+  }) {
+    final it = latest;
+    if (it == null) {
+      return SessionIdentity(appId: appId, providerId: providerId, sessionId: sessionId);
+    } else {
+      return it.copyWith(
+        appId: it.appId.isEmpty ? appId : it.appId,
+        providerId: it.providerId.isEmpty ? providerId : it.providerId,
+        sessionId: it.sessionId.isEmpty ? sessionId : it.sessionId,
+      );
+    }
+  }
+
   SessionIdentity merge(SessionIdentity? other) {
     String withFallback(String? it, String fallback) {
       if (it == null || it.trim().isEmpty) return fallback;

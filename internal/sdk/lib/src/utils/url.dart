@@ -43,10 +43,15 @@ bool isLoginUrl(String url) {
 }
 
 String normalizeUrl(String url) {
-  if (url.endsWith('/')) {
-    url = url.substring(0, url.length - 1);
-  }
+  url = simplifyUrl(url);
   return Uri.parse(url).replace(queryParameters: const {}, scheme: '').removeFragment().toString();
+}
+
+String simplifyUrl(String url) {
+  if (url.endsWith('/')) {
+    return url.substring(0, url.length - 1);
+  }
+  return url;
 }
 
 bool isUrlsEqual(String url, String? otherUrl) {

@@ -48,24 +48,28 @@ Logger _createSdkLogger() {
 
   l.onRecord.listen(_onLoggingLogRecord);
 
-  unawaited(
-    _logLevelPreference.value.then((value) async {
-      final effectiveLevel = await () async {
-        try {
-          final getLevel = ReclaimOverrides.logsConsumer?.levelChangeHandler?.getLevel;
-          if (getLevel != null) {
-            return await getLevel();
+  if (Platform.environment.containsKey('FLUTTER_TEST')) {
+    l.level = Level.ALL;
+  } else {
+    unawaited(
+      _logLevelPreference.value.then((value) async {
+        final effectiveLevel = await () async {
+          try {
+            final getLevel = ReclaimOverrides.logsConsumer?.levelChangeHandler?.getLevel;
+            if (getLevel != null) {
+              return await getLevel();
+            }
+          } catch (e, s) {
+            logging.severe('Failed to get effective log level', e, s);
           }
-        } catch (e, s) {
-          logging.severe('Failed to get effective log level', e, s);
-        }
-        return value ?? Level.INFO;
-      }();
-      l.level = effectiveLevel;
-      _onLoggingLogLevelChanged(effectiveLevel);
-      l.onLevelChanged.listen(_onLoggingLogLevelChanged);
-    }),
-  );
+          return value ?? Level.INFO;
+        }();
+        l.level = effectiveLevel;
+        _onLoggingLogLevelChanged(effectiveLevel);
+        l.onLevelChanged.listen(_onLoggingLogLevelChanged);
+      }),
+    );
+  }
 
   final platformDispatcherLogger = l.child('PlatformDispatcher');
   final previousPlatformDispatcherErrorHandler = PlatformDispatcher.instance.onError;
@@ -87,7 +91,7 @@ Logger _createSdkLogger() {
   };
 
   // an always alive periodic timer
-  _uploadDiagnisticLogs();
+  _uploadDiagnosticLogsPeriodic();
 
   return l;
 }
@@ -173,10 +177,9 @@ Timer? diagnosticLogUploadTimer;
 final _loggingService = DiagnosticLogging();
 
 List<LogEntry> _getLogEntryFromBuffer(List<_BufferLogEntry> logs, SessionIdentity identity) {
-  final entries =
-      logs.map((e) {
-        return LogEntry.fromRecord(e.record, e.identity, fallbackSessionIdentity: identity);
-      }).toList();
+  final entries = logs.map((e) {
+    return LogEntry.fromRecord(e.record, e.identity, fallbackSessionIdentity: identity);
+  }).toList();
   return entries;
 }
 
@@ -186,47 +189,57 @@ int _getSizeInBytes(List<_BufferLogEntry> logs, SessionIdentity identity) {
   return utf8.encode(json.encode(entries)).lengthInBytes;
 }
 
-void _uploadDiagnisticLogs() {
+Future<void> uploadDiagnosticLogs({SessionIdentity? sessionIdentityFallack}) async {
+  final SessionIdentity identity;
+  SessionIdentity? latest = SessionIdentity.latest;
+  if (latest == null || latest.sessionId.isEmpty) {
+    final fallback = sessionIdentityFallack;
+    if (fallback == null) {
+      // wait for session id to get generated
+      return;
+    }
+    // use the fallback session identity if available
+    identity = fallback;
+  } else {
+    identity = latest;
+  }
+
+  if (_buffer.isEmpty) {
+    // no logs to upload
+    return;
+  }
+
+  final logs = _buffer;
+  _buffer = [];
+
+  final entries = logs.map((e) {
+    return LogEntry.fromRecord(e.record, e.identity, fallbackSessionIdentity: identity);
+  }).toList();
+
   try {
-    final identity = SessionIdentity.latest;
-    if (identity == null ||
-        // wait for session id to get generated
-        identity.sessionId.isEmpty) {
-      return;
+    while (_getSizeInBytes(logs, identity) >= _mb4) {
+      if (logs.length == 1 || logs.isEmpty) return;
+      final e = logs.removeLast();
+      // adding will eventually move the biggest log at the end
+      _buffer.add(e);
     }
+  } catch (e, s) {
+    logging.severe('Failed to get size of logs', e, s);
+  }
 
-    if (_buffer.isEmpty) {
-      // no logs to upload
-      return;
-    }
+  _loggingService.sendLogs(entries);
+}
 
-    final logs = _buffer;
-    _buffer = [];
-
-    final entries =
-        logs.map((e) {
-          return LogEntry.fromRecord(e.record, e.identity, fallbackSessionIdentity: identity);
-        }).toList();
-
-    try {
-      while (_getSizeInBytes(logs, identity) >= _mb4) {
-        if (logs.length == 1 || logs.isEmpty) return;
-        final e = logs.removeLast();
-        // adding will eventually move the biggest log at the end
-        _buffer.add(e);
-      }
-    } catch (e, s) {
-      logging.severe('Failed to get size of logs', e, s);
-    }
-
-    _loggingService.sendLogs(entries);
+void _uploadDiagnosticLogsPeriodic() async {
+  try {
+    await uploadDiagnosticLogs();
   } catch (e, s) {
     logging.severe('Failed to upload diagnostic logs', e, s);
     // don't reinsert failed logs in the buffer again. ReclaimHttpClients will have retried on errors.
     // this is why we aren't awaiting to avoid blocking other logs from being uploaded.
   } finally {
     // schedule the next upload
-    diagnosticLogUploadTimer = Timer(_diagnosticLogUploadInterval, _uploadDiagnisticLogs);
+    diagnosticLogUploadTimer = Timer(_diagnosticLogUploadInterval, _uploadDiagnosticLogsPeriodic);
   }
 }
 

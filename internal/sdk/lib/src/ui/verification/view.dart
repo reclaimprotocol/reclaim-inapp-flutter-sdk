@@ -10,6 +10,7 @@ import '../../controller.dart';
 import '../../data/providers.dart';
 import '../../exception/exception.dart';
 import '../../logging/logging.dart';
+import '../../usecase/login_detection.dart';
 import '../../utils/observable_notifier.dart';
 import '../../widgets/claim_creation/claim_creation.dart';
 import '../../widgets/debug_bottom_sheet.dart';
@@ -179,7 +180,8 @@ class _VerificationViewState extends State<VerificationView> {
                   VerificationController.readOf(context).onSubmitProofs(proofs);
                 },
                 onContinue: (nextLocation) {
-                  return _clientViewModel.onContinue(nextLocation);
+                  final loginDetection = LoginDetection.readOf(context);
+                  return _clientViewModel.onContinue(loginDetection, nextLocation);
                 },
                 onException: (e) {
                   VerificationController.readOf(context).updateException(e);
