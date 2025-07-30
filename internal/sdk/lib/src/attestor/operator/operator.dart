@@ -1,14 +1,18 @@
 import 'dart:async';
 
-import 'package:reclaim_flutter_sdk/src/utils/provider_performance_report.dart';
+import '../../utils/provider_performance_report.dart';
 
-typedef OnZKComputePerformanceReportCallback =
-    FutureOr<void> Function(ZKComputePerformanceReport report);
+import 'callback.dart';
+export 'callback.dart';
+
+typedef OnZKComputePerformanceReportCallback = FutureOr<void> Function(ZKComputePerformanceReport report);
 
 /// Defines an interface for zero-knowledge operations in the attestation process.
 ///
 /// Implementations of this class provide the ability to check support for operations,
 /// determine readiness, and compute results for zero-knowledge proofs.
+///
+/// See also [AttestorZkOperatorWithCallback] for a default implementation that uses callbacks.
 abstract class AttestorZkOperator {
   const AttestorZkOperator();
 
@@ -20,9 +24,5 @@ abstract class AttestorZkOperator {
   /// Computes the result of the specified function with the given arguments.
   ///
   /// Returns a string representation of the computation result.
-  FutureOr<String> compute(
-    String fnName,
-    List<dynamic> args,
-    OnZKComputePerformanceReportCallback onPerformanceReport,
-  );
+  FutureOr<String> compute(String fnName, List<dynamic> args, OnZKComputePerformanceReportCallback onPerformanceReport);
 }

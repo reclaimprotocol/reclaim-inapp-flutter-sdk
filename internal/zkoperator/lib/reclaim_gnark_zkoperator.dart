@@ -10,7 +10,6 @@ import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:measure_performance/measure_performance.dart';
 
-import 'src/algorithm/algorithm.dart';
 import 'src/algorithm/assets.dart';
 import 'src/algorithm/utils.dart';
 import 'src/download/download.dart';
@@ -61,10 +60,9 @@ class ReclaimZkOperator extends ZkOperator {
   /// [ReclaimZkOperator._initializeAllAlgorithms] and use [ReclaimZkOperator] later when [_initializeAllAlgorithms] completes.
   static Future<ReclaimZkOperator> getInstance([
     ProverAlgorithmAssetUrlsProvider getAssetUrls = defaultProverAlgorithmAssetUrlsProvider,
-    ProverAlgorithmInitializationPriority priority = ProverAlgorithmInitializationPriority.nonOprfFirst,
   ]) async {
     if (_cachedInstances[getAssetUrls] == null) {
-      _cachedInstances[getAssetUrls] = ReclaimZkOperator._(ProverAlgorithmInitializer(getAssetUrls, priority));
+      _cachedInstances[getAssetUrls] = ReclaimZkOperator._(ProverAlgorithmInitializer(getAssetUrls));
     }
     return _cachedInstances[getAssetUrls]!;
   }
@@ -161,6 +159,26 @@ class ReclaimZkOperator extends ZkOperator {
       }
     }();
     return _reformatJsonStringForRPC(response);
+  }
+
+  @override
+  ProverAlgorithmType? getAlgorithmFromOperationRequest(String fnName, List<dynamic> args) {
+    try {
+      switch (fnName) {
+        case 'groth16Prove':
+          final bytesInput = base64.decode(args[0]['value']);
+          return identifyAlgorithmFromZKOperationRequest(bytesInput);
+      }
+    } catch (e, s) {
+      _logger.warning('Failed to get algorithm from operation request', e, s);
+    }
+    return null;
+  }
+
+  @override
+  Future<bool> ensureInitialized(ProverAlgorithmType algorithm) async {
+    if (_hasAllAlgorithmsInitialized) return true;
+    return initializer.ensureInitialized(algorithm);
   }
 
   @override

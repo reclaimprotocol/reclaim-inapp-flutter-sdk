@@ -146,6 +146,7 @@ Future<Uint8List?> downloadWithHttp(
       retryIf: (e) {
         return e is SocketException ||
             e is TimeoutException ||
+            e.toString().contains('net::ERR_TIMED_OUT') ||
             e is _RetryableHttpException ||
             e is _EmptyResponseException;
       },

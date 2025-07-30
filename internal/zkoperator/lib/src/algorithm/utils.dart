@@ -12,12 +12,12 @@ final _nameToBytes = <ProverAlgorithmType, Uint8List>{};
 final _keyToBytes = <ProverAlgorithmType, Uint8List>{};
 
 extension _IdBytes on ProverAlgorithmType {
-  Uint8List nameToBytes() {
-    return _nameToBytes[this] ??= utf8.encode(name);
+  Uint8List nameToJsonStringBytes() {
+    return _nameToBytes[this] ??= utf8.encode('"$name"');
   }
 
-  Uint8List keyToBytes() {
-    return _keyToBytes[this] ??= utf8.encode(key);
+  Uint8List keyToJsonStringBytes() {
+    return _keyToBytes[this] ??= utf8.encode('"$key"');
   }
 }
 
@@ -27,10 +27,10 @@ ProverAlgorithmType? identifyAlgorithmFromZKOperationRequest(Uint8List bytes) {
   try {
     for (final algorithm in _orderedAlgorithmTypes) {
       // check if the request bytes contain the algorithm name or key
-      if (hasSubview(bytes, algorithm.nameToBytes())) {
+      if (hasSubview(bytes, algorithm.nameToJsonStringBytes())) {
         return algorithm;
       }
-      if (hasSubview(bytes, algorithm.keyToBytes())) {
+      if (hasSubview(bytes, algorithm.keyToJsonStringBytes())) {
         return algorithm;
       }
     }

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reclaim_flutter_sdk/utils/crypto/jwk_codec.dart';
+import 'package:reclaim_inapp_sdk/src/utils/crypto/jwk_codec.dart';
 
 void main() {
   group('JwkValueCodec', () {
@@ -14,9 +14,7 @@ void main() {
     });
 
     test('should encode and decode BigInt with large numbers', () {
-      final value = BigInt.parse(
-        '39652107780440097616261701677477693488465820838769261154713640144338514325440',
-      );
+      final value = BigInt.parse('39652107780440097616261701677477693488465820838769261154713640144338514325440');
       final encoded = codec.encode(value);
       final decoded = codec.decode(encoded);
       expect(encoded, 'V6pMNKtWkU2z_OJ5hxMkUv2UzOaUt-4mdKRVZwzjr8A');

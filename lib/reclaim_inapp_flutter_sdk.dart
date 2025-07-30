@@ -1,65 +1,41 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:reclaim_flutter_sdk/logging/data/log.dart';
-import 'package:reclaim_flutter_sdk/logging/logging.dart';
-import 'package:reclaim_flutter_sdk/reclaim_flutter_sdk.dart';
-import 'package:reclaim_flutter_sdk/services/capability/capability.dart';
-import 'package:reclaim_flutter_sdk/types/claim_creation_type.dart';
+import 'package:logging/logging.dart';
 import 'package:reclaim_gnark_zkoperator/reclaim_gnark_zkoperator.dart';
 // ignore: implementation_imports
 import 'package:reclaim_gnark_zkoperator/src/download/download.dart'
     show downloadWithHttp;
+import 'package:reclaim_inapp_sdk/capability_access.dart';
+import 'package:reclaim_inapp_sdk/logging.dart';
+import 'package:reclaim_inapp_sdk/overrides.dart';
+import 'package:reclaim_inapp_sdk/reclaim_inapp_sdk.dart';
 
-import 'data/url_request.dart';
-import 'overrides.dart';
+import 'data.dart';
 
-export 'package:reclaim_flutter_sdk/data/providers.dart' show HttpProvider;
-export 'package:reclaim_flutter_sdk/exception/exception.dart';
-export 'package:reclaim_flutter_sdk/reclaim_flutter_sdk.dart'
-    show ReclaimSessionInformation, SessionStatus;
-export 'package:reclaim_flutter_sdk/src/attestor/data/attestor/auth.dart'
-    show AttestorAuthenticationRequest;
-export 'package:reclaim_flutter_sdk/types/claim_creation_type.dart';
-export 'package:reclaim_flutter_sdk/types/create_claim.dart';
-export 'package:reclaim_flutter_sdk/types/verification_options.dart';
-export 'overrides.dart';
+export 'package:reclaim_inapp_sdk/attestor.dart';
+export 'package:reclaim_inapp_sdk/overrides.dart';
+export 'package:reclaim_inapp_sdk/reclaim_inapp_sdk.dart'
+    hide ReclaimVerification;
+
+export 'data.dart';
 
 final _logger = Logger('reclaim_flutter_sdk.reclaim_verifier_module');
 
-class ReclaimVerificationRequest {
-  final String appId;
-  final String providerId;
-  final String secret;
-  final ReclaimSessionInformation sessionInformation;
-  final String contextString;
-  final Map<String, String> parameters;
-  final bool autoSubmit;
-  final bool hideCloseButton;
-  final String? webhookUrl;
-  final ReclaimVerificationOptions? verificationOptions;
-  final ClaimCreationType claimCreationType;
+class ReclaimCapabilityException implements Exception {
+  final String message;
 
-  ReclaimVerificationRequest({
-    required this.appId,
-    required this.providerId,
-    required this.sessionInformation,
-    this.secret = '',
-    this.contextString = '',
-    this.parameters = const {},
-    this.verificationOptions,
-    this.claimCreationType = ClaimCreationType.standalone,
-    this.autoSubmit = true,
-    this.hideCloseButton = false,
-    this.webhookUrl,
-  }) : assert(sessionInformation.isValid || secret.isNotEmpty,
-            'A valid session information or application secret is required');
+  const ReclaimCapabilityException(this.message);
+
+  @override
+  String toString() => 'ReclaimCapabilityException: $message';
 }
 
 class ReclaimInAppSdk {
   final BuildContext context;
+  final ReclaimVerification _reclaim;
 
-  const ReclaimInAppSdk.of(this.context);
+  ReclaimInAppSdk.of(this.context) : _reclaim = ReclaimVerification.of(context);
 
   static Future<void> preWarm() async {
     // Getting the Gnark prover instance to initialize in advance before usage because initialization can take time.
@@ -68,74 +44,99 @@ class ReclaimInAppSdk {
     await ReclaimZkOperator.getInstance();
   }
 
-  static Future<String> _onComputeAttestorProof(String type, List args,
-      OnZKComputePerformanceReportCallback onPerformanceReport) async {
-    // Get gnark prover instance and compute the attestor proof.
-    return (await ReclaimZkOperator.getInstance()).computeAttestorProof(
-        type, args, onPerformanceReport: (algorithm, report) {
-      onPerformanceReport(ZKComputePerformanceReport(
-        algorithmName: algorithm?.name ?? '',
-        report: report,
-      ));
-    });
-  }
+  final _defaultReclaimVerificationOptions = ReclaimVerificationOptions(
+    canAutoSubmit: true,
+    isCloseButtonVisible: true,
+    attestorZkOperator: AttestorZkOperatorWithCallback.withReclaimZKOperator(
+      onComputeProof: (type, args, onPerformanceReport) async {
+        // Get gnark prover instance and compute the attestor proof.
+        return (await ReclaimZkOperator.getInstance()).computeAttestorProof(
+          type,
+          args,
+          onPerformanceReport: (algorithm, report) {
+            onPerformanceReport(ZKComputePerformanceReport(
+                algorithmName: algorithm?.name ?? '', report: report));
+          },
+        );
+      },
+    ),
+  );
 
-  Future<List<CreateClaimOutput>?> startVerification(
-      ReclaimVerificationRequest request) async {
-    preWarm();
+  late ReclaimVerificationOptions _reclaimVerificationOptions =
+      _defaultReclaimVerificationOptions;
 
-    late ReclaimVerification verification;
-    if (request.sessionInformation.isValid) {
-      verification = ReclaimVerification.withSession(
-          buildContext: context,
-          appId: request.appId,
-          providerId: request.providerId,
-          context: request.contextString,
-          parameters: request.parameters,
-          sessionInformation: request.sessionInformation,
-          verificationOptions: request.verificationOptions,
-          claimCreationType: request.claimCreationType,
-          autoSubmit: request.autoSubmit,
-          acceptAiProviders: false,
-          hideCloseButton: request.hideCloseButton,
-          webhookUrl: request.webhookUrl,
-          computeAttestorProof: _onComputeAttestorProof);
+  Future<void> setVerificationOptions(
+      ReclaimVerificationOptions? options) async {
+    final log = _logger.child('setVerificationOptions');
+    if (options == null) {
+      log.info('Setting verification options to null');
+      _reclaimVerificationOptions = _defaultReclaimVerificationOptions;
     } else {
-      verification = ReclaimVerification(
-          buildContext: context,
-          appId: request.appId,
-          providerId: request.providerId,
-          secret: request.secret,
-          context: request.contextString,
-          parameters: request.parameters,
-          verificationOptions: request.verificationOptions,
-          claimCreationType: request.claimCreationType,
-          autoSubmit: request.autoSubmit,
-          acceptAiProviders: false,
-          hideCloseButton: request.hideCloseButton,
-          webhookUrl: request.webhookUrl,
-          computeAttestorProof: _onComputeAttestorProof);
+      log.info({
+        'reason': 'Setting verification options',
+        'canDeleteCookiesBeforeVerificationStarts': options.canClearWebStorage,
+        'canUseAttestorAuthenticationRequest':
+            options.attestorAuthenticationRequest != null,
+        'claimCreationType': options.claimCreationType,
+      });
+      _reclaimVerificationOptions = options;
     }
-    return verification.startVerification();
   }
 
-  Future<List<CreateClaimOutput>?> startVerificationFromUrl(String url) {
-    final request = ReclaimUrlRequest.fromUrl(url);
-    return startVerification(
-      ReclaimVerificationRequest(
-        appId: request.applicationId,
-        providerId: request.providerId,
-        secret: request.signature,
-        sessionInformation: ReclaimSessionInformation(
-          sessionId: request.sessionId ?? '',
-          signature: request.signature,
-          timestamp: request.timestamp,
-        ),
-        contextString: request.context ?? '',
-        parameters: request.parameters ?? const {},
-        webhookUrl: request.callbackUrl,
-      ),
-    );
+  Future<ReclaimApiVerificationResponse> _startVerification(
+    ReclaimVerificationRequest request,
+    String requestSessionId,
+  ) async {
+    try {
+      preWarm();
+
+      final response = await _reclaim.startVerification(
+        request: request,
+        options: _reclaimVerificationOptions,
+      );
+      return ReclaimApiVerificationResponse(
+        sessionId: SessionIdentity.latest?.sessionId ?? requestSessionId,
+        didSubmitManualVerification: false,
+        proofs: (json.decode(json.encode(response.proofs)) as List)
+            .map((e) => e as Map<String, dynamic>)
+            .toList(),
+        exception: null,
+      );
+    } catch (e, s) {
+      _logger.severe('Failed verification response', e, s);
+      return ReclaimApiVerificationResponse(
+        sessionId: SessionIdentity.latest?.sessionId ?? requestSessionId,
+        didSubmitManualVerification:
+            e is ReclaimVerificationManualReviewException,
+        proofs: const [],
+        exception: e is ReclaimException
+            ? e
+            : ReclaimVerificationCancelledException(e.toString()),
+      );
+    }
+  }
+
+  Future<ReclaimApiVerificationResponse> startVerification(
+      ReclaimVerificationRequest request) async {
+    return _startVerification(request, SessionIdentity.latest?.sessionId ?? '');
+  }
+
+  Future<ReclaimApiVerificationResponse> startVerificationFromUrl(String url) {
+    final request = ClientSdkVerificationRequest.fromUrl(url);
+    return _startVerification(
+        ReclaimVerificationRequest.fromSdkRequest(request),
+        request.sessionId ?? '');
+  }
+
+  Future<ReclaimApiVerificationResponse> startVerificationFromJson(
+      Map<dynamic, dynamic> template) {
+    final request = ClientSdkVerificationRequest.fromJson(<String, dynamic>{
+      for (final entry in template.entries)
+        (entry.key?.toString() ?? ''): entry.value,
+    });
+    return _startVerification(
+        ReclaimVerificationRequest.fromSdkRequest(request),
+        request.sessionId ?? '');
   }
 
   Future<void> clearAllOverrides() async {
@@ -149,7 +150,8 @@ class ReclaimInAppSdk {
       return true;
     }
 
-    throw ReclaimException('Unauthorized use of capability: $capabilityName');
+    throw ReclaimCapabilityException(
+        'Unauthorized use of capability: $capabilityName');
   }
 
   Future<void> setOverrides({
@@ -162,15 +164,10 @@ class ReclaimInAppSdk {
     ReclaimHostOverridesApi? overridesHandlerApi,
   }) async {
     if (capabilityAccessToken != null) {
-      try {
-        ReclaimOverride.set(
-          CapabilityAccessToken.import(
-              capabilityAccessToken, _CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY),
-        );
-      } on CapabilityAccessTokenException catch (e, s) {
-        _logger.severe('Failed to set capability access token', e, s);
-        throw ReclaimException(e.message);
-      }
+      ReclaimOverride.set(
+        CapabilityAccessToken.import(
+            capabilityAccessToken, _CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY),
+      );
     }
 
     if (feature?.attestorBrowserRpcUrl != null ||
@@ -203,8 +200,9 @@ class ReclaimInAppSdk {
           sessionTimeoutForManualVerificationTrigger:
               feature.sessionTimeoutForManualVerificationTrigger,
           attestorBrowserRpcUrl: feature.attestorBrowserRpcUrl,
-          isAIFlowEnabled: feature.isAIFlowEnabled ?? false,
-          canUseAiFlow: feature.canUseAiFlow ?? false,
+          canUseAiFlow: feature.isAIFlowEnabled ?? false,
+          manualReviewMessage: feature.manualReviewMessage,
+          loginPromptMessage: feature.loginPromptMessage,
         ),
       if (provider != null)
         ReclaimProviderOverride(
@@ -224,7 +222,7 @@ class ReclaimInAppSdk {
                 );
 
                 if (response == null) {
-                  throw ReclaimException(
+                  throw ReclaimVerificationProviderLoadException(
                     'Failed to fetch provider information from ${provider.providerInformationUrl}',
                   );
                 }
@@ -251,7 +249,7 @@ class ReclaimInAppSdk {
               if (e is ReclaimException) {
                 rethrow;
               }
-              throw ReclaimException(
+              throw ReclaimVerificationProviderLoadException(
                   'Failed to fetch provider information due to $e');
             }
 
@@ -259,7 +257,7 @@ class ReclaimInAppSdk {
               return HttpProvider.fromJson(providerInformation);
             } catch (e, s) {
               _logger.severe('Failed to parse provider information', e, s);
-              throw ReclaimException(
+              throw ReclaimVerificationProviderLoadException(
                   'Failed to parse provider information: ${e.toString()}');
             }
           },
@@ -285,6 +283,7 @@ class ReclaimInAppSdk {
             required String providerId,
             required String timestamp,
             required String signature,
+            required String providerVersion,
           }) async {
             assert(overridesHandlerApi != null,
                 'ReclaimInAppSdk.setOverrides(overridesHandlerApi:) is required');
@@ -293,6 +292,7 @@ class ReclaimInAppSdk {
               providerId: providerId,
               timestamp: timestamp,
               signature: signature,
+              providerVersion: providerVersion,
             );
           },
           updateSession: (sessionId, status, metadata) async {

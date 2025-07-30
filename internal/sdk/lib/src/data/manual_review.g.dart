@@ -6,23 +6,16 @@ part of 'manual_review.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-ManualReviewActionData _$ManualReviewActionDataFromJson(
-  Map<String, dynamic> json,
-) => ManualReviewActionData(
+ManualReviewActionData _$ManualReviewActionDataFromJson(Map<String, dynamic> json) => ManualReviewActionData(
   message: _nonBlankStringFromJson(json['message']),
   submitLabel: _nonBlankStringFromJson(json['submitLabel']),
   canSubmit: json['canSubmit'] as bool? ?? true,
   rule:
-      $enumDecodeNullable(
-        _$ManualReviewPromptDisplayRuleEnumMap,
-        json['rule'],
-      ) ??
-      ManualReviewPromptDisplayRule.NOT_LOGIN,
+      $enumDecodeNullable(_$ManualReviewPromptDisplayRuleEnumMap, json['rule']) ??
+      ManualReviewPromptDisplayRule.TIMEOUT,
 );
 
-Map<String, dynamic> _$ManualReviewActionDataToJson(
-  ManualReviewActionData instance,
-) => <String, dynamic>{
+Map<String, dynamic> _$ManualReviewActionDataToJson(ManualReviewActionData instance) => <String, dynamic>{
   'message': instance.message,
   'submitLabel': instance.submitLabel,
   'canSubmit': instance.canSubmit,

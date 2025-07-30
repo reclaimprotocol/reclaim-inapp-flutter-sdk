@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reclaim_flutter_sdk/utils/crypto/signature.dart';
+import 'package:reclaim_inapp_sdk/src/utils/crypto/signature.dart';
 
 void main() {
   group('NistP256ECDSASigner', () {

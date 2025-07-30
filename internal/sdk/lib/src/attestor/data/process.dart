@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:reclaim_flutter_sdk/src/attestor/client/browser_rpc/message.dart';
+import '../client/browser_rpc/message.dart';
 
 /// Represents an attestation process with a request and response lifecycle.
 ///
@@ -26,16 +26,7 @@ class AttestorProcess<REQUEST extends Object?, RESPONSE extends Object?> {
     required this.updateStream,
   });
 
-  RpcRequest<REQUEST> createRequest({
-    required String module,
-    required String channel,
-  }) {
-    return RpcRequest<REQUEST>(
-      id: id,
-      type: type,
-      request: request,
-      module: module,
-      channel: channel,
-    );
+  RpcRequest<REQUEST> createRequest({required String module, required String channel}) {
+    return RpcRequest<REQUEST>(id: id, type: type, request: request, module: module, channel: channel);
   }
 }

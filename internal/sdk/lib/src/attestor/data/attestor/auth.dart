@@ -13,10 +13,7 @@ class AttestorAuthenticationRequest {
   final Map<String, Object?> data;
   final AttestorBinaryData? signature;
 
-  const AttestorAuthenticationRequest({
-    required this.data,
-    required this.signature,
-  });
+  const AttestorAuthenticationRequest({required this.data, required this.signature});
 
   factory AttestorAuthenticationRequest.fromJson(Map<String, dynamic> json) =>
       _$AttestorAuthenticationRequestFromJson(json);

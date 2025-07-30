@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reclaim_flutter_sdk/src/utils/sanitize.dart';
+import 'package:reclaim_inapp_sdk/src/utils/sanitize.dart';
 
 void main() {
   group('sanitize', () {

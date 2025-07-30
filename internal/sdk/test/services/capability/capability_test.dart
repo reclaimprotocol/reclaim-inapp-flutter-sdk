@@ -3,9 +3,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reclaim_flutter_sdk/overrides/override.dart';
-import 'package:reclaim_flutter_sdk/services/capability/access_token.dart';
-import 'package:reclaim_flutter_sdk/services/capability/capability.dart';
+import 'package:reclaim_inapp_sdk/src/overrides/override.dart';
+import 'package:reclaim_inapp_sdk/src/services/capability/access_token.dart';
+import 'package:reclaim_inapp_sdk/src/services/capability/capability.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,68 +17,48 @@ void main() {
     setUp(() {
       final now = DateTime.now().copyWith(microsecond: 0);
 
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-        channel,
-        (MethodCall methodCall) async {
-          switch (methodCall.method) {
-            case 'getAll':
-              return <String, dynamic>{
-                'appName': 'package_info_example',
-                'buildNumber': '1',
-                'packageName': 'org.reclaimprotocol.example',
-                'version': '1.0',
-                'installerStore': null,
-                'installTime': now.millisecondsSinceEpoch.toString(),
-              };
-            default:
-              assert(false);
-              return null;
-          }
-        },
-      );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        MethodCall methodCall,
+      ) async {
+        switch (methodCall.method) {
+          case 'getAll':
+            return <String, dynamic>{
+              'appName': 'package_info_example',
+              'buildNumber': '1',
+              'packageName': 'org.reclaimprotocol.example',
+              'version': '1.0',
+              'installerStore': null,
+              'installTime': now.millisecondsSinceEpoch.toString(),
+            };
+          default:
+            assert(false);
+            return null;
+        }
+      });
     });
 
     tearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-        channel,
-        null,
-      );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
     });
 
     test('isAuthorizedParty', () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       expect(
-        await capabilityAccessVerifier.isAuthorizedParty(
-          Uri.parse('android://org.reclaimprotocol.example'),
-        ),
+        await capabilityAccessVerifier.isAuthorizedParty(Uri.parse('android://org.reclaimprotocol.example')),
         isTrue,
       );
       expect(
-        await capabilityAccessVerifier.isAuthorizedParty(
-          Uri.parse('android://org.reclaimprotocol.example.other'),
-        ),
+        await capabilityAccessVerifier.isAuthorizedParty(Uri.parse('android://org.reclaimprotocol.example.other')),
         isFalse,
       );
 
-      expect(
-        await capabilityAccessVerifier.isAuthorizedParty(
-          Uri.parse('ios://org.reclaimprotocol.example'),
-        ),
-        isFalse,
-      );
+      expect(await capabilityAccessVerifier.isAuthorizedParty(Uri.parse('ios://org.reclaimprotocol.example')), isFalse);
 
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      expect(
-        await capabilityAccessVerifier.isAuthorizedParty(
-          Uri.parse('ios://org.reclaimprotocol.example'),
-        ),
-        isTrue,
-      );
+      expect(await capabilityAccessVerifier.isAuthorizedParty(Uri.parse('ios://org.reclaimprotocol.example')), isTrue);
 
       expect(
-        await capabilityAccessVerifier.isAuthorizedParty(
-          Uri.parse('ios://org.reclaimprotocol.example.other'),
-        ),
+        await capabilityAccessVerifier.isAuthorizedParty(Uri.parse('ios://org.reclaimprotocol.example.other')),
         isFalse,
       );
     });
