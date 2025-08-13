@@ -112,9 +112,15 @@ class VerificationFlowManager {
     SessionIdentity identity,
     Future<AppInfo> appInfoFuture,
     bool canClearWebStorage,
+    bool isAiProvider,
   ) async {
     try {
-      log.fine('canClearWebStorage: $canClearWebStorage');
+      log.fine('canClearWebStorage: $canClearWebStorage. isAiProvider: $isAiProvider');
+      // if the provider is an ai provider, clear the cookies
+      if (isAiProvider) {
+        final cs = CookieService();
+        await cs.clearCookies();
+      }
       if (canClearWebStorage) {
         // clear storage if sdk consumer does't want to prevent it
         final canSaveWebStorageDevPreference = await FeatureFlagRepository().getFeatureFlag(

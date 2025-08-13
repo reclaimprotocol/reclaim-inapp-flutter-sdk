@@ -18,17 +18,7 @@ void main() {
     });
   });
 
-  group('login url and url equal', () {
-    test('should return true if the login url is null and the url is a login url', () {
-      expect(isLoginUrl('https://example.com/login'), true);
-      expect(isLoginUrl('https://github.com/settings/profile'), false);
-      expect(isLoginUrl('https://github.com/login?return_to=https%3A%2F%2Fgithub.com%2Fsettings%2Fprofile'), true);
-      expect(isLoginUrl('https://x.com/?logout=1748851281882'), true);
-      expect(
-        isLoginUrl('https://my.dmv.ca.gov/mga/sps/authsvc?TransactionId=3c5e133f-c2d5-4553-bcff-eed0f12ecbbc'),
-        true,
-      );
-    });
+  group('url equal', () {
     test('should return true if the urls are equal', () {
       expect(isUrlsEqual('https://example.com/login', 'https://example.com/login?foo=bar'), true);
       expect(isUrlsEqual('https://github.com/settings/profile', 'https://github.com/settings/profile'), true);

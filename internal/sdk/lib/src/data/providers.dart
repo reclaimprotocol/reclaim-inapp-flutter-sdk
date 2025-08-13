@@ -4,8 +4,8 @@ import 'dart:math' as math;
 
 import 'package:json_annotation/json_annotation.dart';
 import 'package:meta/meta.dart';
-import 'package:web3dart/crypto.dart';
 
+import '../utils/crypto/ethers.dart';
 import '../utils/list.dart';
 
 part 'providers.g.dart';
@@ -132,8 +132,32 @@ class HttpProvider {
 
   Map<String, dynamic> toJson() => _$HttpProviderToJson(this);
 
-  bool isAIProvider() {
+  bool get isAIProvider {
     return verificationType == 'AI';
+  }
+
+  HttpProvider copyWithLoginUrl(String? newLoginUrl) {
+    return HttpProvider(
+      name: name,
+      description: description,
+      logoUrl: logoUrl,
+      providerType: providerType,
+      loginUrl: newLoginUrl,
+      isActive: isActive,
+      customInjection: customInjection,
+      userAgent: userAgent,
+      isApproved: isApproved,
+      geoLocation: geoLocation,
+      isVerified: isVerified,
+      injectionType: injectionType,
+      disableRequestReplay: disableRequestReplay,
+      providerHash: providerHash,
+      additionalClientOptions: additionalClientOptions,
+      verificationType: 'AI',
+      pageTitle: pageTitle,
+      requestData: requestData,
+      useIncognitoWebview: useIncognitoWebview,
+    );
   }
 }
 
@@ -200,8 +224,8 @@ class DataProviderRequest {
   final String? url;
   @JsonKey(name: "urlType")
   final UrlType? urlType;
-  @JsonKey(name: "method")
-  final RequestMethodType? method;
+  @JsonKey(name: "method", defaultValue: RequestMethodType.GET)
+  final RequestMethodType method;
   @JsonKey(name: "responseMatches", defaultValue: [])
   final List<ResponseMatch> responseMatches;
   @JsonKey(name: "responseRedactions", defaultValue: [])
@@ -211,6 +235,7 @@ class DataProviderRequest {
   @JsonKey(name: "credentials", defaultValue: WebCredentialsType.INCLUDE, fromJson: WebCredentialsType.fromString)
   final WebCredentialsType credentials;
   @JsonKey(name: "requestHash")
+  /// Request hash is unreliable, prefer using requestIdentifier instead within the SDK.
   final String? requestHash;
 
   /// On which page this provider request is expected to be found
@@ -220,7 +245,7 @@ class DataProviderRequest {
   DataProviderRequest({
     this.url,
     this.urlType,
-    this.method,
+    required this.method,
     required this.responseMatches,
     required this.responseRedactions,
     this.bodySniff,
@@ -345,9 +370,11 @@ class DataProviderRequest {
     // matches with the devtool generated hash
     final orderedProviderParams = SplayTreeMap.from({
       'url': url,
-      'method': method?.name,
+      'urlType': urlType?.name,
+      'method': method.name,
       'responseRedactions': responseRedactions,
       'responseMatches': responseMatches,
+      'credentials': credentials.name,
       'reqBody': bodySniff?.enabled == true ? (bodySniff?.template ?? "") : "",
     });
     final canoncalizedJsonString = json.encode(orderedProviderParams);
@@ -368,20 +395,36 @@ class DataProviderRequest {
 
 typedef ResponseSelection = ({ResponseMatch? match, ResponseRedaction? redaction});
 
+enum ResponseMatchType {
+  @JsonValue('contains')
+  contains,
+  @JsonValue('regex')
+  regex,
+}
+
 @JsonSerializable()
 class ResponseMatch {
   @JsonKey(name: "value")
   final String? value;
-  @JsonKey(name: "type")
-  final String? type;
+  @JsonKey(name: "type", defaultValue: ResponseMatchType.contains, unknownEnumValue: ResponseMatchType.contains)
+  final ResponseMatchType? type;
   @JsonKey(name: "invert", defaultValue: false)
   final bool invert;
   @JsonKey(name: "description", includeToJson: false)
   final String? description;
-  @JsonKey(name: 'order', includeToJson: false)
+  @JsonKey(name: "order", includeToJson: false)
   final num? order;
+  @JsonKey(name: "isOptional", defaultValue: false, includeToJson: false)
+  final bool isOptional;
 
-  const ResponseMatch({this.value, this.type, required this.invert, this.description, this.order});
+  const ResponseMatch({
+    this.value,
+    this.type,
+    required this.invert,
+    this.description,
+    this.order,
+    required this.isOptional,
+  });
 
   static final _matchParamRegex = RegExp(r'{{(.*?)}}');
 

@@ -1,9 +1,12 @@
 export './claim_creation/trigger_indicator.dart' show ClaimTriggerIndicator;
 export 'action_button.dart';
 export 'animated_progress.dart';
+export 'app_provider_icon_bar.dart';
 export 'debug_bottom_sheet.dart';
 export 'fonts_loaded.dart';
 export 'icon.dart';
+export 'item_alignment.dart';
 export 'params/params_text.dart';
+export 'potential_failure_reasons.dart';
 export 'reclaim_theme_provider.dart';
 export 'webview_bottom.dart';

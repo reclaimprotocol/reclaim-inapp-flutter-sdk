@@ -60,7 +60,7 @@ class ClaimCreationUIScopeState extends State<ClaimCreationUIScope> {
   void initState() {
     super.initState();
     final controller = ClaimCreationController.of(context, listen: false);
-    _claimCreationControllerSubscription = controller.changesStream.listen(_onClaimCreationControllerChange);
+    _claimCreationControllerSubscription = controller.subscribe(_onClaimCreationControllerChange);
     controller._setDelegate(this);
   }
 

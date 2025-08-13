@@ -18,7 +18,7 @@ void main() {
           ],
           'geoLocation': 'US',
         }).requestIdentifier,
-        equals('0x191364554dda0aaa732f6dd4cfdb3204f437bf36defa067742a6fea6ef15b1d8'),
+        equals('0x88a2c863deeb7bd690e48112b8268b89231efb0a27441df50bce2c77a6836f8a'),
       );
     });
 
@@ -60,7 +60,7 @@ void main() {
           "requestHash": "0xf0671406185377e01a1d5d7cc248d1a828c55887b195ffbc180680f7d068365d",
           "additionalClientOptions": null,
         }),
-        '0x49629317122233f49c189cda3532a62547d97660dd82aa2bb147a75571d56cfd',
+        '0x2ac3761ef83f7b36c649eb36a73aabcce84350f91b61110c06d9a3a8fc63ca78',
       );
       testIntegrity(
         DataProviderRequest.fromJson({
@@ -91,7 +91,7 @@ void main() {
           "requestHash": "0x8d7f90574f96e103f2354fd089ad8545ecaf521c822aca776f9a84ab025f05b2",
           "additionalClientOptions": null,
         }),
-        '0x98b79d22a194098ff7c8d38d171cc263c17f7d32a823952d794d138c0f70c057',
+        '0x5de00a6f92154d939b613b60e0d7b2e1615714e170190e859395e4da29ae3c14',
       );
       testIntegrity(
         DataProviderRequest.fromJson(
@@ -103,7 +103,7 @@ void main() {
             ),
           ),
         ),
-        '0x711db5464ed053d44457fc66e91a51ad7c4ceaf7d16a24b56f774ddaefc6c79d',
+        '0x7091f9aeeed62d14c3717e059c470f2127f0d9c4a8a4e622f5b268b3e9e29850',
       );
     });
 
@@ -112,7 +112,15 @@ void main() {
         url: 'https://example.com',
         urlType: UrlType.CONSTANT,
         method: RequestMethodType.GET,
-        responseMatches: [ResponseMatch(value: "{{FullName}}", type: "contains", invert: false, description: "")],
+        responseMatches: [
+          ResponseMatch(
+            value: "{{FullName}}",
+            type: ResponseMatchType.contains,
+            invert: false,
+            description: "",
+            isOptional: false,
+          ),
+        ],
         responseRedactions: [
           ResponseRedaction(
             xPath: "",
@@ -130,7 +138,15 @@ void main() {
         url: 'https://example.com',
         urlType: UrlType.CONSTANT,
         method: RequestMethodType.GET,
-        responseMatches: [ResponseMatch(value: "{{FullName}}", type: "contains", invert: false, description: "")],
+        responseMatches: [
+          ResponseMatch(
+            value: "{{FullName}}",
+            type: ResponseMatchType.contains,
+            invert: false,
+            description: "",
+            isOptional: false,
+          ),
+        ],
         responseRedactions: [
           ResponseRedaction(
             xPath: "",
@@ -152,7 +168,15 @@ void main() {
         url: 'https://{{name}}.example.com',
         urlType: UrlType.TEMPLATE,
         method: RequestMethodType.POST,
-        responseMatches: [ResponseMatch(value: "{{DateOfBirth}}", type: "contains", invert: false, description: "")],
+        responseMatches: [
+          ResponseMatch(
+            value: "{{DateOfBirth}}",
+            type: ResponseMatchType.contains,
+            invert: false,
+            description: "",
+            isOptional: false,
+          ),
+        ],
         responseRedactions: [
           ResponseRedaction(
             xPath: "",

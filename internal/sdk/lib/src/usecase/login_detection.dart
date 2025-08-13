@@ -50,12 +50,14 @@ class LoginDetection {
       return false;
     }
     if (isLoginUrl(currentUrl)) {
+      log.finest('login url detected: $currentUrl');
       unawaited(
         onLoginRequiredDetected(url: currentUrl, hasLoginRelatedTokenInUrl: true, hasLoginRelatedElementInPage: null),
       );
       return true;
     }
     if (await hasLoginButtonInPage(controller)) {
+      log.finest('login button detected in page: $currentUrl');
       unawaited(
         onLoginRequiredDetected(url: currentUrl, hasLoginRelatedTokenInUrl: false, hasLoginRelatedElementInPage: true),
       );

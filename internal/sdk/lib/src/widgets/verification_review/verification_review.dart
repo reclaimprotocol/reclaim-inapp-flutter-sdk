@@ -9,16 +9,25 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../constants.dart';
 import '../../controller.dart';
 import '../../data/data.dart';
+import '../../data/web_context.dart';
+import '../../exception/exception.dart';
 import '../../logging/logging.dart';
 import '../../ui/claim_creation_webview/view_model.dart';
 import '../../usecase/login_detection.dart';
 import '../../utils/observable_notifier.dart';
 import '../../utils/url.dart';
+import '../action_button.dart';
+import '../ai/recommendation_text.dart';
+import '../ai_flow_coordinator_widget.dart';
 import '../animated_icon/check.dart';
+import '../app_provider_icon_bar.dart';
 import '../claim_creation/claim_creation.dart';
 import '../claim_creation/trigger_indicator.dart';
+import '../fonts_loaded.dart';
+import '../item_alignment.dart';
 import '../loading/shimmer_shader.dart';
-import '../widgets.dart';
+import '../params/params_text.dart';
+import '../potential_failure_reasons.dart';
 import 'controller.dart';
 import 'live_background.dart';
 
@@ -75,13 +84,6 @@ class _VerificationReviewState extends State<VerificationReview> {
       ],
     );
   }
-}
-
-enum ItemAlignment {
-  center,
-  start;
-
-  bool get isStarting => this == ItemAlignment.start;
 }
 
 class VerificationReviewPageSurface extends StatelessWidget {
@@ -184,11 +186,15 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
         alignment: itemAlignment,
         children: [
           const SizedBox(height: 16.0),
-          _AppProviderIconsBar(
+          AppProviderIconsBar(
             key: _animatedAppProviderIconsBarKey,
             itemAlignment: itemAlignment,
-            appInfo: appInfo,
-            providerData: providerData,
+            appImageUrl: appInfo?.appImage,
+            appName: appInfo?.appName,
+            providerImageUrl: providerData?.logoUrl,
+            providerName: providerData?.name,
+            borderRadius: _borderRadius,
+            useInheritedVerificationInformation: true,
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -261,6 +267,7 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
 
   late ClaimCreationController controller;
   late VerificationController verificationController;
+  late WebContext webContext;
   Timer? _loadingTextsTimer;
 
   late final List<String Function()> _loadingTextsQueue = [
@@ -280,20 +287,23 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
   final List<StreamSubscription> _subscriptions = [];
 
   late final ClaimCreationWebClientViewModel webViewModel;
+  bool isAiProvider = false;
+  bool _maybeRequiresLogin = false;
+  String _aiInfoText = '';
 
   @override
   void initState() {
     super.initState();
     controller = ClaimCreationController.readOf(context);
     verificationController = VerificationController.readOf(context);
+    isAiProvider = verificationController.value.provider?.isAIProvider == true;
+    _maybeRequiresLogin = isAiProvider;
     webViewModel = ClaimCreationWebClientViewModel.readOf(context);
-    _subscriptions.add(webViewModel.changesStream.listen(_claimCreationChange));
+    _subscriptions.add(webViewModel.subscribe(_claimCreationChange));
     _onWebPageUpdate();
   }
 
   Timer? _isLoginEvaluationTimer;
-
-  bool _maybeRequiresLogin = false;
 
   void _claimCreationChange(ChangedValues<ClaimCreationWebState> changes) {
     final (oldValue, value) = changes.record;
@@ -305,7 +315,17 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
     _onWebPageUpdate();
   }
 
-  void _onWebPageUpdate() {
+  void _onWebPageUpdate() async {
+    final log = logging.child('onWebPageUpdate');
+    log.info('onWebPageUpdate');
+    if (isAiProvider) {
+      _onWebPageUpdateRemoteDetection();
+    } else {
+      _onWebPageUpdateLocalDetection();
+    }
+  }
+
+  void _onWebPageUpdateLocalDetection() async {
     final log = logging.child('onWebPageUpdate');
 
     _isLoginEvaluationTimer?.cancel();
@@ -335,6 +355,41 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
         });
       }
     });
+  }
+
+  void _onWebPageUpdateRemoteDetection() async {
+    final log = logging.child('onWebPageUpdateRemoteDetection');
+
+    if (!mounted) return;
+
+    _onInfoTextUpdate(webContext.infoText);
+
+    if (!_maybeRequiresLogin) return;
+
+    try {
+      log.info('webContext.isLoggedIn: ${webContext.isLoggedIn}');
+      if (webContext.isLoggedIn) {
+        setState(() {
+          _maybeRequiresLogin = false;
+        });
+      }
+    } catch (e, s) {
+      log.severe('Failed to evaluate if current page is login', e, s);
+    }
+  }
+
+  void _onInfoTextUpdate(String infoText) {
+    final isAiFlowDone = webContext.aiFlowDone;
+    log.info('updating info text in review screen: $infoText');
+    if (isAiFlowDone) {
+      setState(() {
+        _aiInfoText = '';
+      });
+    } else if (infoText.isNotEmpty && infoText != _aiInfoText) {
+      setState(() {
+        _aiInfoText = infoText;
+      });
+    }
   }
 
   void _startLoadingTextsTimer() {
@@ -371,12 +426,33 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
     super.didChangeDependencies();
     controller = ClaimCreationController.of(context);
     verificationController = VerificationController.of(context);
+    webContext = AIFlowCoordinatorWidget.maybeWebContext(context) ?? WebContext();
+    webContext.onInfoTextChanged(_onInfoTextUpdate);
   }
 
   final reviewSubtitleKey = GlobalKey(debugLabel: 'reviewSubtitleKey');
 
   bool get canStartWebClient =>
       verificationController.value.userScripts != null && verificationController.value.provider != null;
+
+  TextStyle _buildTextStyle(
+    ThemeData theme,
+    ClaimCreationControllerState value,
+    FontWeight fontWeight,
+    double fontSize,
+    double lineHeight,
+  ) {
+    return theme.textTheme.titleMedium?.merge(
+          TextStyle(
+            fontWeight: value.hasError ? FontWeight.bold : fontWeight,
+            color: value.hasError ? theme.colorScheme.error : Colors.black,
+            fontSize: fontSize,
+            height: lineHeight,
+            fontVariations: value.hasError ? [FontVariation.weight(700)] : [FontVariation.weight(500)],
+          ),
+        ) ??
+        TextStyle(fontWeight: fontWeight);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -415,6 +491,8 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
           ),
         ],
       );
+    } else if (_aiInfoText.isNotEmpty) {
+      subtitle = TextSpan(text: _aiInfoText);
     } else if (!canStartWebClient) {
       subtitle = const TextSpan(text: 'Getting ready..');
     } else if (_maybeRequiresLogin && value.isIdle) {
@@ -465,19 +543,14 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
                         primaryColor: primaryColor,
                         secondaryColor: secondaryColor,
                         child: Text.rich(
-                          subtitle,
-                          textAlign: widget.itemAlignment.isStarting ? TextAlign.start : TextAlign.center,
-                          style: theme.textTheme.titleMedium?.merge(
-                            TextStyle(
-                              color: value.hasError ? theme.colorScheme.error : Colors.black,
-                              fontSize: fontSize,
-                              height: lineHeight,
-                              fontWeight: value.hasError ? FontWeight.bold : FontWeight.w500,
-                              fontVariations: value.hasError
-                                  ? [FontVariation.weight(700)]
-                                  : [FontVariation.weight(500)],
+                          TextSpan(
+                            children: parseHighlightedText(
+                              subtitle.toPlainText(),
+                              _buildTextStyle(theme, value, FontWeight.w400, fontSize, lineHeight),
+                              _buildTextStyle(theme, value, FontWeight.w900, fontSize, lineHeight),
                             ),
                           ),
+                          textAlign: widget.itemAlignment.isStarting ? TextAlign.start : TextAlign.center,
                           maxLines: lines,
                         ),
                       ),
@@ -489,137 +562,6 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
           ),
         ),
       ),
-    );
-  }
-}
-
-class _AppProviderIconsBar extends StatelessWidget {
-  const _AppProviderIconsBar({
-    super.key,
-    required this.itemAlignment,
-    required this.appInfo,
-    required this.providerData,
-  });
-
-  final ItemAlignment itemAlignment;
-  final AppInfo? appInfo;
-  final HttpProvider? providerData;
-
-  @override
-  Widget build(BuildContext context) {
-    final double logoSize = 70.0;
-    final double defaultIconSize = logoSize;
-
-    final appImage = appInfo?.appImage;
-    final providerData = this.providerData;
-
-    final applicationIcon = InkWell(
-      onDoubleTap: () {
-        VerificationReviewController.readOf(context).setIsVisible(false);
-      },
-      borderRadius: _borderRadius,
-      child: AnimatedSwitcher(
-        duration: Durations.medium1,
-        child: appImage != null && appImage.isNotEmpty
-            ? LogoIcon(logoUrl: appImage, size: logoSize, borderRadius: _borderRadius)
-            : SimpleShimmer(height: logoSize, width: logoSize),
-      ),
-    );
-
-    final isStartAligned = itemAlignment.isStarting;
-
-    final movementTransitionDuration = Durations.long4;
-    final maxWidth = (logoSize * 2) + defaultIconSize + (isStartAligned ? 1 : 2);
-
-    return Row(
-      mainAxisAlignment: isStartAligned ? MainAxisAlignment.start : MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.max,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: logoSize, maxWidth: maxWidth),
-          child: Stack(
-            alignment: AlignmentDirectional.center,
-            fit: StackFit.expand,
-            children: [
-              AnimatedPositioned(
-                top: 0,
-                right: providerData == null
-                    ? (isStartAligned ? maxWidth - logoSize : ((maxWidth / 2) - (logoSize / 2)))
-                    : 0,
-                height: logoSize,
-                width: logoSize,
-                curve: Curves.fastEaseInToSlowEaseOut,
-                duration: movementTransitionDuration,
-                child: applicationIcon,
-              ),
-              AnimatedPositioned(
-                top: 0,
-                left: 0,
-                height: logoSize,
-                width: logoSize + defaultIconSize,
-                curve: Curves.easeIn,
-                duration: movementTransitionDuration,
-                child: AnimatedSwitcher(
-                  duration: movementTransitionDuration,
-                  switchInCurve: Curves.easeIn,
-                  switchOutCurve: Curves.easeOut,
-                  child: providerData == null
-                      ? SizedBox(height: logoSize)
-                      : Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Tooltip(
-                              message: providerData.name ?? 'Provider',
-                              child: LogoIcon(
-                                logoUrl: providerData.logoUrl,
-                                size: logoSize,
-                                borderRadius: _borderRadius,
-                              ),
-                            ),
-                            _AppVerificationTransferIcon(size: defaultIconSize),
-                          ],
-                        ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AppVerificationTransferIcon extends StatelessWidget {
-  const _AppVerificationTransferIcon({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    final controller = ClaimCreationController.of(context);
-    final claimCreationValue = controller.value;
-
-    if (!claimCreationValue.isFinished) {
-      return ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: size),
-        child: ClaimTriggerIndicator(
-          key: ValueKey('iw-progress-indicator'),
-          color: claimCreationValue.hasError ? colorScheme.error : colorScheme.primary,
-          progress: claimCreationValue.progress ?? 0.0,
-          padding: EdgeInsetsDirectional.symmetric(horizontal: 4),
-          thickness: 3,
-        ),
-      );
-    }
-    final iconSize = size / 1.6;
-    final horizontalPadding = (size - iconSize) / 2;
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-      child: Icon(Icons.arrow_forward_rounded, color: Colors.black, size: iconSize),
     );
   }
 }
@@ -759,6 +701,8 @@ class _ActionViewState extends State<_ActionView> {
   @override
   Widget build(BuildContext context) {
     final isSubmitted = _isSubmitted || isAutoSubmitEnabled;
+    final textScaleFactor = MediaQuery.textScalerOf(context).textScaleFactor;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.end,
@@ -771,7 +715,7 @@ class _ActionViewState extends State<_ActionView> {
           switchOutCurve: Curves.easeOut,
           child: () {
             if (widget.hasError) {
-              return SizedBox(height: 100, child: _ErrorWidget());
+              return SizedBox(height: 148 * textScaleFactor, child: _ErrorWidget());
             }
             if (!widget.isFinished) {
               return SizedBox(height: 100);
@@ -793,7 +737,7 @@ class _ActionViewState extends State<_ActionView> {
           padding: const EdgeInsets.only(top: 10.0),
           child: _TermsOfUseNotice(
             key: ValueKey('key-terms-of-use-notice'),
-            isVisible: !isSubmitted && !widget.hasError,
+            isVisible: !_isSubmitted && !widget.hasError,
           ),
         ),
       ],
@@ -901,7 +845,7 @@ class _ErrorWidget extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            if (clientError == null)
+            if (clientError == null || clientError is ReclaimVerificationNoActivityDetectedException)
               Expanded(
                 child: ActionButton(
                   backgroundColor: colorScheme.error,
@@ -947,6 +891,7 @@ class _ErrorWidget extends StatelessWidget {
               ),
           ],
         ),
+        Padding(padding: const EdgeInsets.only(top: 8.0), child: PotentialErrorReasonsLearnMoreWidget()),
       ],
     );
   }

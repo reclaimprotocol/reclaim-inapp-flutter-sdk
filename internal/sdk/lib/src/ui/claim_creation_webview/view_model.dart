@@ -6,9 +6,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../../data/providers.dart';
+import '../../data/web_context.dart';
 import '../../exception/exception.dart';
 import '../../logging/logging.dart';
 import '../../usecase/login_detection.dart';
+import '../../utils/detection/login.dart';
 import '../../utils/observable_notifier.dart';
 import '../../utils/url.dart' as url_util;
 import '../../utils/user_agent.dart';
@@ -106,7 +108,11 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
     }
   }
 
-  Future<void> load({required HttpProvider provider, required UnmodifiableListView<UserScript> userScripts}) async {
+  Future<void> load({
+    required HttpProvider provider,
+    required UnmodifiableListView<UserScript> userScripts,
+    int followCount = 0,
+  }) async {
     final initialUrl = provider.loginUrl ?? provider.requestData.firstOrNull?.url;
 
     if (initialUrl == null) {
@@ -120,6 +126,12 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
       await ensureInitialized().timeout(initializationTimeout);
       await Future.delayed(Duration(seconds: 2));
     } catch (e, s) {
+      final progress = (await value._controller?.getProgress() ?? 0) / 100;
+      log.info('progress: $progress');
+      if (progress > 0.3 && followCount < 3) {
+        log.info('progress is greater than 0.3, skipping update webview');
+        return load(provider: provider, userScripts: userScripts, followCount: followCount + 1);
+      }
       log.severe('Failed to initialize webview with controller: ${value._controller}', e, s);
       log.info('Trying to update webview with $_onUpdateWebView');
       await _onUpdateWebView?.call();
@@ -162,7 +174,7 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
       log.info({'hasLoadedRequestedUrl': value.hasLoadedRequestedUrl, 'lastLoadStopTime': value.lastLoadStopTime});
       if (!value.hasLoadedRequestedUrl) {
         log.warning({
-          'reason': 'Request url hasn\'t loaded in the webview',
+          'reason': "Request url hasn't loaded in the webview",
           'isLoading': value.isLoading,
           'progress': value.webAppBarValue.progress,
         });
@@ -242,15 +254,28 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
 
   final log = logging.child('ClaimCreationWebViewModel');
 
-  Future<bool> canContinueWithExpectedUrl(LoginDetection loginDetection, String expectedPageUrl) async {
+  Future<bool> canContinueWithExpectedUrl(
+    WebContext webContext,
+    LoginDetection loginDetection,
+    String expectedPageUrl,
+    bool isAIProvider,
+  ) async {
     final log = this.log.child('_canContinueWithExpectedUrl');
     final currentUrl = await controller.getUrl().then((value) {
       return value?.toString();
     });
     if (currentUrl == null) return true;
-    if (await loginDetection.maybeRequiresLoginInteraction(currentUrl, controller)) {
+    // Check if login interaction is required based on provider type
+    bool requiresLogin = false;
+    if (isAIProvider) {
+      requiresLogin = requiresLoginInteraction(webContext);
+    } else {
+      requiresLogin = await loginDetection.maybeRequiresLoginInteraction(currentUrl, controller);
+    }
+
+    if (requiresLogin) {
       log.finer(
-        'Cannot continue to expected page "$expectedPageUrl" because current url is a login url: "$currentUrl"',
+        'Cannot continue to expected page "$expectedPageUrl" because current url is a login url: "$currentUrl". isAIProvider: $isAIProvider',
       );
       return false;
     }
@@ -261,11 +286,16 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
     return true;
   }
 
-  Future<bool> onContinue(LoginDetection loginDetection, String nextLocation) async {
+  Future<bool> onContinue(
+    WebContext webContext,
+    LoginDetection loginDetection,
+    String nextLocation,
+    bool isAIProvider,
+  ) async {
     await ensureInitialized();
     final currentUrl = await controller.getUrl().then((value) => value?.toString());
     final fullExpectedUrl = url_util.createUrlFromLocation(nextLocation, currentUrl);
-    if (!await canContinueWithExpectedUrl(loginDetection, fullExpectedUrl)) {
+    if (!await canContinueWithExpectedUrl(webContext, loginDetection, fullExpectedUrl, isAIProvider)) {
       return false;
     }
 
@@ -289,6 +319,22 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
       log.severe('Failed to get current referer url', e, s);
     }
     return url_util.createRefererUrl(url) ?? defaultUrl;
+  }
+
+  void navigateToUrl(String url) {
+    controller.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
+  }
+
+  void evaluateJavascript(String source) {
+    controller.evaluateJavascript(source: source);
+  }
+
+  Future<void> goBack() async {
+    if (await controller.canGoBack()) {
+      await controller.goBack();
+    } else {
+      log.warning('Cannot go back, current url: ${await controller.getUrl()}');
+    }
   }
 
   Future<String?> getCurrentWebPageUrl() async {

@@ -3,10 +3,10 @@
 import 'dart:async';
 
 import 'package:crypto/crypto.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import '../../logging/logging.dart';
-import '../../utils/dio.dart';
+import '../../utils/http/http.dart';
 import 'file_io_stub.dart' // Stubbed implementation by default.
     // Concrete implementation if File IO is available.
     if (dart.library.io) 'file_io.dart'
@@ -80,7 +80,7 @@ class TargetFontDescription {
 
 final _loadedFonts = <String>{};
 
-final _httpClient = buildDio();
+final _httpClient = ReclaimHttpClient();
 
 Future<ByteData> _downloadFontDataFromNetwork(TargetFontDescription font) async {
   final uri = Uri.tryParse(font.url);
@@ -88,14 +88,14 @@ Future<ByteData> _downloadFontDataFromNetwork(TargetFontDescription font) async 
     throw Exception('Invalid fontUrl: ${font.url}');
   }
 
-  Response response;
+  http.Response response;
   try {
-    response = await _httpClient.getUri(uri, options: Options(responseType: ResponseType.bytes));
+    response = await _httpClient.get(uri);
   } catch (e) {
     throw Exception('Failed to load font with url ${font.url}: $e');
   }
   if (response.statusCode == 200) {
-    final Uint8List bytes = Uint8List.fromList(response.data);
+    final Uint8List bytes = response.bodyBytes;
     if (!_isFileSecure(bytes, font)) {
       throw Exception('File from ${font.url} did not match expected length and checksum.');
     }
