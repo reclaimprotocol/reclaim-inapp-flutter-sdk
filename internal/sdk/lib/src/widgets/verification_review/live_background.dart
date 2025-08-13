@@ -43,8 +43,8 @@ class _LiveBackgroundState extends State<LiveBackground> with SingleTickerProvid
     claimCreationController = ClaimCreationController.of(context, listen: false);
     // To prevent initial jank when verification view opens up
     Future.delayed(Durations.medium3, _afterInitDelay);
-    claimCreationChangesSubscription = claimCreationController.changesStream.listen(_onClaimCreationChanges);
-    claimCreationHasErrorStream = claimCreationController.changesStream.map((changes) {
+    claimCreationChangesSubscription = claimCreationController.subscribe(_onClaimCreationChanges);
+    claimCreationHasErrorStream = claimCreationController.mapChangesStream((changes) {
       return changes.value.hasError;
     });
   }
@@ -52,6 +52,7 @@ class _LiveBackgroundState extends State<LiveBackground> with SingleTickerProvid
   bool _canStartAnimating = false;
 
   void _afterInitDelay() {
+    if (!mounted) return;
     setState(() {
       _canStartAnimating = true;
     });

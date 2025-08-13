@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 
 import '../logging/logging.dart';
@@ -60,6 +61,7 @@ class ObservableNotifier<T> implements ValueListenable<T> {
 
   Stream<T> get stream => _controller.stream;
 
+  @Deprecated('Use subscribe instead')
   Stream<ChangedValues<T>> get changesStream {
     T? previousData = value;
     return stream.map((data) {
@@ -67,6 +69,28 @@ class ObservableNotifier<T> implements ValueListenable<T> {
       previousData = data;
       return event;
     });
+  }
+
+  StreamSubscription<ChangedValues<T>> subscribe(
+    void Function(ChangedValues<T> event) onData, {
+    bool fireImmediately = true,
+  }) {
+    if (fireImmediately) {
+      final current = ChangedValues(oldValue: oldValue, value: value);
+      onData(current);
+    }
+    // ignore: deprecated_member_use_from_same_package
+    return changesStream.listen(onData);
+  }
+
+  Stream<S> mapChangesStream<S>(S Function(ChangedValues<T> event) convert, {bool fireImmediately = true}) {
+    if (fireImmediately) {
+      final current = ChangedValues(oldValue: oldValue, value: value);
+      // ignore: deprecated_member_use_from_same_package
+      return StreamGroup.merge([Stream.value(current), changesStream]).map(convert);
+    }
+    // ignore: deprecated_member_use_from_same_package
+    return changesStream.map(convert);
   }
 
   final _listenerRemover = <VoidCallback, StreamSubscription<T>>{};

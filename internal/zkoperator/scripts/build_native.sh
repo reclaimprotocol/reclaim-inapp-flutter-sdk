@@ -26,7 +26,7 @@ get_timestamp() {
 export BUILD_BRANCH="build-$(get_timestamp)"
 git checkout -b $BUILD_BRANCH;
 
-git add pubspec.yaml;
+git add pubspec.yaml lib/src/revision.dart;
 
 BUILD_COMMIT_MESSAGE="Update [CI] native libraries for Android & iOS";
 

@@ -14,6 +14,8 @@ sealed class ReclaimUrls {
     defaultValue: 'https://logs.reclaimprotocol.org/api/business-logs/logDump',
   );
   static const String DEFAULT_CALLBACK_URL_PATH = '$SDK_API_BASE_URL/api/sdk/callback';
+  static const String AI_SERVICE_SEND_EVENTS = 'https://service.reclaimprotocol.org/api/network-requests/add-to-queue';
+  static const String AI_SERVICE_GET_AI_RESPONSE = 'https://service.reclaimprotocol.org/api/ai-actions';
   static String getApplicationProviderUrl(String appId, String providerId) {
     return '$SDK_API_BASE_URL/api/applications/$appId/provider/$providerId';
   }
@@ -22,6 +24,9 @@ sealed class ReclaimUrls {
       'https://reclaimprotocol.notion.site/Privacy-Policy-Reclaim-Protocol-115275b816cb80ab94b8ca8616673658';
   static const String TERMS_OF_SERVICE_URL =
       'https://reclaimprotocol.notion.site/Terms-of-Service-Reclaim-Protocol-13c275b816cb80b1a5ade76c6f2532dd';
+  static const String POTENTIAL_FAILURE_REASONS_URL =
+      'https://reclaimprotocol.notion.site/Potential-Failure-Reasons-Reclaim-Protocol-242275b816cb80d08d35c1dd13a83d39';
 }
 
 final templateParamRegex = RegExp(r'{{(.*?)}}');
+final regexTemplateParamRegex = RegExp(r'\?<(.*?)>');

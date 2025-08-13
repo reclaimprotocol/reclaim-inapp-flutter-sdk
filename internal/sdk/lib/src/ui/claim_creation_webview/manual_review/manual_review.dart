@@ -82,10 +82,8 @@ class _ManualReviewObserverState extends State<ManualReviewObserver> {
     widget.controller.showRequestShareConsentPrompt = () =>
         _showRequestShareConsentPrompt('controller.showRequestShareConsentPrompt');
     final webViewModel = ClaimCreationWebClientViewModel.readOf(context);
-    _subscriptions.add(webViewModel.changesStream.listen(onWebViewModelValueChanged));
-    _subscriptions.add(
-      VerificationReviewController.readOf(context).changesStream.listen(_onVerificationReviewControllerChanges),
-    );
+    _subscriptions.add(webViewModel.subscribe(onWebViewModelValueChanged));
+    _subscriptions.add(VerificationReviewController.readOf(context).subscribe(_onVerificationReviewControllerChanges));
   }
 
   void _showRequestShareConsentDelayedWhenNotTimeout(String debugReason) {

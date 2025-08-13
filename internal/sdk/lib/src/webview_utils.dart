@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'constants.dart';
 import 'data/providers.dart';
 import 'logging/logging.dart';
@@ -152,30 +150,118 @@ if(!window.reclaimFetchInjected){
     }
 """;
 
-class InjectionRequest {
-  final String urlRegex;
-  final String bodySniffRegex;
-  final bool bodySniffEnabled;
-  final RequestMethodType method;
-  // For identifying which request is being matched
-  final String requestHash;
+const userInteractionInjection = """
+(function() {
+  // Track elements that already have listeners attached
+  const attachedElements = new WeakSet();
 
-  const InjectionRequest({
-    required this.urlRegex,
-    required this.bodySniffRegex,
-    required this.bodySniffEnabled,
-    required this.method,
-    required this.requestHash,
+  function sendEvent(eventType, details) {
+    const message = {eventType, details};
+    window.ReclaimMessenger.send('userInteraction', message);
+  }
+
+  function findElementsInShadowDOM(selector, root = document) {
+    const elements = [];
+
+    // Find matching elements in the current root
+    elements.push(...root.querySelectorAll(selector));
+
+    // Recursively search through all shadow roots
+    root.querySelectorAll('*').forEach(el => {
+      if (el.shadowRoot) {
+        elements.push(...findElementsInShadowDOM(selector, el.shadowRoot));
+      }
+    });
+
+    return elements;
+  }
+
+  function attachInputListeners() {
+    const allSelectors = ['input', 'textarea', 'select'];
+
+    allSelectors.forEach(selector => {
+      const elements = findElementsInShadowDOM(selector);
+      elements.forEach(el => {
+        // Only attach listener if not already attached
+        if (!attachedElements.has(el)) {
+          attachedElements.add(el);
+          el.addEventListener('input', e => {
+            console.log('InputEvent');
+            const key = el.name || el.id || el.getAttribute('formcontrolname') || '';
+            const value = el.value;
+            const tag = el.tagName;
+            const url = window.location.href;
+            sendEvent('input', {
+              tag: tag,
+              id: el.id,
+              url: url,
+            });
+          });
+        }
+      });
+    });
+  }
+
+  // Wait for DOM to be fully loaded before attaching listeners
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachInputListeners);
+  } else {
+    // DOM is already loaded, attach listeners immediately
+    attachInputListeners();
+  }
+
+  // Also listen for dynamic content changes using MutationObserver
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+        // Small delay to ensure new elements are fully rendered
+        setTimeout(attachInputListeners, 100);
+      }
+    });
   });
 
+  // Start observing when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    });
+  } else {
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+})();
+""";
+
+class InjectionRequest {
+  final String urlRegex;
+  final String? bodySniffRegex;
+  final DataProviderRequest dataRequest;
+
+  const InjectionRequest({required this.urlRegex, required this.bodySniffRegex, required this.dataRequest});
+
+  static Iterable<InjectionRequest> fromDataRequests(
+    List<DataProviderRequest> requests,
+    Map<String, String> parameters,
+  ) {
+    return requests.map((e) {
+      return InjectionRequest(
+        urlRegex: convertTemplateToRegex(template: e.url ?? '', parameters: parameters, extraEscape: true).$1,
+        bodySniffRegex: e.bodySniff?.enabled == true
+            ? convertTemplateToRegex(template: e.bodySniff?.template ?? '', parameters: parameters).$1
+            : null,
+        dataRequest: e,
+      );
+    });
+  }
+
   Map<String, dynamic> toJson() {
-    return {
-      'urlRegex': urlRegex.replaceAll('\\\\', '\\'),
-      'bodySniffRegex': bodySniffRegex.replaceAll('\\\\', '\\'),
-      'bodySniffEnabled': bodySniffEnabled,
-      'method': method.name,
-      'requestHash': requestHash,
-    };
+    return {'urlRegex': urlRegex.replaceAll('\\\\', '\\'), 'bodySniffRegex': bodySniffRegex?.replaceAll('\\\\', '\\')};
   }
 }
 
@@ -209,34 +295,24 @@ String injectInterceptorScript(
 }
 
 String createInjection(
-  Iterable<InjectionRequest> requests,
   bool disableRequestReplay,
   InjectionType injectionType, {
   required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
 }) {
-  final requestsJson = json.encode(requests.toList());
-  final s =
-      """
+  return """
     window.ReclaimInjected = true;
     ${injectInterceptorScript(injectionType, hawkeyeInterceptionMethod: hawkeyeInterceptionMethod)}
+        
+        window.flutter_inappwebview.callHandler('proofData', JSON.stringify({requestBody: requestBody, url: url, method: requestMethod, headers: headers, response: responseText}));
+
         $_sendRequestLogs
-        const injectedRequests = $requestsJson;
-        for (const injectedRequest of injectedRequests) {
-          if (url.match(injectedRequest.urlRegex) && requestMethod === injectedRequest.method && (!injectedRequest.bodySniffEnabled || (injectedRequest.bodySniffEnabled && requestBody.match(injectedRequest.bodySniffRegex)))) {
-            window.flutter_inappwebview.callHandler('proofData', JSON.stringify({requestBody: requestBody,url: url,headers: headers ,response : responseText, matchedRequest: injectedRequest}));
-            break;
-          }
-        }
-      }
-      catch (e){
+      } catch (e){
         window.flutter_inappwebview.callHandler('errorLogs', JSON.stringify({log:e.message }));
       }
     });
     ${!disableRequestReplay ? requestReplayInjection : ""}
   true;
   """;
-
-  return s;
 }
 
 String createManualVerificationInjections(
@@ -283,6 +359,33 @@ String escapeRegexTemplate({String regexTemplate = '', bool extraEscape = false}
 }
 
 typedef ConvertedTemplateResult = (String template, List<String> allVars, List<String> unSubstitutedVars);
+
+Iterable<String> getRegexTemplateVariables(final String template) {
+  try {
+    _log.info('Getting regex template variables for `$template`');
+    return regexTemplateParamRegex
+        .allMatches(template)
+        .map((match) => match.group(1))
+        .whereType<String>()
+        // force eager evaluation
+        .toList();
+  } catch (e, s) {
+    _log.severe('Failed to get regex template variables for `$template`', e, s);
+    _log.finer({
+      'template': template,
+      'match': regexTemplateParamRegex.allMatches(template),
+      'matches': regexTemplateParamRegex
+          .allMatches(template)
+          .map(
+            (e) => [
+              e,
+              e.groups([0, 1]),
+            ],
+          ),
+    });
+    rethrow;
+  }
+}
 
 Iterable<String> getTemplateVariables(final String template) {
   return templateParamRegex.allMatches(template).map((match) => match.group(1)).whereType<String>();

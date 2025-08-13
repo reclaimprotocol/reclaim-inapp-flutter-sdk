@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:reclaim_gnark_zkoperator/reclaim_gnark_zkoperator.dart';
@@ -11,6 +12,7 @@ import 'package:reclaim_inapp_sdk/logging.dart';
 import 'package:reclaim_inapp_sdk/overrides.dart';
 import 'package:reclaim_inapp_sdk/reclaim_inapp_sdk.dart';
 import 'package:reclaim_inapp_sdk/ui.dart';
+import 'src/util/link.dart';
 
 import 'data.dart';
 
@@ -140,25 +142,100 @@ class ReclaimInAppSdk {
     return _startVerification(request, SessionIdentity.latest?.sessionId ?? '');
   }
 
-  Future<ReclaimApiVerificationResponse> startVerificationFromUrl(String url) {
-    final request = ClientSdkVerificationRequest.fromUrl(url);
-    return _startVerification(
-      ReclaimVerificationRequest.fromSdkRequest(request),
-      request.sessionId ?? '',
-    );
+  Future<ReclaimApiVerificationResponse> startVerificationFromUrl(
+    String url, {
+    int depth = 0,
+  }) async {
+    try {
+      final request = ClientSdkVerificationRequest.fromUrl(url);
+      final debugMessage = 'Starting verification with url: $url';
+      if (kDebugMode) {
+        debugPrint(debugMessage);
+      } else {
+        _logger.info(debugMessage);
+      }
+      return _startVerification(
+        ReclaimVerificationRequest.fromSdkRequest(request),
+        request.sessionId ?? '',
+      );
+    } catch (e, s) {
+      if (e is FormatException) {
+        final location = await followLink(url, depth);
+        if (location != null) {
+          return startVerificationFromUrl(location, depth: depth + 1);
+        }
+      }
+      _logger.severe('Failed to start verification from url', e, s);
+      return Future.value(
+        ReclaimApiVerificationResponse(
+          sessionId: 'unknown',
+          didSubmitManualVerification: false,
+          proofs: const [],
+          exception: e is ReclaimException
+              ? e
+              : ReclaimVerificationCancelledException(e.toString()),
+        ),
+      );
+    }
   }
 
   Future<ReclaimApiVerificationResponse> startVerificationFromJson(
     Map<dynamic, dynamic> template,
   ) {
-    final request = ClientSdkVerificationRequest.fromJson(<String, dynamic>{
-      for (final entry in template.entries)
-        (entry.key?.toString() ?? ''): entry.value,
-    });
-    return _startVerification(
-      ReclaimVerificationRequest.fromSdkRequest(request),
-      request.sessionId ?? '',
-    );
+    try {
+      final debugMessage =
+          'Starting verification with json: ${json.encode(template)}';
+      if (kDebugMode) {
+        debugPrint(debugMessage);
+      } else {
+        _logger.info(debugMessage);
+      }
+
+      if (template.containsKey('reclaimProofRequestConfig')) {
+        final config = template['reclaimProofRequestConfig'];
+        if (config is String) {
+          return startVerificationFromJson(json.decode(config));
+        }
+        if (config is Map) {
+          return startVerificationFromJson(<String, dynamic>{
+            for (final entry in config.entries)
+              (entry.key?.toString() ?? ''): entry.value,
+          });
+        }
+      }
+      if (template.containsKey('context')) {
+        final context = template['context'];
+        if (context is Map) {
+          return startVerificationFromJson(<String, dynamic>{
+            ...template,
+            'context': json.encode(context),
+          });
+        }
+      }
+      if (template.containsKey('timeStamp')) {
+        template['timestamp'] = template['timeStamp'];
+      }
+
+      final request = ClientSdkVerificationRequest.fromJson(
+        json.decode(json.encode(template)),
+      );
+      return _startVerification(
+        ReclaimVerificationRequest.fromSdkRequest(request),
+        request.sessionId ?? '',
+      );
+    } catch (e, s) {
+      _logger.severe('Failed to start verification from json', e, s);
+      return Future.value(
+        ReclaimApiVerificationResponse(
+          sessionId: 'unknown',
+          didSubmitManualVerification: false,
+          proofs: const [],
+          exception: e is ReclaimException
+              ? e
+              : ReclaimVerificationCancelledException(e.toString()),
+        ),
+      );
+    }
   }
 
   Future<void> clearAllOverrides() async {

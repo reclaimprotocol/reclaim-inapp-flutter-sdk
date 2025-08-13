@@ -30,11 +30,7 @@ class UserScriptService {
           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
         ),
         UserScript(
-          source: createInterceptorInjection(
-            providerData,
-            parameters,
-            hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
-          ),
+          source: createInterceptorInjection(providerData, hawkeyeInterceptionMethod: hawkeyeInterceptionMethod),
           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
         ),
       ];
@@ -51,25 +47,22 @@ class UserScriptService {
         UserScript(source: SUPPORT_RN_CUSTOM_INJECTIONS, injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
       );
 
-      // Add user interaction injection
-      scripts.add(
-        UserScript(
-          source: userInteractionInjection(idleTimeThreshold),
-          injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
-        ),
-      );
-
-      // Add login button heuristics
-      scripts.add(
-        UserScript(source: loginButtonHeuristicsInjection(), injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
-      );
-
       // Add HTML getter utility
       scripts.add(
         UserScript(
           source: "window.getHtml = () => document.documentElement.outerHTML;",
           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
         ),
+      );
+
+      // Add user interaction injection
+      scripts.add(
+        UserScript(source: userInteractionInjection, injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
+      );
+
+      // Add page load event injection
+      scripts.add(
+        UserScript(source: PAGE_CONTENT_CAPTURE_ON_LOAD, injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
       );
 
       logger.info('Successfully created ${scripts.length} user scripts');
@@ -101,27 +94,13 @@ class UserScriptService {
   }
 
   static String createInterceptorInjection(
-    HttpProvider? providerData,
-    Map<String, String> parameters, {
+    HttpProvider? providerData, {
     required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
   }) {
     try {
-      final injectionRequests = providerData?.requestData.map((e) {
-        return InjectionRequest(
-          urlRegex: convertTemplateToRegex(template: e.url ?? '', parameters: parameters, extraEscape: true).$1,
-          bodySniffRegex: e.bodySniff?.enabled == true
-              ? convertTemplateToRegex(template: e.bodySniff?.template ?? '', parameters: parameters).$1
-              : "",
-          bodySniffEnabled: e.bodySniff?.enabled == true,
-          method: e.method!,
-          requestHash: e.requestHash!,
-        );
-      });
-
       final injectionType = providerData?.injectionType;
 
       return createInjection(
-        injectionRequests ?? const [],
         providerData?.disableRequestReplay ?? false,
         injectionType ?? InjectionType.MSWJS,
         hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,

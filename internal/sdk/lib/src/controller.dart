@@ -15,11 +15,14 @@ import 'data/verification/result.dart';
 import 'exception/exception.dart';
 import 'logging/logging.dart';
 import 'repository/feature_flags.dart';
+import 'services/cookie_service.dart';
+import 'ui/claim_creation_webview/view_model.dart';
 import 'usecase/session_manager.dart';
 import 'usecase/verification.dart';
 import 'usecase/zkoperator.dart';
 import 'utils/observable_notifier.dart';
 import 'web_scripts/hawkeye/interception_method.dart';
+import 'webview_utils.dart';
 import 'widgets/feature_flags.dart';
 
 @immutable
@@ -32,6 +35,7 @@ class VerificationState with EquatableMixin {
     this.userScripts,
     this.result,
     this.providerVersion,
+    this.injectionRequests,
   });
 
   /// The provider that was initial requested when verification flow started
@@ -42,6 +46,7 @@ class VerificationState with EquatableMixin {
   final AttestorAuthenticationRequest? attestorAuthenticationRequest;
   final UnmodifiableListView<UserScript>? userScripts;
   final ReclaimVerificationResult? result;
+  final Iterable<InjectionRequest>? injectionRequests;
 
   // note: keep progress between 0.0 and 0.1
   double get initializationProgress {
@@ -63,6 +68,7 @@ class VerificationState with EquatableMixin {
     UnmodifiableListView<UserScript>? userScripts,
     ReclaimVerificationResult? result,
     ProviderVersionExact? providerVersion,
+    Iterable<InjectionRequest>? injectionRequests,
   }) {
     return VerificationState(
       // requestedProvider cannot be changed once assigned
@@ -73,6 +79,7 @@ class VerificationState with EquatableMixin {
       userScripts: userScripts ?? this.userScripts,
       result: result ?? this.result,
       providerVersion: providerVersion ?? this.providerVersion,
+      injectionRequests: injectionRequests ?? this.injectionRequests,
     );
   }
 
@@ -178,12 +185,6 @@ class VerificationController extends ObservableNotifier<VerificationState> {
 
       _attestorUrlUpdatesSubscription = verificationFlowManager.startAttestorUrlUpdates(identity);
 
-      final clearingWebStorage = verificationFlowManager.clearWebStorageIfRequired(
-        identity,
-        appInfoFuture,
-        options.canClearWebStorage,
-      );
-
       _log.info('Fetching provider ${request.providerId} with version: ${sessionInformation.version}');
       final provider = await verificationFlowManager.fetchRequestedProvider(
         applicationId: request.applicationId,
@@ -192,6 +193,13 @@ class VerificationController extends ObservableNotifier<VerificationState> {
         version: sessionInformation.version,
       );
       _log.info('Provider fetched with version: ${provider.version}');
+
+      final clearingWebStorage = verificationFlowManager.clearWebStorageIfRequired(
+        identity,
+        appInfoFuture,
+        options.canClearWebStorage,
+        provider.isAIProvider,
+      );
 
       final canContinueVerificationCallback = options.canContinueVerification;
 
@@ -212,11 +220,19 @@ class VerificationController extends ObservableNotifier<VerificationState> {
 
       value = value.copyWith(provider: provider);
 
+      _log.info('Fetching attestor authentication request');
+
       await _onFetchAttestorAuthenticationRequest(provider);
+
+      _log.info('Waiting for web storage to be cleared');
 
       await clearingWebStorage;
 
+      _log.info('Loading user scripts');
+
       await _loadUserScripts(provider, response.identity);
+
+      _log.info('User scripts loaded');
     } on ReclaimException catch (e, s) {
       updateException(e, s);
     } catch (e, s) {
@@ -236,7 +252,8 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       parameters: request.parameters,
       hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
     );
-    value = value.copyWith(userScripts: userScripts);
+    final injectionRequests = InjectionRequest.fromDataRequests(provider.requestData, request.parameters);
+    value = value.copyWith(userScripts: userScripts, injectionRequests: injectionRequests);
   }
 
   Future<void> _onFetchAttestorAuthenticationRequest(HttpProvider requestedProvider) async {
@@ -262,19 +279,31 @@ class VerificationController extends ObservableNotifier<VerificationState> {
     updateException(const ReclaimVerificationDismissedException());
   }
 
-  Future<void> updateProvider(
-    FutureOr<HttpProvider> Function(HttpProvider requestedProvider, HttpProvider oldProvider) fn,
-  ) async {
-    final requestedProvider = value.requestedProvider;
-    final provider = value.provider;
+  Future<void> updateProvider(String versionNumber, ClaimCreationWebClientViewModel controller) async {
+    final provider = await VerificationFlowManager().fetchProvider(
+      applicationId: request.applicationId,
+      providerId: request.providerId,
+      sessionInformation: sessionInformation,
+      version: ProviderVersionExact(versionNumber),
+    );
 
-    assert(requestedProvider != null, 'provider updated before initialization');
-    if (requestedProvider == null || provider == null) return;
+    final currentUrl = await controller.getCurrentWebPageUrl();
 
-    final newProvider = await fn(requestedProvider, provider);
-    value = value.copyWith(provider: newProvider);
-    await _loadUserScripts(newProvider, identity);
-    // TODO: Unimplemented recovery from errors.
+    // If currentUrl isn't null, modify the provider to replace the loginUrl with currentUrl
+    final finalProvider = provider.copyWithLoginUrl(currentUrl ?? provider.loginUrl);
+
+    final featureFlagsProvider = FeatureFlagsProvider(identity);
+    final hawkeyeInterceptionMethod = await featureFlagsProvider
+        .get(FeatureFlag.hawkeyeInterceptionMethod)
+        .then(HawkeyeInterceptionMethod.fromString);
+
+    final userScripts = await VerificationFlowManager().loadUserScripts(
+      provider: finalProvider,
+      parameters: request.parameters,
+      hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
+    );
+
+    value = value.copyWith(provider: finalProvider, userScripts: userScripts);
   }
 
   Future<void> onManualVerificationRequestSubmitted() async {
@@ -284,6 +313,15 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       providerId: request.providerId,
     );
     updateException(const ReclaimVerificationManualReviewException());
+  }
+
+  Future<void> signUserOut(InAppWebViewController controller) async {
+    final cs = CookieService();
+    await cs.clearCookies();
+    final loginUrl = value.provider?.loginUrl;
+    if (loginUrl != null) {
+      await controller.loadUrl(urlRequest: URLRequest(url: WebUri(loginUrl)));
+    }
   }
 
   void onSubmitProofs(Iterable<CreateClaimOutput> proofs) {

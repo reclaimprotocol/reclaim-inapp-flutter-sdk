@@ -8,7 +8,7 @@ IOS_OUT:=$(PROJECT_DIR)/ios
 ANDROID_OUT:=$(PROJECT_DIR)/android/src/main/jniLibs
 WEB_OUT:=$(PROJECT_DIR)/build/web
 
-# Could be ANDROID_NDK_HOME=$(ANDROID_HOME)/ndk/23.1.7779620/toolchains/llvm/prebuilt/darwin-x86_64
+# Could be ANDROID_NDK_HOME=$(ANDROID_HOME)/ndk/29.0.13846066/toolchains/llvm/prebuilt/darwin-x86_64
 ifeq ($(findstring android,$(MAKECMDGOALS)),android)
 ifndef ANDROID_NDK_HOME
 $(error ANDROID_NDK_HOME is not set)

@@ -103,7 +103,7 @@ Map<String, dynamic> _$BodySniffToJson(BodySniff instance) => <String, dynamic>{
 DataProviderRequest _$DataProviderRequestFromJson(Map<String, dynamic> json) => DataProviderRequest(
   url: json['url'] as String?,
   urlType: $enumDecodeNullable(_$UrlTypeEnumMap, json['urlType']),
-  method: $enumDecodeNullable(_$RequestMethodTypeEnumMap, json['method']),
+  method: $enumDecodeNullable(_$RequestMethodTypeEnumMap, json['method']) ?? RequestMethodType.GET,
   responseMatches:
       (json['responseMatches'] as List<dynamic>?)
           ?.map((e) => ResponseMatch.fromJson(e as Map<String, dynamic>))
@@ -125,7 +125,7 @@ DataProviderRequest _$DataProviderRequestFromJson(Map<String, dynamic> json) => 
 Map<String, dynamic> _$DataProviderRequestToJson(DataProviderRequest instance) => <String, dynamic>{
   'url': instance.url,
   'urlType': _$UrlTypeEnumMap[instance.urlType],
-  'method': _$RequestMethodTypeEnumMap[instance.method],
+  'method': _$RequestMethodTypeEnumMap[instance.method]!,
   'responseMatches': instance.responseMatches,
   'responseRedactions': instance.responseRedactions,
   'bodySniff': instance.bodySniff,
@@ -146,17 +146,22 @@ const _$WebCredentialsTypeEnumMap = {
 
 ResponseMatch _$ResponseMatchFromJson(Map<String, dynamic> json) => ResponseMatch(
   value: json['value'] as String?,
-  type: json['type'] as String?,
+  type:
+      $enumDecodeNullable(_$ResponseMatchTypeEnumMap, json['type'], unknownValue: ResponseMatchType.contains) ??
+      ResponseMatchType.contains,
   invert: json['invert'] as bool? ?? false,
   description: json['description'] as String?,
   order: json['order'] as num?,
+  isOptional: json['isOptional'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$ResponseMatchToJson(ResponseMatch instance) => <String, dynamic>{
   'value': instance.value,
-  'type': instance.type,
+  'type': _$ResponseMatchTypeEnumMap[instance.type],
   'invert': instance.invert,
 };
+
+const _$ResponseMatchTypeEnumMap = {ResponseMatchType.contains: 'contains', ResponseMatchType.regex: 'regex'};
 
 ResponseRedaction _$ResponseRedactionFromJson(Map<String, dynamic> json) => ResponseRedaction(
   xPath: json['xPath'] as String?,

@@ -7,4 +7,8 @@ interface class BuildEnv {
     'org.reclaimprotocol.inapp_sdk.IS_CLIENT_LAZY_INITIALIZE',
     defaultValue: true,
   );
+  static const bool MOCK_AI_SERVICE = bool.fromEnvironment(
+    'org.reclaimprotocol.inapp_sdk.MOCK_AI_SERVICE',
+    defaultValue: false,
+  );
 }
