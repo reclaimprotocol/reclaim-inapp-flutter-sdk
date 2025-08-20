@@ -8,14 +8,19 @@ import 'package:retry/retry.dart';
 
 import '../../../attestor.dart';
 import '../../controller.dart';
+import '../../data/app_events.dart';
 import '../../data/http_request_log.dart';
 import '../../data/manual_review.dart';
 import '../../data/providers.dart';
 import '../../exception/exception.dart';
 import '../../logging/logging.dart';
 import '../../repository/feature_flags.dart';
+import '../../services/ai_services/ai_client_services.dart';
 import '../../services/cookie_service.dart';
+import '../../services/request_matcher.dart';
+import '../../usecase/ai_flow/ai_action_controller.dart';
 import '../../usecase/login_detection.dart';
+import '../../utils/detection/login.dart';
 import '../../utils/location.dart';
 import '../../utils/observable_notifier.dart';
 import '../../utils/sanitize.dart';
@@ -23,6 +28,7 @@ import '../../utils/single_work.dart';
 import '../../utils/url.dart';
 import '../../utils/webview_state_mixin.dart';
 import '../../widgets/action_bar.dart';
+import '../../widgets/ai_flow_coordinator_widget.dart';
 import '../../widgets/claim_creation/claim_creation.dart';
 import '../../widgets/feature_flags.dart';
 import '../../widgets/verification_review/verification_review.dart';
@@ -45,11 +51,15 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     with WebViewCompanionMixin<ClaimCreationWebClient> {
   final List<StreamSubscription> _subscriptions = [];
   late final ManualReviewController _manualReviewController = ManualReviewController();
+  late AIActionController _aiActionController;
   late ClaimCreationController _claimCreationController;
+  bool _hasContinueSucceeded = false;
+  late VerificationController _verificationController;
 
   @override
   void initState() {
     super.initState();
+    logger.info('Initializing claim creation webview');
     _claimCreationController = ClaimCreationController.of(context, listen: false);
     // VerificationController.identity can throw StateError in the beginning, the future that completes with it is [startingSession].
     FeatureFlagsProvider.readAfterSessionStartedOf(context).then((featureFlagProvider) {
@@ -57,9 +67,11 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       featureFlagProvider.get(FeatureFlag.isWebInspectable).then(_onWebViewInspectableChanged);
       featureFlagProvider.get(FeatureFlag.sessionNoActivityTimeoutDurationInMins).then(_startNoActivityObserver);
     });
-    _subscriptions.add(_claimCreationController.changesStream.listen(_onClaimCreationControllerChanges));
+    _subscriptions.add(_claimCreationController.subscribe(_onClaimCreationControllerChanges));
     final vm = ClaimCreationWebClientViewModel.readOf(context);
     vm.onUpdateWebView = _onUpdateWebView;
+    _initializeAIActionController();
+    _verificationController = VerificationController.readOf(context);
   }
 
   late GlobalKey _webviewKey = GlobalKey();
@@ -67,18 +79,49 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
   Future<void> _onUpdateWebView() async {
     final log = logger.child('onUpdateWebView');
     log.info('updating webview key');
+    if (!mounted) {
+      log.info('not updating webview key because not mounted');
+      return;
+    }
     setState(() {
       _webviewKey = GlobalKey();
     });
   }
 
+  Future<void> _initializeAIActionController() async {
+    final verification = VerificationController.readOf(context);
+    final session = await verification.sessionStartFuture;
+    if (!mounted) return;
+    final aiServiceClient = AiServiceClient(session.sessionInformation.sessionId, session.identity.providerId);
+    _aiActionController = AIActionController(context, aiServiceClient);
+
+    _setupAIActionController(verification);
+  }
+
+  void _setupAIActionController(VerificationController verification) {
+    if (verification.value.provider == null) {
+      _subscriptions.add(
+        verification.subscribe((change) {
+          final (oldValue, value) = change.record;
+          if (value.provider != null && value.provider?.isAIProvider == true) {
+            _aiActionController.start();
+          }
+        }),
+      );
+    } else if (verification.value.provider?.isAIProvider == true) {
+      _aiActionController.start();
+    }
+  }
+
   @override
   void dispose() {
+    logger.info('Disposing claim creation webview');
     _sessionNoActivityObserverTimer?.cancel();
     _sessionNoActivityObserverTimer = null;
     for (final s in _subscriptions) {
       s.cancel();
     }
+    _aiActionController.stop();
     _manualReviewController.dispose();
     super.dispose();
   }
@@ -90,15 +133,15 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       setState(() {
         isInspectablePreference = isInspectable;
       });
-    }
 
-    ClaimCreationWebClientViewModel.readOf(context).setWebViewSettings((settings) {
-      if (settings.isInspectable != isInspectable) {
-        settings.isInspectable = isInspectable;
-        return settings;
-      }
-      return null;
-    });
+      ClaimCreationWebClientViewModel.readOf(context).setWebViewSettings((settings) {
+        if (settings.isInspectable != isInspectable) {
+          settings.isInspectable = isInspectable;
+          return settings;
+        }
+        return null;
+      });
+    }
   }
 
   Timer? _continueTimer;
@@ -155,6 +198,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     logger.info('page loading started on $uri');
     _hideToken = Object();
     final vm = ClaimCreationWebClientViewModel.readOf(context);
+    final webContext = AIFlowCoordinatorWidget.of(context).webContext;
     final url = uri?.toString();
     if (url == null || url == 'about:blank') {
       return;
@@ -163,6 +207,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     vm.setDisplayUrl(url.toString());
     vm.setDisplayProgress(0.05);
     vm.onLoadStart();
+    webContext.setCurrentWebPageUrl(url);
     _claimCreationController.value.delegate?.showReview();
   }
 
@@ -196,7 +241,15 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
 
   Object? _hideToken;
   void _hideReviewSheetIfRequired(InAppWebViewController controller, WebUri? uri) async {
-    final log = logger.child('_hideReviewSheetIfRequired');
+    if (_verificationController.value.provider?.isAIProvider == true) {
+      _hideReviewSheetIfRequiredRemoteDetection(controller, uri);
+    } else {
+      _hideReviewSheetIfRequiredLocalDetection(controller, uri);
+    }
+  }
+
+  void _hideReviewSheetIfRequiredLocalDetection(InAppWebViewController controller, WebUri? uri) async {
+    final log = logger.child('_hideReviewSheetIfRequiredLocalDetection');
     if (!mounted) return;
     final token = Object();
     _hideToken = token;
@@ -237,7 +290,6 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
           if (!claimCreationController.value.isWaitingForContinuation) return;
         }
       }
-
       // The amount of time we take to wait here should be less than the time (6+ seconds) it takes for continue automatically to appear from review sheet.
       final nextLocation = claimCreationController.getNextLocation();
       if (nextLocation != null) {
@@ -260,6 +312,79 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     }
   }
 
+  void _hideReviewSheetIfRequiredRemoteDetection(InAppWebViewController controller, WebUri? uri) async {
+    final log = logger.child('_hideReviewSheetIfRequiredRemoteDetection');
+    if (!mounted) return;
+    final token = Object();
+    _hideToken = token;
+    final claimCreationController = ClaimCreationController.of(context, listen: false);
+    final vm = ClaimCreationWebClientViewModel.readOf(context);
+    final verification = VerificationController.readOf(context);
+    final webContext = AIFlowCoordinatorWidget.of(context).webContext;
+    final url = (uri ?? await controller.getUrl())?.toString();
+    log.fine({'url': url, 'isWaitingForContinuation': claimCreationController.value.isWaitingForContinuation});
+    if (!claimCreationController.value.isWaitingForContinuation) return;
+
+    // Wait for page to render elements
+    await Future.delayed(Duration(milliseconds: 500));
+
+    if (vm.value.isLoading) {
+      log.fine('not hiding review sheet because webview is loading');
+      return;
+    }
+
+    if (url != null && requiresLoginInteraction(webContext) && !potentiallyLoggedIn(webContext, url)) {
+      // Another _hideReviewSheetIfRequired call had been made
+      if (_hideToken != token) return;
+      log.finest('Closing review sheet because login page');
+      requiresUserInteraction(true);
+    } else {
+      // The amount of time we take to wait here should be less than the time (6+ seconds) it takes for continue automatically to appear from review sheet.
+      for (var i = 0; i < 3; i++) {
+        final nextLocation = claimCreationController.getNextLocation();
+        if (nextLocation != null) {
+          final fullExpectedUrl = createUrlFromLocation(nextLocation, url);
+          final canContinue = url == null ? true : !isUrlsEqual(url, fullExpectedUrl);
+          if (canContinue) return;
+        }
+
+        await Future.delayed(
+          Duration(seconds: claimCreationController.value.isIdle ? _estimateZKOperatorInitDuration() : 4),
+        );
+
+        if (!mounted) return;
+        if (await controller.isLoading()) return;
+        if (!claimCreationController.value.isWaitingForContinuation) return;
+      }
+
+      log.fine('Closing review sheet because no proof generation started. can hide: ${_hideToken == token}');
+
+      // Another _hideReviewSheetIfRequired call had been made
+      if (_hideToken != token) return;
+
+      log.info(
+        'Closing review sheet because ai flow is done and user is not signed out by ai before that. webContext.signedOutByAi: ${!webContext.signedOutByAi}, webContext.aiFlowDone: ${webContext.aiFlowDone}',
+      );
+
+      if (!webContext.signedOutByAi && webContext.aiFlowDone) {
+        await verification.signUserOut(controller);
+        webContext.setSignedOutByAi();
+        requiresUserInteraction(true);
+        return;
+      }
+
+      log.info(
+        'Closing review sheet because ai did not respond recently. ai responded recently: ${webContext.aiRespondedRecently()}, isLoggedIn: ${webContext.isLoggedIn}',
+      );
+
+      // If the ai flow responded recently and the user is logged in, we don't want to close the review sheet
+      if (webContext.aiRespondedRecently() && webContext.isLoggedIn) return;
+
+      log.finest('Closing review sheet because no proof generation started and ai did not respond recently');
+      requiresUserInteraction(true);
+    }
+  }
+
   void _onWebViewCreated(InAppWebViewController controller) {
     try {
       logger.info('onWebViewCreated');
@@ -276,25 +401,38 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
   void evaluateIfNavigationToExpectedPageIsRequired() async {
     final log = logger.child('evaluateUrlOnLoadStop');
 
+    final verification = VerificationController.readOf(context);
+    final isAIProvider = verification.value.provider?.isAIProvider == true;
+    if (!isAIProvider) {
+      log.info('Skipping evaluation because provider is not AI');
+      return;
+    }
+
     final claimCreationController = ClaimCreationController.of(context, listen: false);
 
-    final expectedUrl = claimCreationController.getNextLocation();
-    if (expectedUrl == null) {
+    final nextLocation = claimCreationController.getNextLocation();
+    if (nextLocation == null) {
       // Do nothing, wait for user to press the continue button
       return;
     }
 
-    log.info('evaluateIfNavigationToExpectedPageIsRequired: $expectedUrl. Will not perform any action.');
+    log.info('evaluateIfNavigationToExpectedPageIsRequired: $nextLocation');
 
-    // TODO: check whether we should show a hint or navigate forceably to the expected page
+    // If onContinue has already succeeded once, don't call it again
+    if (_hasContinueSucceeded) {
+      log.info('onContinue has already succeeded, skipping call');
+      return;
+    }
 
-    // final vm = ClaimCreationWebViewModel.readOf(context);
+    final vm = ClaimCreationWebClientViewModel.readOf(context);
+    final webContext = AIFlowCoordinatorWidget.of(context).webContext;
+    final loginDetection = LoginDetection.readOf(context);
 
-    // vm.onContinue(nextLocation);
-    // see if we need to go to the expected page automatically without conflicting with the claim creation process and its expected page suggestion
-
-    // if (!await _canContinueWithExpectedUrl(expectedUrl)) return;
-    // See if we need to show user a hint to navigate to expected page
+    final didContinue = await vm.onContinue(webContext, loginDetection, nextLocation, isAIProvider);
+    if (didContinue) {
+      _hasContinueSucceeded = true;
+      log.info('onContinue succeeded, setting _hasContinueSucceeded to true');
+    }
   }
 
   late final _webviewInitializationDelay = Future.delayed(const Duration(milliseconds: 100));
@@ -413,8 +551,11 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
           log.info('url : ${requestLog.url}, method : ${requestLog.method}');
 
           _manualReviewController.addRequest(requestLog);
+          // push the request log to the ai flow coordinator service
+          AIFlowCoordinatorWidget.pushEvent(NetworkRequestEvent(requestLog: requestLog));
         } catch (e, s) {
           logger.severe('Failed to add request log', e, s);
+          logger.finer({'requestLog': args});
         }
       },
     );
@@ -433,6 +574,22 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       },
     );
     controller.addJavaScriptHandler(
+      handlerName: 'userInteraction',
+      callback: (args) async {
+        final userInteractionData = json.decode(args[0]);
+        final interactionType = userInteractionData['eventType'];
+        var url = userInteractionData['url'];
+        if (url == null) {
+          final currentUrl = await controller.getUrl().then((value) => value?.toString());
+          if (currentUrl != null && currentUrl.isNotEmpty) {
+            url = currentUrl;
+          }
+        }
+        final userInteraction = UserInteractionEvent(interactionType: interactionType, metadata: {'url': url});
+        AIFlowCoordinatorWidget.pushEvent(userInteraction);
+      },
+    );
+    controller.addJavaScriptHandler(
       handlerName: 'debugLogs',
       callback: (args) {
         logger.child('debug_logs').info(args);
@@ -441,7 +598,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     controller.addJavaScriptHandler(
       handlerName: 'proofData',
       callback: (args) async {
-        onProofDataReceived(args);
+        onInterceptedRequest(args);
       },
     );
     controller.addJavaScriptHandler(
@@ -454,6 +611,28 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       handlerName: 'errorLogs',
       callback: (args) {
         logging.child('handleWebviewErrorLogs').severe({"errorLogs.args": args});
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'locationChanged',
+      callback: (args) async {
+        final newUrl = args[0] as String;
+        logger.info('Location changed to: $newUrl');
+        // You can add additional handling here if needed
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'pageLoadComplete',
+      callback: (args) async {
+        final data = json.decode(args[0]);
+        final url = data['url'] as String;
+        final dom = data['dom'] as String;
+        final formData = data['formData'] as String;
+
+        logger.info('Page load complete for URL: $url');
+
+        final pageLoadedEvent = PageLoadedEvent(url: url, renderedDom: dom, formData: formData);
+        AIFlowCoordinatorWidget.pushEvent(pageLoadedEvent);
       },
     );
     controller.addJavaScriptHandler(
@@ -490,6 +669,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
 
   void _startNoActivityObserver(int durationInMins) {
     final noActivityDuration = Duration(minutes: durationInMins);
+    logger.info('Starting no activity observer with duration: $noActivityDuration');
     _sessionNoActivityObserverTimer = Timer.periodic(Duration(seconds: 5), (timer) {
       if (!mounted) {
         timer.cancel();
@@ -513,16 +693,18 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
         logger.info('Error was: ${_claimCreationController.value.debugErrorDetails()}');
         return;
       }
+      if (_claimCreationController.value.httpProvider?.isAIProvider == true) {
+        logger.info('No activity detection skipped because provider is AI');
+        return;
+      }
       final durationSinceLastActivity = DateTime.now().difference(lastActivityDetectedAt).abs();
       if (durationSinceLastActivity >= noActivityDuration) {
         logger.info('No activity detected for $durationSinceLastActivity');
-        if (kDebugMode) {
-          // TODO: remove this when we not debug
-          logger.info('Skipping error because of debug mode');
-          return;
-        }
         _claimCreationController.setClientError(
-          ReclaimVerificationNoActivityDetectedException('Verification could not be completed in time'),
+          // This may show a different message in UI
+          ReclaimVerificationNoActivityDetectedException(
+            'The verification did not complete in expected amount of time',
+          ),
         );
         return;
       }
@@ -552,7 +734,32 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     return timeoutDuration;
   }
 
-  void onProofDataReceived(List<dynamic> args) async {
+  void onInterceptedRequest(List<dynamic> args) {
+    if (!mounted) return;
+
+    final request = json.decode(args[0]);
+
+    final verification = VerificationController.readOf(context);
+    final injectionRequests = verification.value.injectionRequests ?? const [];
+
+    if (injectionRequests.isEmpty) {
+      logger.info('A request was received but no injection requests were found. skipping.');
+      return;
+    }
+
+    final matcher = RequestMatcher(injectionRequests: injectionRequests);
+
+    final normalizedRequest = matcher.normalizeRequest(request);
+    final matchedRequests = matcher.findMatch(normalizedRequest);
+
+    if (matchedRequests.isNotEmpty) {
+      for (final it in matchedRequests) {
+        onProofDataReceived(normalizedRequest, it.dataRequest);
+      }
+    }
+  }
+
+  void onProofDataReceived(Map proofData, DataProviderRequest requestData) async {
     final logger = logging.child('webview_screen.onProofDataReceived.${Object().hashCode}');
     logger.info('Completed request matching to start proof generation from webview');
 
@@ -568,32 +775,21 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     final userAgent = await vm.getWebViewUserAgent();
     final actionControl = messenger.show(ActionBarMessage(type: ActionMessageType.claim));
     try {
-      final proofData = json.decode(args[0]);
+      _aiActionController.pause();
 
       DevController.shared.push('matchedRequest', proofData);
 
       final url = WebUri(proofData['url']);
-      final String? requestHash = proofData['matchedRequest']['requestHash'];
-      assert(requestHash != null, 'Request hash is null in proofData=${args[0]}');
-
-      final requestData = claimCreationController.value.httpProvider?.requestData.where((it) {
-        return it.requestHash == requestHash;
-      }).firstOrNull;
-
-      if (requestData == null) {
-        logger.severe(
-          'Request data not found for request hash: $requestHash. Available was ${verification.value.provider?.requestData.map((e) => e.requestHash)}',
-        );
-        return;
-      }
 
       DevController.shared.push('DataProviderRequest', requestData);
 
       if (claimCreationController.value.isCompleted(requestData.requestIdentifier)) {
-        logger.info('Request hash $requestHash is already completed. skipping.');
+        logger.info('Request hash ${requestData.requestHash} is already completed. skipping.');
         return;
       }
-      logger.info('Matched request with hash $requestHash, evaluating this with id ${requestData.requestIdentifier}');
+      logger.info(
+        'Matched request with hash ${requestData.requestHash}, evaluating this with id ${requestData.requestIdentifier}',
+      );
 
       final cs = CookieService();
       final String cookieString = await cs.getCookieString(url, credentials: requestData.credentials);
@@ -708,6 +904,8 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     final userAgent = await vm.getWebViewUserAgent();
     final actionControl = messenger.show(ActionBarMessage(type: ActionMessageType.claim));
     try {
+      _aiActionController.pause();
+
       if (args[0] == 'onboarding:exit_webview') {
         logger.info('Exiting webview because of exit webview');
         return;

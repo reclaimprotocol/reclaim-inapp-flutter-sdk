@@ -148,7 +148,7 @@ class NistP256ECDSASigner {
     final kid = Uuid().v4().toString();
     return NistP256ECDSASigner(
       kid: kid,
-      keyPair: AsymmetricKeyPair(keyPair.publicKey as ECPublicKey, keyPair.privateKey as ECPrivateKey),
+      keyPair: AsymmetricKeyPair(keyPair.publicKey, keyPair.privateKey),
       curveInfo: curveInfo,
     );
   }

@@ -1,3 +1,26 @@
+## 0.12.0
+
+* Add support for optional response matches
+* Move request matching to platform from webpage injections
+* Add regex match support for http provider's requests
+* Remove dependency of requestHash to prevent request matching to fail with accidental re-use of request hashes from devtools
+* Add retries when loading fonts
+* Update cryptography library dependencies
+* Add subscribe and mapChangesStream to ObservableNotifier for firing an event on subscribe to prevent listeners from missing latest event
+* Fixes edge cases where initialization would get stuck
+
+## 0.11.0
+
+* Introduce AI flow: enables automated verification for providers with `verificationType` set to `AI`
+* AI flow automatically guides users through verification steps and handles data extraction
+* Add AI action controller to manage and coordinate AI-driven actions during the verification process
+* Add AI flow coordinator widget to manage and coordinate AI flow
+
+## 0.10.15
+
+* Fix visibility of terms of service
+* Add text with hyperlink when an error occurs to help users learn more about potential failures
+
 ## 0.10.13
 
 * Fix webview re-initialization when initial attempt fails

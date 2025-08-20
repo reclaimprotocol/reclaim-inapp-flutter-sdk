@@ -12,6 +12,7 @@ import '../../exception/exception.dart';
 import '../../logging/logging.dart';
 import '../../usecase/login_detection.dart';
 import '../../utils/observable_notifier.dart';
+import '../../widgets/ai_flow_coordinator_widget.dart';
 import '../../widgets/claim_creation/claim_creation.dart';
 import '../../widgets/debug_bottom_sheet.dart';
 import '../../widgets/reclaim_appbar.dart';
@@ -36,26 +37,29 @@ class _VerificationViewState extends State<VerificationView> {
   late final StreamSubscription _webViewModelSubscription;
   late final ClaimCreationController _claimCreationController = ClaimCreationController();
   late final VerificationReviewController _reviewController;
+
+  late final _log = logging.child('VerificationViewState.$hashCode');
+
   @override
   void initState() {
     super.initState();
+    _log.info('Initializing verification view');
     _reviewController = VerificationReviewController();
     final controller = VerificationController.readOf(context);
     final initialWebAppBarValue = WebAppBarValue(url: '', progress: controller.value.initializationProgress);
     appBarController = ReclaimAppBarController(initialWebAppBarValue);
     _clientViewModel = ClaimCreationWebClientViewModel(initialWebAppBarValue);
-    _controllerSubscription = controller.changesStream.listen(_onVerificationStateChanged);
-    _webViewModelSubscription = _clientViewModel.changesStream.listen(_onClientValueChanged);
-    _claimCreationController.changesStream.listen(_onClaimCreationControllerChanges);
+    _controllerSubscription = controller.subscribe(_onVerificationStateChanged);
+    _webViewModelSubscription = _clientViewModel.subscribe(_onClientValueChanged);
+    _claimCreationController.subscribe(_onClaimCreationControllerChanges);
     unawaited(controller.response.whenComplete(_onCompleted));
   }
 
   bool _didPop = false;
 
   void _onCompleted() {
-    logging.config('onCompleted, mounted: $mounted, _didPop: $_didPop');
+    _log.config('onCompleted, mounted: $mounted, _didPop: $_didPop');
     if (!mounted) {
-      logging.warning('_onCompleted was called when context was not mounted');
       return;
     }
     if (_didPop) return;
@@ -95,7 +99,7 @@ class _VerificationViewState extends State<VerificationView> {
     _claimCreationController.setHttpProvider(provider);
     _clientViewModel.load(provider: provider, userScripts: userScripts).catchError((e, s) {
       if (mounted) {
-        logging.severe('Failed to load client web', e, s);
+        _log.severe('Failed to load client web', e, s);
         VerificationController.readOf(
           context,
         ).updateException(ReclaimVerificationProviderLoadException('Failed to load scripts'));
@@ -124,7 +128,7 @@ class _VerificationViewState extends State<VerificationView> {
     final provider = controller.value.provider;
     final userScripts = controller.value.userScripts;
     if (provider == null || userScripts == null) {
-      logging.warning('Failed to retry, provider or userScripts is null');
+      _log.warning('Failed to retry, provider or userScripts is null');
       _clientViewModel.refresh();
       return;
     }
@@ -133,6 +137,7 @@ class _VerificationViewState extends State<VerificationView> {
 
   @override
   void dispose() {
+    _log.info('Disposing verification view');
     _webViewModelSubscription.cancel();
     _clientViewModel.dispose();
     _controllerSubscription.cancel();
@@ -180,8 +185,10 @@ class _VerificationViewState extends State<VerificationView> {
                   VerificationController.readOf(context).onSubmitProofs(proofs);
                 },
                 onContinue: (nextLocation) {
+                  final webContext = AIFlowCoordinatorWidget.of(context).webContext;
                   final loginDetection = LoginDetection.readOf(context);
-                  return _clientViewModel.onContinue(loginDetection, nextLocation);
+                  final isAIProvider = VerificationController.readOf(context).value.provider?.isAIProvider == true;
+                  return _clientViewModel.onContinue(webContext, loginDetection, nextLocation, isAIProvider);
                 },
                 onException: (e) {
                   VerificationController.readOf(context).updateException(e);
@@ -190,8 +197,8 @@ class _VerificationViewState extends State<VerificationView> {
               child: Scaffold(
                 key: verificationViewKey,
                 appBar: ReclaimAppBar(controller: appBarController, onPressed: _showDebugMenu),
-                body: ClaimCreationWebClient(),
-                bottomNavigationBar: WebviewBottomBar(),
+                body: const ClaimCreationWebClient(),
+                bottomNavigationBar: const WebviewBottomBar(),
               ),
             ),
           ),

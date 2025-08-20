@@ -3,7 +3,8 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:pointycastle/export.dart';
-import 'package:web3dart/crypto.dart';
+
+import 'crypto/ethers.dart';
 
 String getPublicKey(String privateKeyHex) {
   final publicKey = extractPublicKey(privateKeyHex);

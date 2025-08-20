@@ -114,7 +114,7 @@ class ClaimCreationRequest {
                 ? proofData['requestBody']
                 : (requestData.bodySniff?.template ?? proofData['requestBody'])) ??
             '',
-        method: requestData.method?.name ?? '',
+        method: requestData.method.name,
         witnessParams: {
           ...witnessParams,
           ...initialWitnessParams,

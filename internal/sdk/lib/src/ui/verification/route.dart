@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../ui.dart';
 import '../../controller.dart';
+import '../../widgets/ai_flow_coordinator_widget.dart';
 import '../../widgets/safe_area.dart';
 import 'view.dart';
 
@@ -30,17 +31,19 @@ class VerificationViewPageRoute extends PageRoute<dynamic> with CupertinoRouteTr
   @override
   Widget buildContent(BuildContext context) {
     return verificationController.wrap(
-      child: ReclaimThemeProvider(
-        child: MediaQuery.fromView(
-          view: View.of(context),
-          child: FractionallyPaddedSafeArea(
-            top: false,
-            bottomFraction: Theme.of(context).platform == TargetPlatform.iOS
-                // Eyeballed on iphone that ~32% of safe area bottom padding should be safe
-                ? 0.32
-                // Androids always provide bottom padding as 0.
-                : 1,
-            child: VerificationView(),
+      child: AIFlowCoordinatorWidget(
+        child: ReclaimThemeProvider(
+          child: MediaQuery.fromView(
+            view: View.of(context),
+            child: FractionallyPaddedSafeArea(
+              top: false,
+              bottomFraction: Theme.of(context).platform == TargetPlatform.iOS
+                  // Eyeballed on iphone that ~32% of safe area bottom padding should be safe
+                  ? 0.32
+                  // Androids always provide bottom padding as 0.
+                  : 1,
+              child: VerificationView(),
+            ),
           ),
         ),
       ),

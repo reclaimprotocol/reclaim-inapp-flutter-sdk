@@ -4,7 +4,6 @@ import '../../reclaim_inapp_sdk.dart';
 import '../constants.dart';
 import '../logging/logging.dart';
 import '../overrides/overrides.dart';
-
 import 'base_http.dart';
 
 class ReclaimProviderService {

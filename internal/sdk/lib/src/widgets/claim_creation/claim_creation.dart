@@ -224,6 +224,12 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     } else {
       logger.severe('No claim status found for request id: ${proofRequest.requestData.requestIdentifier}');
     }
+    // final claimCreationFailedEvent = ClaimCreationFailedEvent(
+    //   errorMessage: e.toString(),
+    //   stackTrace: s.toString(),
+    //   requestHash: proofRequest.requestData.requestHash ?? '',
+    // );
+    // AIFlowCoordinatorWidget.pushEvent(claimCreationFailedEvent);
   }
 
   Future<ClaimCreationRequest> createRequestWithUpdatedProviderParams(
@@ -245,12 +251,25 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
 
     final selectionLength = math.max(responseRedactions.length, responseMatches.length);
 
+    final markedForRemovalResponseMatch = <ResponseMatch>{};
+    final markedForRemovalResponseRedaction = <ResponseRedaction>{};
+
+    void markForRemoval(ResponseRedaction? responseRedaction, ResponseMatch? responseMatch) {
+      if (responseRedaction != null) {
+        markedForRemovalResponseRedaction.add(responseRedaction);
+      }
+      if (responseMatch != null) {
+        markedForRemovalResponseMatch.add(responseMatch);
+      }
+    }
+
     await Future.wait(
       List.generate(selectionLength, (index) async {
         final logger = log.child('responseRedaction.$index');
         logger.info('start');
         final responseRedactionI = maybeGetAtIndex(responseRedactions, index);
         final responseMatchI = maybeGetAtIndex(responseMatches, index);
+        final isFieldOptional = responseMatchI?.isOptional == true;
         String element = response;
         final responseSelectionXPath = responseRedactionI?.xPath;
         if (responseSelectionXPath != null && responseSelectionXPath.isNotEmpty) {
@@ -264,6 +283,11 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
           } catch (e) {
             logger.info('Coult not extract xpath for $responseSelectionXPath');
             if (e.toString().contains('Failed to find') || e.toString().contains('not found')) {
+              if (isFieldOptional) {
+                logger.info('skipping optional response match because xpath not found: $responseMatchI');
+                markForRemoval(responseRedactionI, responseMatchI);
+                return;
+              }
               throw const ReclaimVerificationRequirementException();
             } else {
               rethrow;
@@ -284,6 +308,11 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
           } catch (e) {
             logger.info('Coult not extract jsonpath for $responseSelectionJsonPath');
             if (e.toString().contains('Failed to find') || e.toString().contains('not found')) {
+              if (isFieldOptional) {
+                logger.info('skipping optional response match because xpath not found: $responseMatchI');
+                markForRemoval(responseRedactionI, responseMatchI);
+                return;
+              }
               throw const ReclaimVerificationRequirementException();
             } else {
               rethrow;
@@ -293,24 +322,33 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
           logger.info('response selection json path is empty');
         }
         logger.info('value extraction completed');
-        final responseMatchParamKeys = getTemplateVariables(responseMatchI?.value ?? '');
+
+        final isRegexResponseMatch = responseMatchI?.type == ResponseMatchType.regex;
+
+        final responseMatchParamKeys = isRegexResponseMatch
+            ? getRegexTemplateVariables(responseMatchI?.value ?? '')
+            : getTemplateVariables(responseMatchI?.value ?? '');
         logger.info('response match param keys (${responseMatchParamKeys.length}): $responseMatchParamKeys');
-        String? responseMatchRegex = responseRedactionI?.regex;
-        if (responseMatchRegex == null) {
+        String? paramSelectionRegex = responseRedactionI?.regex;
+        if (paramSelectionRegex == null) {
           logger.info('response match regex is null, converting template to regex template');
-          // if regex is not provided, we need to fallback by converting template to regex template
-          // This may not be needed if all providers have regex in responseMatch post migration
-          final (regex, _, _) = convertTemplateToRegex(
-            template: responseMatchI?.value ?? '',
-            parameters: request.initialWitnessParams,
-            matchTypeOverride: responseRedactionI?.matchType,
-          );
-          responseMatchRegex = regex;
+          if (isRegexResponseMatch) {
+            paramSelectionRegex = responseMatchI?.value ?? '';
+          } else {
+            // if regex is not provided, we need to fallback by converting template to regex template
+            // This may not be needed if all providers have regex in responseMatch post migration
+            final (regex, _, _) = convertTemplateToRegex(
+              template: responseMatchI?.value ?? '',
+              parameters: request.initialWitnessParams,
+              matchTypeOverride: responseRedactionI?.matchType,
+            );
+            paramSelectionRegex = regex;
+          }
         }
 
-        logger.info('evaluating response match regex with element: $responseMatchRegex');
+        logger.info('evaluating response match regex with element: $paramSelectionRegex');
 
-        final responseSelectionParamRegexMatch = RegExp(responseMatchRegex, dotAll: true).firstMatch(element);
+        final responseSelectionParamRegexMatch = RegExp(paramSelectionRegex, dotAll: true).firstMatch(element);
         logger.info('responseSelectionParamRegexMatches groupCount ${responseSelectionParamRegexMatch?.groupCount}');
         final List<String?>? responseSelectionParamValue = responseSelectionParamRegexMatch?.groups(
           // generate list of indices from 1 to length of responseMatchParamKeys
@@ -319,41 +357,56 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
         logger.info('selection count: ${responseSelectionParamValue?.length}');
         if (responseSelectionParamValue == null || responseSelectionParamValue.isEmpty) {
           if (responseSelectionParamRegexMatch == null || responseSelectionParamRegexMatch.groupCount == 0) {
-            logger.info('No regex matches for `$responseMatchRegex`');
+            // This cannot be ignored even if the case is regex. Because attestor needs regex in response match to have params.
+            logger.info('No regex matches for `$paramSelectionRegex`');
           }
           if (responseSelectionParamValue == null || responseSelectionParamValue.isEmpty) {
-            logger.info('No selections found for $responseMatchParamKeys in $responseMatchRegex');
+            logger.info('No selections found for $responseMatchParamKeys in $paramSelectionRegex');
           }
           logger.fine({
-            'responseMatchRegex': responseMatchRegex,
+            'responseMatchRegex': paramSelectionRegex,
             'element': element,
             'responseMatchParamKeys': responseMatchParamKeys,
           });
+          if (isFieldOptional) {
+            logger.info('skipping because optional response match');
+            markForRemoval(responseRedactionI, responseMatchI);
+            return;
+          }
           throw const ReclaimVerificationRequirementException();
         }
         logger.info('setting params from responseMatch param keys and its values from selections');
         for (var i = 0; i < responseMatchParamKeys.length; i++) {
           final value = responseMatchParamKeys.elementAt(i);
-          final paramValue = responseSelectionParamValue[i];
+          final paramValue = maybeGetAtIndex(responseSelectionParamValue, i);
           if (paramValue == null) {
             logger.info('No param value for `$value`');
             continue;
           }
+          // For non regex response matches, we can directly set the param value
+          // For regex response matches, the values may differ when the request is actually made by the attestor
           params[value] = paramValue;
         }
-        logger.info('updating response redaction with regex: $responseMatchRegex');
+        logger.info('updating response redaction with regex: $paramSelectionRegex');
         if (responseRedactionI != null) {
           responseRedactions[index] = ResponseRedaction(
             xPath: responseRedactionI.xPath,
             jsonPath: responseRedactionI.jsonPath,
             hash: responseRedactionI.hash,
             matchType: responseRedactionI.matchType,
-            regex: responseMatchRegex,
+            regex: paramSelectionRegex,
           );
         }
       }),
       eagerError: true,
     );
+
+    for (final match in markedForRemovalResponseMatch) {
+      responseMatches.remove(match);
+    }
+    for (final redaction in markedForRemovalResponseRedaction) {
+      responseRedactions.remove(redaction);
+    }
 
     log.info({
       'responseMatches.pre': request.requestData.responseMatches.map((e) => e.toJson()).toList(),
@@ -361,6 +414,10 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
       'responseMatches': responseMatches.map((e) => e.toJson()).toList(),
       'responseRedactions': responseRedactions.map((e) => e.toJson()).toList(),
     });
+
+    if (responseMatches.isEmpty) {
+      log.warning('Atleast one response match is required for claim creation. Verification will likely fail.');
+    }
 
     return request.copyWith(
       witnessParams: params,

@@ -49,7 +49,7 @@ class ClientSdkVerificationRequest {
     });
   }
 
-  factory ClientSdkVerificationRequest.fromUrl(String url) {
+  static Map<dynamic, dynamic> parseTemplateFromUrl(String url) {
     final data =
         Uri.parse(url).queryParameters['template'] ??
         // The deeplink url is not always correct, so we try to fix it by replacing the /template with /?template
@@ -67,6 +67,16 @@ class ClientSdkVerificationRequest {
       throw FormatException('Template data is not a valid json');
     }
 
+    if (template is! Map) {
+      _logger.severe('Not a valid json map');
+      throw FormatException('Template data is not a valid json map');
+    }
+
+    return template;
+  }
+
+  factory ClientSdkVerificationRequest.fromUrl(String url) {
+    final template = parseTemplateFromUrl(url);
     return ClientSdkVerificationRequest.fromJson(template);
   }
 
