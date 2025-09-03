@@ -1,6 +1,6 @@
 name: reclaim_verifier_module
 description: A Flutter Add-to-app Module for the Reclaim InApp Verifier SDK
-
+publish_to: none
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
 # followed by an optional build number separated by a +.
@@ -28,8 +28,16 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  reclaim_gnark_zkoperator: ^0.0.1
-  reclaim_inapp_sdk: ^0.0.1
+  reclaim_inapp_sdk:
+    git:
+      url: https://github.com/reclaimprotocol/reclaim-inapp-flutter-sdk.git
+      ref: 0.15.0
+      path: internal/sdk
+  reclaim_gnark_zkoperator:
+    git:
+      url: https://github.com/reclaimprotocol/reclaim-inapp-flutter-sdk.git
+      ref: 0.15.0
+      path: internal/zkoperator
   json_annotation: ^4.9.0
   logging: ^1.3.0
   http: ^1.5.0
