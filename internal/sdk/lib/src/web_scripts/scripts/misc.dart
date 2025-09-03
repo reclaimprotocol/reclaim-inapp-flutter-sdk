@@ -4,7 +4,8 @@ const String SUPPORT_RN_CUSTOM_INJECTIONS = """
   };
 """;
 
-const String PAGE_CONTENT_CAPTURE_ON_LOAD = """
+String pageContentCaptureOnLoad({int debounceTimeoutMs = 7000}) =>
+    """
   (function() {
     function getFrameContent(frame) {
       try {
@@ -135,7 +136,7 @@ const String PAGE_CONTENT_CAPTURE_ON_LOAD = """
           });
         }
         isProcessing = false;
-      }, 7000);
+      }, $debounceTimeoutMs);
     }
     
     // Monitor location changes

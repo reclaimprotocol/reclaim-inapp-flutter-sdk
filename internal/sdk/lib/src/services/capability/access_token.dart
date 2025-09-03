@@ -123,7 +123,7 @@ class CapabilityAccessToken extends ReclaimOverride<CapabilityAccessToken> {
         .map((e) => Uri.parse(e).normalizePath().toString())
         .join(' ');
 
-    final jti = Uuid().v4();
+    final jti = const Uuid().v4();
     final issuedAtDateTime = DateTime.now().toUtc();
     final issuedAt = issuedAtDateTime.millisecondsSinceEpoch ~/ 1000;
     final expiresAtDateTime = issuedAtDateTime.add(expiresAfter);

@@ -101,6 +101,7 @@ class ClaimCreationUIScopeState extends State<ClaimCreationUIScope> {
     }
 
     verificationReviewController.setIsVisible(true);
+    logging.info('Review sheet is now visible');
   }
 
   void hideReview() {

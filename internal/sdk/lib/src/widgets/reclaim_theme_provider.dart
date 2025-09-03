@@ -13,10 +13,10 @@ class ReclaimThemeProvider extends StatelessWidget {
   static ThemeData buildTheme() {
     ThemeData theme = ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Color(0xFF000099),
-        primary: Color(0xFF4444EE),
-        secondary: Color(0xFF2563EB),
-        tertiary: Color(0xFF1375f6),
+        seedColor: const Color(0xFF000099),
+        primary: const Color(0xFF4444EE),
+        secondary: const Color(0xFF2563EB),
+        tertiary: const Color(0xFF1375f6),
         brightness: Brightness.light,
         dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
       ),

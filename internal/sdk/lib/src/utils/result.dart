@@ -19,6 +19,9 @@ final class _OptionalValue<T> implements Optional<T> {
   R map<R>({required R Function(T?) value, required R Function() none}) {
     return value(this.value);
   }
+
+  @override
+  String toString() => 'Optional.value($value)';
 }
 
 final class _OptionalNone<T> implements Optional<T> {
@@ -31,4 +34,7 @@ final class _OptionalNone<T> implements Optional<T> {
   R map<R>({required R Function(T?) value, required R Function() none}) {
     return none();
   }
+
+  @override
+  String toString() => 'Optional.none()';
 }

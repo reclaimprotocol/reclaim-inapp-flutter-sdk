@@ -18,7 +18,8 @@ class LoginDetection {
   final SessionIdentity identity;
   final SessionManager sessionManager;
 
-  LoginDetection(this.identity, {SessionManager? sessionManager}) : sessionManager = sessionManager ?? SessionManager();
+  LoginDetection(this.identity, {SessionManager? sessionManager})
+    : sessionManager = sessionManager ?? const SessionManager();
 
   static Future<LoginDetection> readAfterSessionStartedOf(BuildContext context) async {
     final controller = VerificationController.readOf(context);

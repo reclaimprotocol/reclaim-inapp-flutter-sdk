@@ -16,6 +16,8 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     this.hawkeyeInterceptionMethod,
     this.claimCreationTimeoutDurationInMins,
     this.sessionNoActivityTimeoutDurationInMins,
+    this.pageLoadedCompletedDebounceTimeoutMs,
+    this.potentialLoginTimeoutS,
   });
 
   final bool? cookiePersist;
@@ -29,6 +31,8 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
   final HawkeyeInterceptionMethod? hawkeyeInterceptionMethod;
   final int? claimCreationTimeoutDurationInMins;
   final int? sessionNoActivityTimeoutDurationInMins;
+  final int? pageLoadedCompletedDebounceTimeoutMs;
+  final int? potentialLoginTimeoutS;
 
   @override
   ReclaimFeatureFlagData copyWith({
@@ -43,6 +47,8 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     HawkeyeInterceptionMethod? hawkeyeInterceptionMethod,
     int? claimCreationTimeoutDurationInMins,
     int? sessionNoActivityTimeoutDurationInMins,
+    int? pageLoadedCompletedDebounceTimeoutMs,
+    int? potentialLoginTimeoutS,
   }) {
     return ReclaimFeatureFlagData(
       cookiePersist: cookiePersist ?? this.cookiePersist,
@@ -59,6 +65,9 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       claimCreationTimeoutDurationInMins: claimCreationTimeoutDurationInMins ?? this.claimCreationTimeoutDurationInMins,
       sessionNoActivityTimeoutDurationInMins:
           sessionNoActivityTimeoutDurationInMins ?? this.sessionNoActivityTimeoutDurationInMins,
+      pageLoadedCompletedDebounceTimeoutMs:
+          pageLoadedCompletedDebounceTimeoutMs ?? this.pageLoadedCompletedDebounceTimeoutMs,
+      potentialLoginTimeoutS: potentialLoginTimeoutS ?? this.potentialLoginTimeoutS,
     );
   }
 
@@ -75,6 +84,8 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       hawkeyeInterceptionMethod: HawkeyeInterceptionMethod.fromString(json['hawkeyeInterceptionMethod'] as String?),
       claimCreationTimeoutDurationInMins: json['claimCreationTimeoutDurationInMins'] as int?,
       sessionNoActivityTimeoutDurationInMins: json['sessionNoActivityTimeoutDurationInMins'] as int?,
+      pageLoadedCompletedDebounceTimeoutMs: json['pageLoadedCompletedDebounceTimeoutMs'] as int?,
+      potentialLoginTimeoutS: json['potentialLoginTimeoutS'] as int?,
     );
   }
 
@@ -91,6 +102,8 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       'hawkeyeInterceptionMethod': hawkeyeInterceptionMethod?.name,
       'claimCreationTimeoutDurationInMins': claimCreationTimeoutDurationInMins,
       'sessionNoActivityTimeoutDurationInMins': sessionNoActivityTimeoutDurationInMins,
+      'pageLoadedCompletedDebounceTimeoutMs': pageLoadedCompletedDebounceTimeoutMs,
+      'potentialLoginTimeoutS': potentialLoginTimeoutS,
     };
   }
 

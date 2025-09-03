@@ -420,7 +420,7 @@ class _ParamsTextState extends State<ParamsText> {
               key: _key,
               controller: _controller,
               shrinkWrap: widget.shrinkWrap,
-              physics: AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
               padding: widget.padding ?? const EdgeInsets.all(8.0),
               children: tiles.isNotEmpty
                   ? tiles.indexed.map((e) {
@@ -509,7 +509,7 @@ class _ParamsTileState extends State<ParamsTile> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: AnimatedSwitcher(
             key: _key,
             duration: Durations.medium1,
@@ -549,7 +549,9 @@ class _ParamsTileState extends State<ParamsTile> {
                     return ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: maxWidth),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3.0).add(EdgeInsetsDirectional.only(end: 8)),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 3.0,
+                        ).add(const EdgeInsetsDirectional.only(end: 8)),
                         child: Text(
                           label,
                           style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.normal),
@@ -579,7 +581,7 @@ class _ParamsTileState extends State<ParamsTile> {
                           fontSize: 14,
                           overflow: TextOverflow.ellipsis,
                           fontWeight: FontWeight.w400,
-                          fontVariations: [FontVariation.weight(400)],
+                          fontVariations: [const FontVariation.weight(400)],
                         ),
                       );
                     } else {
@@ -590,7 +592,7 @@ class _ParamsTileState extends State<ParamsTile> {
                           fontSize: 14,
                           overflow: TextOverflow.ellipsis,
                           fontWeight: FontWeight.w500,
-                          fontVariations: [FontVariation.weight(500)],
+                          fontVariations: [const FontVariation.weight(500)],
                         ),
                         maxLines: 1,
                       );
@@ -599,12 +601,12 @@ class _ParamsTileState extends State<ParamsTile> {
 
                         if (_canShowHumanizedValue) {
                           child = Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.attach_file_rounded, size: 14),
-                                SizedBox(width: 4),
+                                const Icon(Icons.attach_file_rounded, size: 14),
+                                const SizedBox(width: 4),
                                 Padding(padding: const EdgeInsetsDirectional.only(end: 4.0), child: child),
                               ],
                             ),
@@ -626,7 +628,7 @@ class _ParamsTileState extends State<ParamsTile> {
                             color: Colors.white30,
                             shape: RoundedRectangleBorder(
                               borderRadius: borderRadius,
-                              side: BorderSide(color: Color(0xFFccd6df)),
+                              side: const BorderSide(color: Color(0xFFccd6df)),
                             ),
                             child: child,
                           );

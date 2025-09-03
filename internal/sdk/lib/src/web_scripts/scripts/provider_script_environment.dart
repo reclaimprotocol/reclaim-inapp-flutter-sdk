@@ -12,6 +12,25 @@ String getProviderScriptEnvironment(HttpProvider providerData, Map<String, Strin
   final providerJsObject = _objectToJsObject(providerData.toJson()..remove('customInjection'));
 
   return """
+addEventListener("DOMContentLoaded", (event) => {
+  const preNode = document.evaluate(
+    '//pre',
+    document,
+    null,
+    XPathResult.FIRST_ORDERED_NODE_TYPE,
+    null,
+  ).singleNodeValue;
+  const preText = preNode ? preNode.innerText : null;
+  if (preText) {
+    window._ResponseOnDocumentContentLoaded = preText;
+  } else {
+    window._ResponseOnDocumentContentLoaded = document.documentElement.innerHTML;
+  }
+  if (typeof window._On_ResponseOnDocumentContentLoaded === 'function') {
+    window._On_ResponseOnDocumentContentLoaded(location.href, window._ResponseOnDocumentContentLoaded);
+  }
+}, {once: true});
+
 window.ReclaimMessenger = {
     _send: (event, message) => {
         if ('flutter_inappwebview' in window) {

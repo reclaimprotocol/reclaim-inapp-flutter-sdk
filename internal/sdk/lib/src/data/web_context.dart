@@ -1,5 +1,12 @@
+import 'dart:async';
+import 'dart:ui';
+
+import '../logging/logging.dart';
+
 /// A class that holds web context data that can be used by the coordinator and handlers
 class WebContext {
+  static final _log = logging.child('WebContext');
+
   String? _currentWebPageUrl;
   String _lastInputUrl = '';
   bool _aiFlowDone = false;
@@ -8,9 +15,15 @@ class WebContext {
   String _infoText = '';
   DateTime? _lastAiResponseTime;
   bool _signedOutByAi = false;
+  VoidCallback? _hideReviewSheet;
+  final int _potentialLoginTimeoutS;
 
   // Callback function type for infoText changes
   void Function(String)? _onInfoTextChanged;
+
+  /// Constructor for WebContext
+  /// [_potentialLoginTimeoutS] - Timeout in seconds to show the review sheet if the user is potentially logged in
+  WebContext({int potentialLoginTimeoutS = 20}) : _potentialLoginTimeoutS = potentialLoginTimeoutS;
 
   String? get currentWebPageUrl => _currentWebPageUrl;
   String get lastInputUrl => _lastInputUrl;
@@ -19,6 +32,10 @@ class WebContext {
   bool get markedLoggedInByAI => _markedLoggedInByAI;
   String get infoText => _infoText;
   bool get signedOutByAi => _signedOutByAi;
+  int get potentialLoginTimeoutS => _potentialLoginTimeoutS;
+  void setHideReviewSheetCallback(VoidCallback? cb) {
+    _hideReviewSheet = cb;
+  }
 
   /// Register a callback to be notified when infoText changes
   void onInfoTextChanged(void Function(String newInfoText) callback) {
@@ -52,6 +69,19 @@ class WebContext {
 
   void setIsLoggedIn(bool isLoggedIn) {
     _isLoggedIn = isLoggedIn;
+    if (!isLoggedIn) {
+      // Hiding the review sheet because the user isn't logged in and user has to interact with the page to login
+      final cb = _hideReviewSheet;
+      if (cb != null) {
+        try {
+          cb();
+        } catch (e, s) {
+          _log.warning('Error calling hideReviewSheet callback for WebContext', e, s);
+        }
+      } else {
+        _log.info('No hideReviewSheet callback set');
+      }
+    }
   }
 
   void setMarkedLoggedInByAI() {
@@ -70,5 +100,24 @@ class WebContext {
     _signedOutByAi = true;
     _markedLoggedInByAI = false;
     _isLoggedIn = false;
+  }
+
+  void waitForAILoginResponse() {
+    _log.info('Waiting for AI login response for $_potentialLoginTimeoutS seconds');
+    // Add delay and check if markedLoggedInByAI is false
+    Timer(Duration(seconds: _potentialLoginTimeoutS), () {
+      if (!markedLoggedInByAI) {
+        _log.info(
+          'LoginDetectionHandler: markedLoggedInByAI is false after $_potentialLoginTimeoutS seconds, setting isLoggedIn to false',
+        );
+        setIsLoggedIn(false);
+      }
+    });
+  }
+
+  void handlePotentialLoginTimeout() {
+    setLastInputUrl('');
+    setIsLoggedIn(true);
+    waitForAILoginResponse();
   }
 }

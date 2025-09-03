@@ -110,7 +110,7 @@ class CryptoEthers {
     int recoveryId = -1;
     for (var i = 0; i < 2; i++) {
       final k = _recoverPublicKeyFromSignature(i, sig.r, sig.s, message);
-      if (ListEquality().equals(k, publicKey)) {
+      if (const ListEquality().equals(k, publicKey)) {
         recoveryId = i;
         break;
       }

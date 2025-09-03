@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:logging/logging.dart';
-import 'package:reclaim_gnark_zkoperator/src/utils/list.dart';
 
+import '../utils/list.dart';
 import 'algorithm.dart';
 
 final _logger = Logger('reclaim_flutter_sdk.reclaim_gnark_zkoperator.algorithm.utils');

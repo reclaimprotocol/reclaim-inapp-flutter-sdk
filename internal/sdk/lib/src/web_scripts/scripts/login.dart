@@ -131,7 +131,7 @@ Future<bool> hasLoginButtonInPage(InAppWebViewController controller) async {
     final result = await controller
         .evaluateJavascript(source: _loginButtonFinderScript)
         // shouldn't take this long
-        .timeout(Duration(milliseconds: 500));
+        .timeout(const Duration(milliseconds: 500));
     _log.fine('has login: $result');
     return result == true || result == 'true' || result == '1';
   } catch (e, s) {

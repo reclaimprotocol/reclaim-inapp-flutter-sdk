@@ -135,10 +135,10 @@ class _AppVerificationTransferIcon extends StatelessWidget {
         return ConstrainedBox(
           constraints: BoxConstraints(maxWidth: size),
           child: ClaimTriggerIndicator(
-            key: ValueKey('iw-progress-indicator'),
+            key: const ValueKey('iw-progress-indicator'),
             color: claimCreationValue.hasError ? colorScheme.error : colorScheme.primary,
             progress: claimCreationValue.progress ?? 0.0,
-            padding: EdgeInsetsDirectional.symmetric(horizontal: 4),
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 4),
             thickness: 3,
           ),
         );

@@ -19,6 +19,7 @@ linter:
     cancel_subscriptions: true
     combinators_ordering: true
     deprecated_consistency: true
+    prefer_const_constructors: true
     # Doesn't work with formatter
     # require_trailing_commas: true
     # Apply following later to avoid polluting PR more

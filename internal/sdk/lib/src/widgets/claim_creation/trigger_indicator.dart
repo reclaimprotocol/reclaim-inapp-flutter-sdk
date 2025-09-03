@@ -128,14 +128,14 @@ class ClaimTriggerIndicator extends StatelessWidget {
             backgroundColor: Colors.transparent,
             minHeight: thickness,
             valueColor: color,
-            borderRadius: BorderRadius.all(Radius.circular(16)),
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
           ),
           AnimatedLinearProgressIndicator(
             indeterminateProgress: true,
             backgroundColor: Colors.transparent,
             minHeight: thickness,
             valueColor: color.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.all(Radius.circular(16)),
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
           ),
         ],
       );
@@ -147,7 +147,10 @@ class ClaimTriggerIndicator extends StatelessWidget {
         backgroundColor: Colors.transparent,
         minHeight: (thickness - 2).clamp(1, 10),
         valueColor: color,
-        borderRadius: BorderRadiusDirectional.only(topStart: Radius.circular(16), bottomStart: Radius.circular(16)),
+        borderRadius: const BorderRadiusDirectional.only(
+          topStart: Radius.circular(16),
+          bottomStart: Radius.circular(16),
+        ),
       );
       child = Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -170,11 +173,11 @@ class ClaimCreationIndicatorOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return const Column(
       mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisAlignment: MainAxisAlignment.end,
-      children: [AnimatedSwitcher(duration: Durations.medium1, child: const ClaimCreationIndicator())],
+      children: [AnimatedSwitcher(duration: Durations.medium1, child: ClaimCreationIndicator())],
     );
   }
 }
@@ -194,10 +197,10 @@ class ClaimCreationIndicator extends StatelessWidget {
     if (isVisible && indicationType != ClaimTriggerType.error) {
       final value = ClaimCreationController.of(context).value;
       if (value.isFinished || value.httpProvider == null) {
-        indicator = SizedBox();
+        indicator = const SizedBox();
       } else {
         indicator = ClaimTriggerIndicator(
-          key: ValueKey('iw-progress-indicator'),
+          key: const ValueKey('iw-progress-indicator'),
           color: colorScheme.primary,
           progress: value.progress,
         );
@@ -206,17 +209,17 @@ class ClaimCreationIndicator extends StatelessWidget {
     } else {
       switch (indicationType) {
         case ClaimTriggerType.claim:
-          indicator = ClaimTriggerIndicator(key: ValueKey('iw-claim-indicator'), color: colorScheme.primary);
+          indicator = ClaimTriggerIndicator(key: const ValueKey('iw-claim-indicator'), color: colorScheme.primary);
         case ClaimTriggerType.processing:
-          indicator = ClaimTriggerIndicator(key: ValueKey('iw-processing-indicator'), color: Color(0xffffc636));
+          indicator = const ClaimTriggerIndicator(key: ValueKey('iw-processing-indicator'), color: Color(0xffffc636));
         case ClaimTriggerType.error:
           indicator = ClaimTriggerIndicator(
-            key: ValueKey('iw-error-indicator'),
+            key: const ValueKey('iw-error-indicator'),
             color: colorScheme.error,
             emphasise: true,
           );
         case ClaimTriggerType.none:
-          indicator = SizedBox();
+          indicator = const SizedBox();
       }
     }
     return indicator;

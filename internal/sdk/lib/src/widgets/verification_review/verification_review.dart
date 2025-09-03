@@ -80,7 +80,7 @@ class _VerificationReviewState extends State<VerificationReview> {
             child: VerificationReviewPage(key: verificationReviewPageKey),
           ),
         ),
-        IgnorePointer(child: ClaimCreationIndicatorOverlay()),
+        const IgnorePointer(child: ClaimCreationIndicatorOverlay()),
       ],
     );
   }
@@ -109,7 +109,7 @@ class VerificationReviewPageSurface extends StatelessWidget {
             children: [
               Flexible(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: VerificationReviewPageSurface.smallScreenWidthExtent),
+                  constraints: const BoxConstraints(maxWidth: VerificationReviewPageSurface.smallScreenWidthExtent),
                   child: Column(
                     mainAxisSize: MainAxisSize.max,
                     mainAxisAlignment: MainAxisAlignment.start,
@@ -209,7 +209,7 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
               children: [
                 Flexible(
                   child: AnimatedSwitcher(
-                    key: ValueKey('key-review-provider-data'),
+                    key: const ValueKey('key-review-provider-data'),
                     duration: Durations.medium1,
                     switchInCurve: Curves.easeIn,
                     switchOutCurve: Curves.easeOut,
@@ -218,7 +218,7 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               if (!value.hasError)
-                                Padding(padding: const EdgeInsets.only(top: 32.0), child: CupertinoActivityIndicator()),
+                                const Padding(padding: EdgeInsets.only(top: 32.0), child: CupertinoActivityIndicator()),
                             ],
                           )
                         : FontsLoaded(
@@ -294,6 +294,7 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
   @override
   void initState() {
     super.initState();
+    webContext = AIFlowCoordinatorWidget.maybeReadWebContextOf(context) ?? WebContext();
     controller = ClaimCreationController.readOf(context);
     verificationController = VerificationController.readOf(context);
     isAiProvider = verificationController.value.provider?.isAIProvider == true;
@@ -396,7 +397,7 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
     final t = _loadingTextsTimer;
     if (t != null && t.isActive) return;
 
-    _loadingTextsTimer = Timer.periodic(Duration(seconds: 3), _onTimerTick);
+    _loadingTextsTimer = Timer.periodic(const Duration(seconds: 3), _onTimerTick);
   }
 
   void _stopLoadingTextsTimer() {
@@ -426,7 +427,7 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
     super.didChangeDependencies();
     controller = ClaimCreationController.of(context);
     verificationController = VerificationController.of(context);
-    webContext = AIFlowCoordinatorWidget.maybeWebContext(context) ?? WebContext();
+    webContext = AIFlowCoordinatorWidget.maybeWebContextOf(context) ?? webContext;
     webContext.onInfoTextChanged(_onInfoTextUpdate);
   }
 
@@ -448,7 +449,7 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
             color: value.hasError ? theme.colorScheme.error : Colors.black,
             fontSize: fontSize,
             height: lineHeight,
-            fontVariations: value.hasError ? [FontVariation.weight(700)] : [FontVariation.weight(500)],
+            fontVariations: value.hasError ? [const FontVariation.weight(700)] : [const FontVariation.weight(500)],
           ),
         ) ??
         TextStyle(fontWeight: fontWeight);
@@ -460,8 +461,8 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
 
     final value = controller.value;
 
-    final primaryColor = Color(0xFF0000EE); // theme.colorScheme.primary;
-    final secondaryColor = Color(0xFF0000EE).withValues(alpha: 0.4); // theme.colorScheme.secondary;
+    final primaryColor = const Color(0xFF0000EE); // theme.colorScheme.primary;
+    final secondaryColor = const Color(0xFF0000EE).withValues(alpha: 0.4); // theme.colorScheme.secondary;
 
     final TextSpan subtitle;
 
@@ -475,7 +476,7 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
       } else if (clientErrorMessage != null && clientErrorMessage.isNotEmpty) {
         subtitle = TextSpan(text: clientErrorMessage);
       } else {
-        subtitle = TextSpan(text: 'Something went wrong');
+        subtitle = const TextSpan(text: 'Something went wrong');
       }
     } else if (value.isFinished) {
       subtitle = TextSpan(
@@ -486,7 +487,7 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
             style: TextStyle(
               color: primaryColor,
               fontWeight: FontWeight.w700,
-              fontVariations: [FontVariation.weight(700)],
+              fontVariations: [const FontVariation.weight(700)],
             ),
           ),
         ],
@@ -496,7 +497,7 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
     } else if (!canStartWebClient) {
       subtitle = const TextSpan(text: 'Getting ready..');
     } else if (_maybeRequiresLogin && value.isIdle) {
-      subtitle = TextSpan(text: 'Getting ready to verify');
+      subtitle = const TextSpan(text: 'Getting ready to verify');
     } else {
       isShowingLoadingText = true;
 
@@ -594,7 +595,7 @@ class _TermsOfUseNotice extends StatelessWidget {
       logging.child('TermsOfUseNotice').severe('Failed to launch terms of use', e, s);
     }
     messenger.showSnackBar(
-      SnackBar(content: Text('Find our terms of service & privacy policy at reclaimprotocol.org')),
+      const SnackBar(content: Text('Find our terms of service & privacy policy at reclaimprotocol.org')),
     );
   }
 
@@ -609,19 +610,19 @@ class _TermsOfUseNotice extends StatelessWidget {
         child: Text.rich(
           TextSpan(
             children: [
-              TextSpan(text: 'By continuing, you agree to these '),
+              const TextSpan(text: 'By continuing, you agree to these '),
               TextSpan(
                 text: 'Terms of Service',
                 recognizer: TapGestureRecognizer()
                   ..onTap = () => _onTermsOfUsePressed(context, TermsType.termsOfService),
-                style: TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
+                style: const TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
               ),
-              TextSpan(text: ' and '),
+              const TextSpan(text: ' and '),
               TextSpan(
                 text: 'Privacy Policy',
                 recognizer: TapGestureRecognizer()
                   ..onTap = () => _onTermsOfUsePressed(context, TermsType.privacyPolicy),
-                style: TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
+                style: const TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
               ),
             ],
           ),
@@ -676,8 +677,8 @@ class _ActionViewState extends State<_ActionView> {
   /// returned from [ClaimCreationController.startClaimCreation] after [ClaimCreationBottomSheet] bottom sheet is closed.
   void _onShared() async {
     if (!mounted) return;
-
-    logging.child('ClaimCreationBottomSheetState._onShared').finest('sharing proof');
+    final log = logging.child('ClaimCreationBottomSheetState._onShared');
+    log.finest('sharing proof');
 
     // show next page after sharing proof
     setState(() => _isSubmitted = true);
@@ -688,10 +689,18 @@ class _ActionViewState extends State<_ActionView> {
     if (!mounted) return;
 
     final maybeProofs = controller.value.claims.map((e) => e.proofs);
-    final proofs = maybeProofs.whereType<List<CreateClaimOutput>>();
+    final publicData = controller.value.publicData;
+    log.fine('publicData: $publicData');
+    final proofs =
+        <CreateClaimOutput>[
+          for (final proofs in maybeProofs)
+            if (proofs != null) ...proofs,
+        ]
+        // attach public data to all proofs
+        .map((e) => e.copyWith(publicData: publicData));
 
-    assert(proofs.isNotEmpty && proofs.length == maybeProofs.length);
-    options?.onSubmitProofs(proofs.expand((e) => e).toList());
+    assert(proofs.isNotEmpty);
+    options?.onSubmitProofs(proofs);
   }
 
   bool _isSubmitted = false;
@@ -701,7 +710,7 @@ class _ActionViewState extends State<_ActionView> {
   @override
   Widget build(BuildContext context) {
     final isSubmitted = _isSubmitted || isAutoSubmitEnabled;
-    final textScaleFactor = MediaQuery.textScalerOf(context).textScaleFactor;
+    final textScaler = MediaQuery.textScalerOf(context);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -715,10 +724,10 @@ class _ActionViewState extends State<_ActionView> {
           switchOutCurve: Curves.easeOut,
           child: () {
             if (widget.hasError) {
-              return SizedBox(height: 148 * textScaleFactor, child: _ErrorWidget());
+              return SizedBox(height: textScaler.scale(148), child: const _ErrorWidget());
             }
             if (!widget.isFinished) {
-              return SizedBox(height: 100);
+              return const SizedBox(height: 100);
             }
             if (!isSubmitted) {
               return SizedBox(
@@ -736,7 +745,7 @@ class _ActionViewState extends State<_ActionView> {
         Padding(
           padding: const EdgeInsets.only(top: 10.0),
           child: _TermsOfUseNotice(
-            key: ValueKey('key-terms-of-use-notice'),
+            key: const ValueKey('key-terms-of-use-notice'),
             isVisible: !_isSubmitted && !widget.hasError,
           ),
         ),
@@ -851,7 +860,10 @@ class _ErrorWidget extends StatelessWidget {
                   backgroundColor: colorScheme.error,
                   foregroundColor: colorScheme.onError,
                   onPressed: () {
-                    controller.requestRetry();
+                    // clear the error and let the user continue
+                    controller.setClientError(null);
+                    // hide this review screen
+                    controller.value.delegate?.hideReview();
                   },
                   child: Stack(
                     alignment: Alignment.center,
@@ -891,7 +903,7 @@ class _ErrorWidget extends StatelessWidget {
               ),
           ],
         ),
-        Padding(padding: const EdgeInsets.only(top: 8.0), child: PotentialErrorReasonsLearnMoreWidget()),
+        const Padding(padding: EdgeInsets.only(top: 8.0), child: PotentialErrorReasonsLearnMoreWidget()),
       ],
     );
   }

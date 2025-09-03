@@ -1,4 +1,4 @@
-part of '../../reclaim_gnark_zkoperator.dart';
+part of 'isolate_worker.dart';
 
 class _LogRecordIsolateMessage {
   final String loggerName;

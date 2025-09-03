@@ -47,7 +47,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
 
   static ClaimCreationController? get lastInstance => _lastInstance;
 
-  ClaimCreationController() : super(ClaimCreationControllerState()) {
+  ClaimCreationController() : super(const ClaimCreationControllerState()) {
     _lastInstance = this;
   }
 
@@ -105,7 +105,8 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
   }
 
   void setPublicData(Object? publicData) {
-    value = value.copyWith(publicData: publicData);
+    logging.fine('publicData: $publicData');
+    value = value.copyWith(publicData: Optional.value(publicData));
   }
 
   void canExpectManyClaims(bool canExpectManyClaims) {
@@ -538,7 +539,6 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
       requestMeasurePerformance.stop();
 
       for (final p in proofs) {
-        p.publicData = value.publicData;
         p.providerRequest = proofRequest.requestData;
       }
 

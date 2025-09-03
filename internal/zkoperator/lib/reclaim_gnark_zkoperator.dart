@@ -1,12 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
-import 'dart:convert';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:measure_performance/measure_performance.dart';
 
@@ -14,6 +13,7 @@ import 'src/algorithm/assets.dart';
 import 'src/algorithm/utils.dart';
 import 'src/download/download.dart';
 import 'src/generated_bindings.dart';
+import 'src/worker/isolate_worker/isolate_worker.dart';
 import 'src/zk_operator.dart';
 
 export 'src/algorithm/algorithm.dart';
@@ -24,11 +24,9 @@ part 'src/algorithm/initializer.dart';
 part 'src/part/bindings.dart';
 part 'src/part/bytes.dart';
 part 'src/part/json.dart';
-
 part 'src/worker/initialize.dart';
-part 'src/worker/log.dart';
-part 'src/worker/oprf/generate_request.dart';
 part 'src/worker/oprf/finalize.dart';
+part 'src/worker/oprf/generate_request.dart';
 part 'src/worker/prover.dart';
 
 // The logger for reclaim_gnark_zkoperator package. Using 'reclaim_flutter_sdk' as parent logger name to allow
@@ -75,7 +73,7 @@ class ReclaimZkOperator extends ZkOperator {
 
   ReclaimZkOperator._(this.initializer);
 
-  Future<_ProveWorker>? _proveWorkerFuture;
+  Future<BackgroundWorker<Uint8List, ProofResult>>? _proveWorkerFuture;
 
   /// Computes the witness proof for the given bytes.
   ///
@@ -183,27 +181,30 @@ class ReclaimZkOperator extends ZkOperator {
 
   @override
   Future<String> groth16Prove(Uint8List bytes, {OnProofPerformanceReportCallback? onPerformanceReport}) async {
-    final proveWorkerFuture = _proveWorkerFuture ??= _ProveWorker.spawn();
+    final proveWorkerFuture = _proveWorkerFuture ??= const WorkerManager(ProveRunnable()).createWorker();
     final worker = await proveWorkerFuture;
-    return worker.prove(bytes, onPerformanceReport: onPerformanceReport);
+    final result = await worker.executeInBackground(bytes);
+    onPerformanceReport?.call(result.$2);
+    return result.$1;
   }
 
-  Future<_TOPRFFinalizeWorker>? _toprfFinalizeWorkerFuture;
+  Future<BackgroundWorker<Uint8List, String>>? _toprfFinalizeWorkerFuture;
 
   @override
   Future<String> finaliseOPRF(Uint8List bytes) async {
-    final workerFuture = _toprfFinalizeWorkerFuture ??= _TOPRFFinalizeWorker.spawn();
+    final workerFuture = _toprfFinalizeWorkerFuture ??= const WorkerManager(TOPRFFinalizeRunnable()).createWorker();
     final worker = await workerFuture;
-    return worker.toprfFinalize(bytes);
+    return worker.executeInBackground(bytes);
   }
 
-  Future<_GenerateOPRFRequestDataWorker>? _generateOPRFRequestDataWorkerFuture;
+  Future<BackgroundWorker<Uint8List, String>>? _generateOPRFRequestDataWorkerFuture;
 
   @override
   Future<String> generateOPRFRequestData(Uint8List bytes) async {
-    final workerFuture = _generateOPRFRequestDataWorkerFuture ??= _GenerateOPRFRequestDataWorker.spawn();
+    final workerFuture =
+        _generateOPRFRequestDataWorkerFuture ??= const WorkerManager(GenerateOPRFRequestDataRunnable()).createWorker();
     final worker = await workerFuture;
-    return worker.generateOPRFRequestData(bytes);
+    return worker.executeInBackground(bytes);
   }
 
   @override
@@ -225,9 +226,15 @@ class ReclaimZkOperator extends ZkOperator {
 
   @override
   Future<void> close() async {
-    final proverWorkerFuture = _proveWorkerFuture;
-    if (proverWorkerFuture != null) {
-      (await proverWorkerFuture).close();
+    final workers = <Future<BackgroundWorker>?>[
+      _proveWorkerFuture,
+      _toprfFinalizeWorkerFuture,
+      _generateOPRFRequestDataWorkerFuture,
+    ];
+    for (final worker in workers) {
+      if (worker != null) {
+        (await worker).close();
+      }
     }
   }
 }

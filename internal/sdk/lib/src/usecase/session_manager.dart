@@ -13,6 +13,8 @@ class SessionStartResponse {
 }
 
 class SessionManager {
+  const SessionManager();
+
   Future<SessionStartResponse> startSession(
     String applicationId,
     String providerId,
@@ -32,7 +34,7 @@ class SessionManager {
       rethrow;
     } catch (e, s) {
       logging.severe('Error session start', e, s);
-      throw ReclaimInitSessionException('Could not start session');
+      throw const ReclaimInitSessionException('Could not start session');
     }
   }
 

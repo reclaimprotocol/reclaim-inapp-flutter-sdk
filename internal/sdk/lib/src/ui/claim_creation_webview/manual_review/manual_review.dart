@@ -98,7 +98,7 @@ class _ManualReviewObserverState extends State<ManualReviewObserver> {
     Duration delayDuration = Duration.zero;
     switch (manualReviewMessage.rule) {
       case ManualReviewPromptDisplayRule.NOT_LOGIN:
-        delayDuration = Duration(seconds: 2);
+        delayDuration = const Duration(seconds: 2);
         break;
       case ManualReviewPromptDisplayRule.IMMEDIATELY:
         break;
@@ -232,7 +232,7 @@ class _ManualReviewObserverState extends State<ManualReviewObserver> {
       logger.severe('Failed to send requests for diagnosis', e, s);
     } finally {
       if (mounted) {
-        Timer(Duration(seconds: 5), _sendRequestsForDiagnosisPeriodic);
+        Timer(const Duration(seconds: 5), _sendRequestsForDiagnosisPeriodic);
       }
     }
   }
@@ -356,15 +356,15 @@ class _ManualReviewObserverState extends State<ManualReviewObserver> {
               ? TextSpan(text: message)
               : TextSpan(
                   children: [
-                    TextSpan(text: 'Tap '),
+                    const TextSpan(text: 'Tap '),
                     TextSpan(
                       text: 'Share',
                       style: TextStyle(color: reclaimTheme?.primary, fontWeight: FontWeight.bold),
                     ),
-                    TextSpan(text: ' to send data for manual review'),
+                    const TextSpan(text: ' to send data for manual review'),
                   ],
                 ),
-          style: TextStyle(color: Colors.black),
+          style: const TextStyle(color: Colors.black),
         ),
         action: !canSubmit ? null : ActionBarAction(label: submitLabel ?? 'Share', onActionPressed: onSharePressed),
       ),

@@ -112,7 +112,8 @@ class ClaimCreationRequest {
         requestBody:
             (isRequestFromProviderScript
                 ? proofData['requestBody']
-                : (requestData.bodySniff?.template ?? proofData['requestBody'])) ??
+                : ((requestData.bodySniff?.enabled == true ? requestData.bodySniff?.template : null) ??
+                      proofData['requestBody'])) ??
             '',
         method: requestData.method.name,
         witnessParams: {

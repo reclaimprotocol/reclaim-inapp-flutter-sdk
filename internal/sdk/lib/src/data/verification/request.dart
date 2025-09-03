@@ -50,7 +50,7 @@ class ReclaimVerificationRequest {
       );
     } catch (e, s) {
       log.severe('Request creation failed from sdk url', e, s);
-      throw InvalidRequestReclaimException('Request creation failed from sdk url');
+      throw const InvalidRequestReclaimException('Request creation failed from sdk url');
     }
   }
 }

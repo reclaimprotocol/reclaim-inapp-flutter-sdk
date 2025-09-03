@@ -119,6 +119,20 @@ class FeatureFlag<T> {
     selector: (data) => data.sessionNoActivityTimeoutDurationInMins,
   );
 
+  static final pageLoadedCompletedDebounceTimeoutMs = FeatureFlag<int>(
+    key: 'pageLoadedCompletedDebounceTimeoutMs',
+    canFetchFromRemote: true,
+    valueIfNull: 7000,
+    selector: (data) => data.pageLoadedCompletedDebounceTimeoutMs,
+  );
+
+  static final potentialLoginTimeoutS = FeatureFlag<int>(
+    key: 'potentialLoginTimeoutS',
+    canFetchFromRemote: true,
+    valueIfNull: 30,
+    selector: (data) => data.potentialLoginTimeoutS,
+  );
+
   T _select(ReclaimFeatureFlagData data) => _selector?.call(data) ?? _valueIfNull;
 
   static bool isFlagSessionIndependent(String key) {
@@ -276,8 +290,8 @@ class FeatureFlagRepository {
       return 'feature-flag-session-independent-$featureFlagKey';
     }
     return createRestorationIdentifier(
-      'feature-flag',
       {...identity.toJson(), 'key': featureFlagKey}..remove('sessionId'),
+      prefix: 'feature-flag:',
     );
   }
 

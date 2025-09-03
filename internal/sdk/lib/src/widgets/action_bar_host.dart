@@ -72,7 +72,7 @@ class _ActionBarHostState extends State<_ActionBarHost> {
       case ActionMessageType.claim:
         return colorScheme.primary;
       case ActionMessageType.processing:
-        return Color(0xffffc636);
+        return const Color(0xffffc636);
       case ActionMessageType.error:
         return colorScheme.error;
       case ActionMessageType.message:
@@ -175,7 +175,7 @@ class _ActionBarHostState extends State<_ActionBarHost> {
 
     late final ThemeData theme = Theme.of(context);
     late final ColorScheme colors = theme.colorScheme;
-    final contentTextStyle = (Theme.of(context).textTheme.bodyMedium ?? TextStyle()).copyWith(
+    final contentTextStyle = (Theme.of(context).textTheme.bodyMedium ?? const TextStyle()).copyWith(
       color: colors.onSurface,
       fontWeight: FontWeight.bold,
     );
@@ -185,7 +185,7 @@ class _ActionBarHostState extends State<_ActionBarHost> {
     final handler = _SnackBarActionHandler();
     final actionColor = _getActionColor(message.type);
 
-    final canDismiss = duration > Duration(seconds: 5);
+    final canDismiss = duration > const Duration(seconds: 5);
 
     snackbarCtrl = msg.showSnackBar(
       SnackBar(
@@ -410,7 +410,7 @@ class _SnackBarActionState extends State<_SnackBarAction> {
       ).copyWith(foregroundColor: resolveForegroundColor(), backgroundColor: resolveBackgroundColor()),
       onPressed: _haveTriggeredAction ? null : _handlePressed,
       child: _haveTriggeredAction
-          ? SizedBox.square(dimension: 16, child: CircularProgressIndicator())
+          ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator())
           : Text(widget.label),
     );
   }

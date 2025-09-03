@@ -3,7 +3,7 @@ import 'package:reclaim_inapp_sdk/src/utils/crypto/jwk_codec.dart';
 
 void main() {
   group('JwkValueCodec', () {
-    final codec = JwkValueCodec();
+    final codec = const JwkValueCodec();
 
     test('should encode and decode BigInt', () {
       final value = BigInt.from(1234567890);

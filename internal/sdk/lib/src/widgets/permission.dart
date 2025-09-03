@@ -17,24 +17,27 @@ class PermissionDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final buttonStyle = TextButton.styleFrom(minimumSize: Size(100, 48), textStyle: TextStyle(fontSize: 16));
+    final buttonStyle = TextButton.styleFrom(
+      minimumSize: const Size(100, 48),
+      textStyle: const TextStyle(fontSize: 16),
+    );
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      actionsPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       title: Text('Requesting permission', style: Theme.of(context).textTheme.titleLarge),
       content: Text.rich(
         TextSpan(
           children: [
             TextSpan(
               text: request.origin.toString(),
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            TextSpan(text: ' wants to access your '),
+            const TextSpan(text: ' wants to access your '),
             TextSpan(
               text: request.resources.map((e) => formatParamsLabel(e.toString())).join(', '),
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -43,11 +46,11 @@ class PermissionDialog extends StatelessWidget {
       actionsOverflowButtonSpacing: 16,
       actionsAlignment: MainAxisAlignment.spaceEvenly,
       actions: [
-        TextButton(style: buttonStyle, onPressed: () => Navigator.pop(context), child: Text('Don\'t Allow')),
+        TextButton(style: buttonStyle, onPressed: () => Navigator.pop(context), child: const Text('Don\'t Allow')),
         TextButton(
           style: buttonStyle,
           onPressed: () => Navigator.pop(context, true),
-          child: Text('Allow', style: TextStyle(fontWeight: FontWeight.bold)),
+          child: const Text('Allow', style: TextStyle(fontWeight: FontWeight.bold)),
         ),
       ],
     );

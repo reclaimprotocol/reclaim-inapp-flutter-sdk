@@ -20,6 +20,7 @@ import '../../widgets/verification_review/controller.dart';
 import '../../widgets/webview_bottom.dart';
 import '../claim_creation_webview/view.dart';
 import '../claim_creation_webview/view_model.dart';
+import '../dev/dev.dart';
 import 'route.dart';
 
 /// A widget where the verification flow happens.
@@ -43,6 +44,7 @@ class _VerificationViewState extends State<VerificationView> {
   @override
   void initState() {
     super.initState();
+    DevController.shared.clearAll();
     _log.info('Initializing verification view');
     _reviewController = VerificationReviewController();
     final controller = VerificationController.readOf(context);
@@ -102,7 +104,7 @@ class _VerificationViewState extends State<VerificationView> {
         _log.severe('Failed to load client web', e, s);
         VerificationController.readOf(
           context,
-        ).updateException(ReclaimVerificationProviderLoadException('Failed to load scripts'));
+        ).updateException(const ReclaimVerificationProviderLoadException('Failed to load scripts'));
       }
     });
   }
@@ -117,9 +119,20 @@ class _VerificationViewState extends State<VerificationView> {
   }
 
   void _onClaimCreationControllerChanges(ChangedValues<ClaimCreationControllerState> changes) {
+    if (!mounted) return;
     if (changes.oldValue?.status != changes.value.status &&
         changes.value.status == ClaimCreationStatus.retryRequested) {
       _onRetryRequested();
+    }
+    final controller = VerificationController.readOf(context);
+    final clientError = changes.value.clientError;
+    if (changes.oldValue?.clientError != clientError && clientError != null) {
+      controller.reportException(clientError);
+    }
+
+    final providerError = changes.value.providerError;
+    if (changes.oldValue?.providerError != providerError && providerError != null) {
+      controller.reportException(providerError);
     }
   }
 

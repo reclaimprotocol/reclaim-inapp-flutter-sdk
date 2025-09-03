@@ -2,14 +2,13 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:http/http.dart' as http;
 import 'package:cronet_http/cronet_http.dart' as cronet;
 import 'package:cupertino_http/cupertino_http.dart' as cupertino;
-import 'package:logging/logging.dart';
-import 'package:retry/retry.dart';
-import 'package:path/path.dart' as path;
-
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:logging/logging.dart';
+import 'package:path/path.dart' as path;
+import 'package:retry/retry.dart';
 
 Directory _getCacheDir([String? cacheDirName]) {
   final tempDir = Directory.systemTemp;

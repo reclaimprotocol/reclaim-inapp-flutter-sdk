@@ -29,7 +29,7 @@ class PotentialErrorReasonsLearnMoreWidget extends StatelessWidget {
     } catch (e, s) {
       log.severe('Failed to launch potential failure reasons website', e, s);
     }
-    messenger.showSnackBar(SnackBar(content: Text('Contact application support for more information.')));
+    messenger.showSnackBar(const SnackBar(content: Text('Contact application support for more information.')));
   }
 
   @override
@@ -40,10 +40,10 @@ class PotentialErrorReasonsLearnMoreWidget extends StatelessWidget {
       child: Text.rich(
         TextSpan(
           children: [
-            TextSpan(text: "For more information about this error, please "),
+            const TextSpan(text: "For more information about this error, please "),
             TextSpan(
               text: "see potential failure reasons.",
-              style: TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
+              style: const TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
               recognizer: TapGestureRecognizer()
                 ..onTap = () {
                   _onSeePotentialFailureReasons(context);

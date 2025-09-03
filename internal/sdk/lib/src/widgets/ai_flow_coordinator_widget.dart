@@ -1,12 +1,15 @@
 import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 import '../controller.dart';
 import '../data/app_events.dart';
 import '../data/web_context.dart';
+import '../repository/feature_flags.dart';
 import '../services/ai_services/ai_client_services.dart';
 import '../usecase/ai_flow/ai_flow_coordinator.dart';
 import '../usecase/ai_flow/handler_map_config.dart';
+import '../widgets/feature_flags.dart';
 
 /// A widget that manages the AIFlowCoordinator instance and provides it to its descendants.
 /// This widget must be used within a context that has both [ActionBarMessenger] and [ClaimCreationWebClientViewModel] available.
@@ -34,6 +37,15 @@ class AIFlowCoordinatorWidget extends StatefulWidget {
     }
   }
 
+  static AIFlowCoordinator? readOf(BuildContext context) {
+    try {
+      final provider = context.getInheritedWidgetOfExactType<_AIFlowCoordinatorProvider>();
+      return provider?.coordinator;
+    } catch (e) {
+      return null;
+    }
+  }
+
   /// Pushes an event to the AI flow coordinator without requiring context.
   static void pushEvent(AppEvent event) {
     if (_isAiProvider) {
@@ -43,8 +55,19 @@ class AIFlowCoordinatorWidget extends StatefulWidget {
 
   /// Returns the WebContext from the nearest AIFlowCoordinatorWidget, or null if not found.
   /// This is a safe alternative to directly accessing the webContext when the widget might not be available.
-  static WebContext? maybeWebContext(BuildContext context) {
+  ///
+  /// Depends on the closest [AIFlowCoordinatorWidget] in the widget tree.
+  static WebContext? maybeWebContextOf(BuildContext context) {
     final coordinator = maybeOf(context);
+    return coordinator?.webContext;
+  }
+
+  /// Returns the WebContext from the nearest AIFlowCoordinatorWidget, or null if not found.
+  /// This is a safe alternative to directly accessing the webContext when the widget might not be available.
+  ///
+  /// Reads from the closest [AIFlowCoordinatorWidget] in the widget tree.
+  static WebContext? maybeReadWebContextOf(BuildContext context) {
+    final coordinator = readOf(context);
     return coordinator?.webContext;
   }
 
@@ -98,9 +121,15 @@ class _AIFlowCoordinatorWidgetState extends State<AIFlowCoordinatorWidget> {
     final controller = VerificationController.readOf(context);
     final session = await controller.sessionStartFuture;
 
+    final featureFlagsProvider = FeatureFlagsProvider(session.identity);
+
+    final potentialLoginTimeoutS = await featureFlagsProvider
+        .get(FeatureFlag.potentialLoginTimeoutS)
+        .then((value) => value.toInt());
+
     final handlerMap = configureHandlerMap();
     final aiClient = AiServiceClient(session.sessionInformation.sessionId, session.identity.providerId);
-    final config = AIFlowCoordinatorConfig();
+    final config = AIFlowCoordinatorConfig(potentialLoginTimeoutS: potentialLoginTimeoutS);
 
     if (!mounted) return;
     setState(() {

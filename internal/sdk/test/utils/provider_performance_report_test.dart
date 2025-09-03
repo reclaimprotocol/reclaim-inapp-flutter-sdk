@@ -12,8 +12,8 @@ void main() {
           ProviderRequestPerformanceReport(
             requestReport: PerformanceReport(
               startedAt: now,
-              stoppedAt: now.add(Duration(milliseconds: 100)),
-              elapsed: Duration(milliseconds: 100),
+              stoppedAt: now.add(const Duration(milliseconds: 100)),
+              elapsed: const Duration(milliseconds: 100),
               memoryUsageBeforeStartBytes: 100,
               memoryUsageAfterStoppedBytes: 120,
               memoryUsageBytes: [100, 120],
@@ -24,8 +24,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -36,8 +36,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -48,8 +48,8 @@ void main() {
           ProviderRequestPerformanceReport(
             requestReport: PerformanceReport(
               startedAt: now,
-              stoppedAt: now.add(Duration(milliseconds: 100)),
-              elapsed: Duration(milliseconds: 150),
+              stoppedAt: now.add(const Duration(milliseconds: 100)),
+              elapsed: const Duration(milliseconds: 150),
               memoryUsageBeforeStartBytes: 80,
               memoryUsageAfterStoppedBytes: 200,
               memoryUsageBytes: [80, 200],
@@ -60,8 +60,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 50),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 50),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -72,8 +72,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -84,8 +84,8 @@ void main() {
           ProviderRequestPerformanceReport(
             requestReport: PerformanceReport(
               startedAt: now,
-              stoppedAt: now.add(Duration(milliseconds: 100)),
-              elapsed: Duration(milliseconds: 100),
+              stoppedAt: now.add(const Duration(milliseconds: 100)),
+              elapsed: const Duration(milliseconds: 100),
               memoryUsageBeforeStartBytes: 100,
               memoryUsageAfterStoppedBytes: 120,
               memoryUsageBytes: [100, 120],
@@ -96,8 +96,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -108,8 +108,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -138,7 +138,7 @@ void main() {
     });
 
     test('should handle empty reports', () {
-      final measurements = ProviderRequestPerformanceMeasurements(reports: []);
+      final measurements = const ProviderRequestPerformanceMeasurements(reports: []);
 
       final stats = measurements.getStatistics();
 
@@ -162,9 +162,9 @@ void main() {
         reports: [
           ProviderRequestPerformanceReport(
             requestReport: PerformanceReport(
-              startedAt: now.subtract(Duration(milliseconds: 100)),
-              stoppedAt: now.add(Duration(milliseconds: 100)),
-              elapsed: Duration(milliseconds: 100),
+              startedAt: now.subtract(const Duration(milliseconds: 100)),
+              stoppedAt: now.add(const Duration(milliseconds: 100)),
+              elapsed: const Duration(milliseconds: 100),
               memoryUsageBeforeStartBytes: 100,
               memoryUsageAfterStoppedBytes: 120,
               memoryUsageBytes: [100, 120],
@@ -174,9 +174,9 @@ void main() {
                 algorithmName: 'algorithm-a',
 
                 report: PerformanceReport(
-                  startedAt: now.subtract(Duration(milliseconds: 100)),
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  startedAt: now.subtract(const Duration(milliseconds: 100)),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -187,8 +187,8 @@ void main() {
           ProviderRequestPerformanceReport(
             requestReport: PerformanceReport(
               startedAt: now,
-              stoppedAt: now.add(Duration(milliseconds: 150)),
-              elapsed: Duration(milliseconds: 150),
+              stoppedAt: now.add(const Duration(milliseconds: 150)),
+              elapsed: const Duration(milliseconds: 150),
               memoryUsageBeforeStartBytes: 80,
               memoryUsageAfterStoppedBytes: 200,
               memoryUsageBytes: [80, 200],
@@ -199,8 +199,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 50)),
-                  elapsed: Duration(milliseconds: 50),
+                  stoppedAt: now.add(const Duration(milliseconds: 50)),
+                  elapsed: const Duration(milliseconds: 50),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -211,8 +211,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -223,8 +223,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 150)),
-                  elapsed: Duration(milliseconds: 150),
+                  stoppedAt: now.add(const Duration(milliseconds: 150)),
+                  elapsed: const Duration(milliseconds: 150),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -259,8 +259,8 @@ void main() {
           ProviderRequestPerformanceReport(
             requestReport: PerformanceReport(
               startedAt: now,
-              stoppedAt: now.add(Duration(milliseconds: 100)),
-              elapsed: Duration(milliseconds: 100),
+              stoppedAt: now.add(const Duration(milliseconds: 100)),
+              elapsed: const Duration(milliseconds: 100),
               memoryUsageBeforeStartBytes: 0,
               memoryUsageAfterStoppedBytes: 0,
               memoryUsageBytes: [0, 0],
@@ -271,8 +271,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 0,
                   memoryUsageAfterStoppedBytes: 0,
                   memoryUsageBytes: [0, 0],
@@ -303,8 +303,8 @@ void main() {
           ProviderRequestPerformanceReport(
             requestReport: PerformanceReport(
               startedAt: now,
-              stoppedAt: now.add(Duration(milliseconds: 100)),
-              elapsed: Duration(milliseconds: 100),
+              stoppedAt: now.add(const Duration(milliseconds: 100)),
+              elapsed: const Duration(milliseconds: 100),
               memoryUsageBeforeStartBytes: 100,
               memoryUsageAfterStoppedBytes: 120,
               memoryUsageBytes: [100, 120],
@@ -315,8 +315,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -327,8 +327,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -339,8 +339,8 @@ void main() {
           ProviderRequestPerformanceReport(
             requestReport: PerformanceReport(
               startedAt: now,
-              stoppedAt: now.add(Duration(milliseconds: 100)),
-              elapsed: Duration(milliseconds: 150),
+              stoppedAt: now.add(const Duration(milliseconds: 100)),
+              elapsed: const Duration(milliseconds: 150),
               memoryUsageBeforeStartBytes: 80,
               memoryUsageAfterStoppedBytes: 200,
               memoryUsageBytes: [80, 200],
@@ -351,8 +351,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 50),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 50),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -363,8 +363,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],
@@ -375,8 +375,8 @@ void main() {
 
                 report: PerformanceReport(
                   startedAt: now,
-                  stoppedAt: now.add(Duration(milliseconds: 100)),
-                  elapsed: Duration(milliseconds: 100),
+                  stoppedAt: now.add(const Duration(milliseconds: 100)),
+                  elapsed: const Duration(milliseconds: 100),
                   memoryUsageBeforeStartBytes: 100,
                   memoryUsageAfterStoppedBytes: 120,
                   memoryUsageBytes: [100, 120],

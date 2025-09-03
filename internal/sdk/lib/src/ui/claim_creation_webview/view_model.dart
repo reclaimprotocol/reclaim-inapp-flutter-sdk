@@ -12,6 +12,7 @@ import '../../logging/logging.dart';
 import '../../usecase/login_detection.dart';
 import '../../utils/detection/login.dart';
 import '../../utils/observable_notifier.dart';
+import '../../utils/strings.dart';
 import '../../utils/url.dart' as url_util;
 import '../../utils/user_agent.dart';
 import '../../utils/webview_state_mixin.dart';
@@ -113,18 +114,18 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
     required UnmodifiableListView<UserScript> userScripts,
     int followCount = 0,
   }) async {
-    final initialUrl = provider.loginUrl ?? provider.requestData.firstOrNull?.url;
+    final initialUrl = provider.loginUrl?.maybeIfNotBlankOrNull ?? provider.requestData.firstOrNull?.expectedPageUrl;
 
     if (initialUrl == null) {
-      throw ReclaimVerificationProviderLoadException('No initial URL found for provider');
+      throw const ReclaimVerificationProviderLoadException('No initial URL found for provider');
     }
 
     log.info('load with provider and user scripts');
     log.debug('waiting for webview to initialize');
-    final initializationTimeout = Duration(seconds: 5);
+    final initializationTimeout = const Duration(seconds: 5);
     try {
       await ensureInitialized().timeout(initializationTimeout);
-      await Future.delayed(Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 2));
     } catch (e, s) {
       final progress = (await value._controller?.getProgress() ?? 0) / 100;
       log.info('progress: $progress');
@@ -135,7 +136,7 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
       log.severe('Failed to initialize webview with controller: ${value._controller}', e, s);
       log.info('Trying to update webview with $_onUpdateWebView');
       await _onUpdateWebView?.call();
-      await Future.delayed(Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 2));
       try {
         await ensureInitialized().timeout(initializationTimeout);
       } catch (e, s) {
@@ -163,9 +164,9 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
     log.debug('added ${userScripts.length} user scripts');
 
     try {
-      final loadUrlTimeout = Duration(seconds: 20);
+      final loadUrlTimeout = const Duration(seconds: 20);
       // Adding a delay to ensure the webview is ready to load the url
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
       log.info('loading url $initialUrl');
       log.info({'hasLoadedRequestedUrl': value.hasLoadedRequestedUrl, 'lastLoadStopTime': value.lastLoadStopTime});
       await controller.loadUrl(urlRequest: URLRequest(url: WebUri(initialUrl))).timeout(loadUrlTimeout);
@@ -196,7 +197,7 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
   Future<void> refresh() async {
     final url = value.requestedUrl ?? (await controller.getUrl())?.toString();
     if (url == null) {
-      throw ReclaimVerificationProviderLoadException('No URL found for provider');
+      throw const ReclaimVerificationProviderLoadException('No URL found for provider');
     }
     await controller.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
   }
@@ -340,6 +341,10 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
   Future<String?> getCurrentWebPageUrl() async {
     await ensureInitialized();
     return (await controller.getUrl())?.toString();
+  }
+
+  InAppWebViewController getController() {
+    return controller;
   }
 
   Future<bool> maybeCurrentPageRequiresLogin(LoginDetection loginDetection) async {

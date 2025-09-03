@@ -58,7 +58,7 @@ class VerificationFlowManager {
       rethrow;
     } catch (e, s) {
       logging.severe('Error fetching provider', e, s);
-      throw ReclaimVerificationProviderLoadException('Error fetching provider');
+      throw const ReclaimVerificationProviderLoadException('Error fetching provider');
     }
   }
 
@@ -72,7 +72,7 @@ class VerificationFlowManager {
     } catch (e) {
       logger.severe('Error fetching attestor authentication request', e);
       // We want to show the error to the developer.
-      throw ReclaimAttestorException('Error fetching attestor authentication request');
+      throw const ReclaimAttestorException('Error fetching attestor authentication request');
     }
   }
 
@@ -89,7 +89,7 @@ class VerificationFlowManager {
       version: version,
     );
 
-    await SessionManager().onRequestedProvidersFetched(
+    await const SessionManager().onRequestedProvidersFetched(
       applicationId: applicationId,
       providerId: providerId,
       sessionId: sessionInformation.sessionId,
@@ -147,6 +147,7 @@ class VerificationFlowManager {
     required HttpProvider provider,
     required Map<String, String> parameters,
     required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
+    required int pageLoadedCompletedDebounceTimeoutMs,
   }) async {
     try {
       return await UserScriptService.createUserScripts(
@@ -154,10 +155,11 @@ class VerificationFlowManager {
         parameters: parameters,
         idleTimeThreshold: 10,
         hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
+        debounceTimeoutMs: pageLoadedCompletedDebounceTimeoutMs,
       );
     } catch (e, s) {
       log.severe('Error loading user scripts for provider', e, s);
-      throw ReclaimVerificationProviderLoadException('Error loading user scripts for provider');
+      throw const ReclaimVerificationProviderLoadException('Error loading user scripts for provider');
     }
   }
 }

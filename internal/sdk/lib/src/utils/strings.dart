@@ -24,3 +24,13 @@ String interpolateParamsInTemplate(String template, Map<String, String> params) 
   text = _interpolateParamsInString(text, params, prefix: '%7B%7B', suffix: '%7D%7D');
   return text;
 }
+
+extension StringX on String? {
+  String? get maybeIfNotBlankOrNull {
+    final it = this;
+    if (it == null) return null;
+    if (it.isEmpty) return null;
+    if (it.trim().isEmpty) return null;
+    return it;
+  }
+}

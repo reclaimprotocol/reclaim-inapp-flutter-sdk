@@ -59,7 +59,7 @@ class ReclaimAppBar extends StatefulWidget implements PreferredSizeWidget {
   State<StatefulWidget> createState() => _ReclaimAppBarState();
 
   @override
-  Size get preferredSize => Size.fromHeight(kToolbarHeight - 10);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight - 10);
 }
 
 class _ReclaimAppBarState extends State<ReclaimAppBar> {

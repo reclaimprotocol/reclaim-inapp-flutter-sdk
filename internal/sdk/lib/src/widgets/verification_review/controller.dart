@@ -17,7 +17,7 @@ class VerificationReviewState with EquatableMixin {
 }
 
 class VerificationReviewController extends ObservableNotifier<VerificationReviewState> {
-  VerificationReviewController() : super(VerificationReviewState());
+  VerificationReviewController() : super(const VerificationReviewState());
 
   Widget wrap({required Widget child}) {
     return _Provider(notifier: this, child: child);

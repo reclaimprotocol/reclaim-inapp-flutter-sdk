@@ -18,7 +18,7 @@ void main() {
           ],
           'geoLocation': 'US',
         }).requestIdentifier,
-        equals('0x88a2c863deeb7bd690e48112b8268b89231efb0a27441df50bce2c77a6836f8a'),
+        equals('548a82e357a8cdcd'),
       );
     });
 
@@ -60,7 +60,7 @@ void main() {
           "requestHash": "0xf0671406185377e01a1d5d7cc248d1a828c55887b195ffbc180680f7d068365d",
           "additionalClientOptions": null,
         }),
-        '0x2ac3761ef83f7b36c649eb36a73aabcce84350f91b61110c06d9a3a8fc63ca78',
+        '4bbf64de5ccfcf5a',
       );
       testIntegrity(
         DataProviderRequest.fromJson({
@@ -91,7 +91,7 @@ void main() {
           "requestHash": "0x8d7f90574f96e103f2354fd089ad8545ecaf521c822aca776f9a84ab025f05b2",
           "additionalClientOptions": null,
         }),
-        '0x5de00a6f92154d939b613b60e0d7b2e1615714e170190e859395e4da29ae3c14',
+        'd29a5a33bdcbad08',
       );
       testIntegrity(
         DataProviderRequest.fromJson(
@@ -103,7 +103,7 @@ void main() {
             ),
           ),
         ),
-        '0x7091f9aeeed62d14c3717e059c470f2127f0d9c4a8a4e622f5b268b3e9e29850',
+        'b8b97b258be7b304',
       );
     });
 
@@ -113,7 +113,7 @@ void main() {
         urlType: UrlType.CONSTANT,
         method: RequestMethodType.GET,
         responseMatches: [
-          ResponseMatch(
+          const ResponseMatch(
             value: "{{FullName}}",
             type: ResponseMatchType.contains,
             invert: false,
@@ -122,7 +122,7 @@ void main() {
           ),
         ],
         responseRedactions: [
-          ResponseRedaction(
+          const ResponseRedaction(
             xPath: "",
             jsonPath: r"$.email",
             regex: "\"email\": \"(?\u003Cemail\u003E.*)\"",
@@ -139,7 +139,7 @@ void main() {
         urlType: UrlType.CONSTANT,
         method: RequestMethodType.GET,
         responseMatches: [
-          ResponseMatch(
+          const ResponseMatch(
             value: "{{FullName}}",
             type: ResponseMatchType.contains,
             invert: false,
@@ -148,7 +148,7 @@ void main() {
           ),
         ],
         responseRedactions: [
-          ResponseRedaction(
+          const ResponseRedaction(
             xPath: "",
             jsonPath: r"$.email",
             regex: "\"email\": \"(?\u003Cemail\u003E.*)\"",
@@ -169,7 +169,7 @@ void main() {
         urlType: UrlType.TEMPLATE,
         method: RequestMethodType.POST,
         responseMatches: [
-          ResponseMatch(
+          const ResponseMatch(
             value: "{{DateOfBirth}}",
             type: ResponseMatchType.contains,
             invert: false,
@@ -178,7 +178,7 @@ void main() {
           ),
         ],
         responseRedactions: [
-          ResponseRedaction(
+          const ResponseRedaction(
             xPath: "",
             jsonPath: r"$.dob",
             regex: "\"dob\": \"(?\u003Cdob\u003E.*)\"",

@@ -42,7 +42,7 @@ class AppInfo extends ReclaimOverride<AppInfo> {
       return appInfo;
     } catch (error, stackTrace) {
       logger.severe('Error fetching app name', error, stackTrace);
-      return AppInfo(appName: '', appImage: '', isRecurring: false);
+      return const AppInfo(appName: '', appImage: '', isRecurring: false);
     }
   }
 

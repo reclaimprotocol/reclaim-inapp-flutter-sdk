@@ -163,7 +163,7 @@ class VerificationController extends ObservableNotifier<VerificationState> {
 
   Future<void> initialize() async {
     try {
-      final sessionManager = SessionManager();
+      final sessionManager = const SessionManager();
 
       _startingSession = sessionManager.startSession(
         request.applicationId,
@@ -237,7 +237,7 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       updateException(e, s);
     } catch (e, s) {
       _log.severe('Error fetching provider', e, s);
-      updateException(ReclaimVerificationProviderLoadException('Error loading provider'));
+      updateException(const ReclaimVerificationProviderLoadException('Error loading provider'));
     }
   }
 
@@ -246,11 +246,15 @@ class VerificationController extends ObservableNotifier<VerificationState> {
     final hawkeyeInterceptionMethod = await featureFlagsProvider
         .get(FeatureFlag.hawkeyeInterceptionMethod)
         .then(HawkeyeInterceptionMethod.fromString);
+    final pageLoadedCompletedDebounceTimeoutMs = await featureFlagsProvider
+        .get(FeatureFlag.pageLoadedCompletedDebounceTimeoutMs)
+        .then((value) => value.toInt());
 
     final userScripts = await VerificationFlowManager().loadUserScripts(
       provider: provider,
       parameters: request.parameters,
       hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
+      pageLoadedCompletedDebounceTimeoutMs: pageLoadedCompletedDebounceTimeoutMs,
     );
     final injectionRequests = InjectionRequest.fromDataRequests(provider.requestData, request.parameters);
     value = value.copyWith(userScripts: userScripts, injectionRequests: injectionRequests);
@@ -297,17 +301,23 @@ class VerificationController extends ObservableNotifier<VerificationState> {
         .get(FeatureFlag.hawkeyeInterceptionMethod)
         .then(HawkeyeInterceptionMethod.fromString);
 
+    final pageLoadedCompletedDebounceTimeoutMs = await featureFlagsProvider
+        .get(FeatureFlag.pageLoadedCompletedDebounceTimeoutMs)
+        .then((value) => value.toInt());
+
     final userScripts = await VerificationFlowManager().loadUserScripts(
       provider: finalProvider,
       parameters: request.parameters,
       hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
+      pageLoadedCompletedDebounceTimeoutMs: pageLoadedCompletedDebounceTimeoutMs,
     );
 
-    value = value.copyWith(provider: finalProvider, userScripts: userScripts);
+    final injectionRequests = InjectionRequest.fromDataRequests(provider.requestData, request.parameters);
+    value = value.copyWith(provider: finalProvider, userScripts: userScripts, injectionRequests: injectionRequests);
   }
 
   Future<void> onManualVerificationRequestSubmitted() async {
-    SessionManager().onManualVerificationRequestSubmitted(
+    const SessionManager().onManualVerificationRequestSubmitted(
       applicationId: request.applicationId,
       sessionId: sessionInformation.sessionId,
       providerId: request.providerId,
@@ -339,6 +349,26 @@ class VerificationController extends ObservableNotifier<VerificationState> {
     value = value.copyWith(result: result);
   }
 
+  ReclaimException? _lastReportedException;
+
+  void reportException(ReclaimException exception, [StackTrace? stackTrace]) {
+    if (_lastReportedException == exception) {
+      // don't report the same exception twice
+      return;
+    }
+
+    _log.info({'tag': 'reportException', 'exception': exception.toString(), 'stackTrace': StackTrace.current});
+
+    _lastReportedException = exception;
+
+    const SessionManager().onReclaimException(
+      applicationId: request.applicationId,
+      sessionId: _sessionInformation?.sessionId ?? '',
+      providerId: request.providerId,
+      exception: exception,
+    );
+  }
+
   void updateException(ReclaimException exception, [StackTrace? stackTrace]) {
     if (isCompleted) {
       final error = StateError('An exception occurred after verification is completed');
@@ -346,14 +376,7 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       return;
     }
 
-    _log.info({'exception': exception.toString(), 'stackTrace': StackTrace.current});
-
-    SessionManager().onReclaimException(
-      applicationId: request.applicationId,
-      sessionId: _sessionInformation?.sessionId ?? '',
-      providerId: request.providerId,
-      exception: exception,
-    );
+    reportException(exception, stackTrace);
 
     if (exception is ReclaimVerificationRequirementException) {
       // Requirement for verification could not be met. We can ignore this error.

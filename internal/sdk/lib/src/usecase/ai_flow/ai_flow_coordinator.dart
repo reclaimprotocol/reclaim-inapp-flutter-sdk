@@ -13,10 +13,12 @@ class AIFlowCoordinatorConfig {
   final Duration handlerTimeout;
   final int maxRetries;
   final Duration retryDelay;
+  final int potentialLoginTimeoutS;
 
   const AIFlowCoordinatorConfig({
     this.handlerTimeout = const Duration(seconds: 10),
     this.maxRetries = 2,
+    this.potentialLoginTimeoutS = 30,
     this.retryDelay = const Duration(seconds: 1),
   });
 }
