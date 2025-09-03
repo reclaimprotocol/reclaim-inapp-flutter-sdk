@@ -28,7 +28,10 @@ class FeatureFlagService {
   }
 
   static String _getRestorableFeatureFlagIdentifier(SessionIdentity identity) {
-    final identifier = createRestorationIdentifier('feature-flags', {...identity.toJson()}..remove('sessionId'));
+    final identifier = createRestorationIdentifier(
+      {...identity.toJson()}..remove('sessionId'),
+      prefix: 'feature-flags:',
+    );
     _updateRestorableFeatureFlagIdentifier(identifier);
     return identifier;
   }

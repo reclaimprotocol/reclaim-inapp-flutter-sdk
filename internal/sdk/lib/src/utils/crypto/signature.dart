@@ -141,11 +141,11 @@ class NistP256ECDSASigner {
           // NIST P-256
           curveInfo.domainParameters,
         ),
-        _DartSecureRandom(),
+        const _DartSecureRandom(),
       ),
     );
     final keyPair = keyGen.generateKeyPair();
-    final kid = Uuid().v4().toString();
+    final kid = const Uuid().v4().toString();
     return NistP256ECDSASigner(
       kid: kid,
       keyPair: AsymmetricKeyPair(keyPair.publicKey, keyPair.privateKey),
@@ -173,7 +173,7 @@ class NistP256ECDSASigner {
   Uint8List sign(Uint8List message) {
     final messageHash = Uint8List.fromList(sha256.convert(message).bytes);
     final signer = ECDSASigner();
-    signer.init(true, ParametersWithRandom(PrivateKeyParameter(keyPair.privateKey), _DartSecureRandom()));
+    signer.init(true, ParametersWithRandom(PrivateKeyParameter(keyPair.privateKey), const _DartSecureRandom()));
     final signature = signer.generateSignature(messageHash) as ECSignature;
     signature.normalize(curveInfo.domainParameters);
     final signatureBytes = Uint8List(64);

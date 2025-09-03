@@ -4,10 +4,12 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../../controller.dart';
 import '../../../logging/logging.dart';
 import '../../../utils/webview_state_mixin.dart';
+import '../../../webview_utils.dart';
 import '../../../widgets/reclaim_appbar.dart';
 import '../../../widgets/reclaim_theme_provider.dart';
 import '../../../widgets/verification_review/controller.dart';
 import '../../../widgets/webview_bottom.dart';
+import '../user_interaction_handler.dart';
 
 class WebViewWindowParameters {
   final InAppWebViewSettings webViewSettings;
@@ -57,6 +59,31 @@ class _WebViewWindowState extends State<WebViewWindow> with WebViewCompanionMixi
 
   final logger = logging.child('WebViewWindow');
 
+  void _addUserInteractionScript(InAppWebViewController controller) {
+    controller.addUserScript(
+      userScript: UserScript(
+        source: userInteractionInjection,
+        injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+      ),
+    );
+  }
+
+  void _setJSHandlers(InAppWebViewController controller) {
+    controller.addJavaScriptHandler(
+      handlerName: 'userInteraction',
+      callback: (args) async => await handleUserInteraction(args, controller),
+    );
+  }
+
+  void _onWebViewCreated(InAppWebViewController controller) {
+    try {
+      _addUserInteractionScript(controller);
+      _setJSHandlers(controller);
+    } catch (e, s) {
+      logger.severe('Error adding user interaction script', e, s);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -80,6 +107,7 @@ class _WebViewWindowState extends State<WebViewWindow> with WebViewCompanionMixi
           windowId: widget.parameters.action.windowId,
           onWebViewCreated: (controller) {
             _controller = controller;
+            _onWebViewCreated(controller);
           },
           onLoadStart: (controller, url) {
             appBarController.updateUrl(url.toString());
@@ -99,7 +127,7 @@ class _WebViewWindowState extends State<WebViewWindow> with WebViewCompanionMixi
           onCreateWindow: onCreateWindowAction,
           shouldOverrideUrlLoading: shouldOverrideUrlLoading,
         ),
-        bottomNavigationBar: WebviewBottomBar(),
+        bottomNavigationBar: const WebviewBottomBar(),
       ),
     );
   }

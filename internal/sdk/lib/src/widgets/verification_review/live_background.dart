@@ -38,7 +38,7 @@ class _LiveBackgroundState extends State<LiveBackground> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
-    controller = AnimationController(vsync: this, duration: Duration(seconds: 5));
+    controller = AnimationController(vsync: this, duration: const Duration(seconds: 5));
     controller.addListener(_onAnimationChanged);
     claimCreationController = ClaimCreationController.of(context, listen: false);
     // To prevent initial jank when verification view opens up

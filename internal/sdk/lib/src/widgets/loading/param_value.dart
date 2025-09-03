@@ -17,7 +17,7 @@ class LoadingParamValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = color ?? Color(0xffD4D7DB);
+    final primaryColor = color ?? const Color(0xffD4D7DB);
 
     return ShimmerShader(
       animate: true,

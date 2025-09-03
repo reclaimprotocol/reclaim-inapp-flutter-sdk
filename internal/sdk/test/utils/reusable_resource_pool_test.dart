@@ -116,15 +116,15 @@ void main() {
       // Run multiple computations
       await Future.wait([
         pool.compute((r) async {
-          await Future.delayed(Duration(milliseconds: 100));
+          await Future.delayed(const Duration(milliseconds: 100));
           return r.id;
         }),
         pool.compute((r) async {
-          await Future.delayed(Duration(milliseconds: 50));
+          await Future.delayed(const Duration(milliseconds: 50));
           return r.id;
         }),
         pool.compute((r) async {
-          await Future.delayed(Duration(milliseconds: 75));
+          await Future.delayed(const Duration(milliseconds: 75));
           return r.id;
         }),
       ]);

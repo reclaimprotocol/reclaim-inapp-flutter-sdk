@@ -61,7 +61,7 @@ class RpcResponseErrorData {
   }
 }
 
-final class RpcResponseError<RpcResponseErrorData> extends RpcMessage {
+final class RpcResponseError extends RpcMessage {
   const RpcResponseError({required super.id, required super.module, required this.data}) : super(type: 'error');
 
   final RpcResponseErrorData data;

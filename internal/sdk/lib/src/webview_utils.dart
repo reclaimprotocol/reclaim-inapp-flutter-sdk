@@ -118,7 +118,7 @@ const String HAWKEYE =
             requestUrl = requestUrl || '/';
           }
         }
-        const url = requestUrl.startsWith('/') ? window.location.origin + request.url : request.url;
+        const url = requestUrl.startsWith('/') ? window.location.origin + requestUrl : requestUrl;
         let requestMethod = request.method || (request.options.method ? request.options.method : 'GET');
         let parsedHeaders = {}
         const receivedHeaders = request.headers || request.options.headers;
@@ -148,6 +148,17 @@ if(!window.reclaimFetchInjected){
       fetch(window.location.href,{method:"GET"}).then(async (response) => {})
       window.reclaimFetchInjected = true;
     }
+""";
+
+const requestWithoutReplayInjection =
+    """
+window._On_ResponseOnDocumentContentLoaded = (url, responseText) => {
+  let headers = {};
+  let requestMethod = 'GET';
+  let requestBody = '';
+
+  $_notifyRequestInterceptorListeners
+};
 """;
 
 const userInteractionInjection = """
@@ -294,23 +305,29 @@ String injectInterceptorScript(
   }
 }
 
+const String _notifyRequestInterceptorListeners =
+    """
+      window.flutter_inappwebview.callHandler('proofData', JSON.stringify({requestBody: requestBody, url: url, method: requestMethod, headers: headers, response: responseText}));
+
+      $_sendRequestLogs
+""";
+
 String createInjection(
   bool disableRequestReplay,
   InjectionType injectionType, {
   required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
 }) {
+  logging.child('createInjection').config('disableRequestReplay: $disableRequestReplay');
   return """
     window.ReclaimInjected = true;
     ${injectInterceptorScript(injectionType, hawkeyeInterceptionMethod: hawkeyeInterceptionMethod)}
         
-        window.flutter_inappwebview.callHandler('proofData', JSON.stringify({requestBody: requestBody, url: url, method: requestMethod, headers: headers, response: responseText}));
-
-        $_sendRequestLogs
+        $_notifyRequestInterceptorListeners
       } catch (e){
         window.flutter_inappwebview.callHandler('errorLogs', JSON.stringify({log:e.message }));
       }
     });
-    ${!disableRequestReplay ? requestReplayInjection : ""}
+    ${!disableRequestReplay ? requestReplayInjection : requestWithoutReplayInjection}
   true;
   """;
 }

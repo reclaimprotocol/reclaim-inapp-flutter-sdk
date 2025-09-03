@@ -47,7 +47,7 @@ class _ShimmerShaderState extends State<ShimmerShader> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = widget.primaryColor ?? Color(0xffD4D7DB); // theme.colorScheme.primary;
+    final primaryColor = widget.primaryColor ?? const Color(0xffD4D7DB); // theme.colorScheme.primary;
     final secondaryColor = widget.secondaryColor ?? primaryColor.withValues(alpha: 0.1); // theme.colorScheme.secondary;
 
     return AnimatedBuilder(

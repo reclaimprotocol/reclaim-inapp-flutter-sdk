@@ -41,14 +41,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
-  buffer:
-    dependency: transitive
-    description:
-      name: buffer
-      sha256: "389da2ec2c16283c8787e0adaede82b1842102f8c8aae2f49003a766c5c6b3d1"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.2.3"
   cached_network_image:
     dependency: transitive
     description:
@@ -185,22 +177,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
-  eip1559:
-    dependency: transitive
-    description:
-      name: eip1559
-      sha256: c2b81ac85f3e0e71aaf558201dd9a4600f051ece7ebacd0c5d70065c9b458004
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.6.2"
-  eip55:
-    dependency: transitive
-    description:
-      name: eip55
-      sha256: "213a9b86add87a5216328e8494b0ab836e401210c4d55eb5e521bd39e39169e1"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.2"
   equatable:
     dependency: transitive
     description:
@@ -209,14 +185,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.7"
-  eth_sig_util:
-    dependency: transitive
-    description:
-      name: eth_sig_util
-      sha256: "20fdc5ce3864e70e5ade1c1cd03cce4ef01018db00adab107303f9055d26b01a"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.9"
   fake_async:
     dependency: transitive
     description:
@@ -395,14 +363,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.1.3"
-  flutter_spinkit:
-    dependency: transitive
-    description:
-      name: flutter_spinkit
-      sha256: d2696eed13732831414595b98863260e33e8882fc069ee80ec35d4ac9ddb0472
-      url: "https://pub.dev"
-    source: hosted
-    version: "5.2.1"
   flutter_svg:
     dependency: transitive
     description:
@@ -438,10 +398,10 @@ packages:
     dependency: transitive
     description:
       name: http
-      sha256: "2c11f3f94c687ee9bad77c171151672986360b2b001d109814ee7140b2cf261b"
+      sha256: bb2ce4590bc2667c96f318d68cac1b5a7987ec819351d32b1c987239a815e007
       url: "https://pub.dev"
     source: hosted
-    version: "1.4.0"
+    version: "1.5.0"
   http_parser:
     dependency: transitive
     description:
@@ -495,38 +455,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.9.0"
-  json_rpc_2:
-    dependency: transitive
-    description:
-      name: json_rpc_2
-      sha256: "246b321532f0e8e2ba474b4d757eaa558ae4fdd0688fdbc1e1ca9705f9b8ca0e"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.0.3"
   leak_tracker:
     dependency: transitive
     description:
       name: leak_tracker
-      sha256: "6bb818ecbdffe216e81182c2f0714a2e62b593f4a4f13098713ff1685dfb6ab0"
+      sha256: "8dcda04c3fc16c14f48a7bb586d4be1f0d1572731b6d81d51772ef47c02081e0"
       url: "https://pub.dev"
     source: hosted
-    version: "10.0.9"
+    version: "11.0.1"
   leak_tracker_flutter_testing:
     dependency: transitive
     description:
       name: leak_tracker_flutter_testing
-      sha256: f8b613e7e6a13ec79cfdc0e97638fddb3ab848452eff057653abd3edba760573
+      sha256: "1dbc140bb5a23c75ea9c4811222756104fbcd1a27173f0c34ca01e16bea473c1"
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.9"
+    version: "3.0.10"
   leak_tracker_testing:
     dependency: transitive
     description:
       name: leak_tracker_testing
-      sha256: "6ba465d5d76e67ddf503e1161d1f4a6bc42306f9d66ca1e8f079a47290fb06d3"
+      sha256: "8d5a2d49f4a66b49744b23b018848400d23e54caf9463f4eb20df3eb8acb2eb1"
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.1"
+    version: "3.0.2"
   lints:
     dependency: transitive
     description:
@@ -771,10 +723,10 @@ packages:
     dependency: transitive
     description:
       name: pointycastle
-      sha256: "4be0097fcf3fd3e8449e53730c631200ebc7b88016acecab2b0da2f0149222fe"
+      sha256: "92aa3841d083cc4b0f4709b5c74fd6409a3e6ba833ffc7dc6a8fee096366acf5"
       url: "https://pub.dev"
     source: hosted
-    version: "3.9.1"
+    version: "4.0.0"
   pool:
     dependency: transitive
     description:
@@ -808,32 +760,33 @@ packages:
     source: hosted
     version: "2.2.0"
   reclaim_gnark_zkoperator:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      path: "internal/zkoperator"
-      ref: "0.10.13"
-      resolved-ref: "605fa1a8212f807f08bcfa84b7d80f78b7d098c5"
-      url: "https://github.com/reclaimprotocol/reclaim-inapp-flutter-sdk.git"
-    source: git
-    version: "1.3.1"
+      path: "../internal/zkoperator"
+      relative: true
+    source: path
+    version: "1.5.0"
   reclaim_inapp_flutter_sdk:
     dependency: "direct main"
     description:
-      path: "."
-      ref: "0.10.13"
-      resolved-ref: "605fa1a8212f807f08bcfa84b7d80f78b7d098c5"
-      url: "https://github.com/reclaimprotocol/reclaim-inapp-flutter-sdk.git"
-    source: git
-    version: "0.10.13"
+      path: ".."
+      relative: true
+    source: path
+    version: "0.15.0"
   reclaim_inapp_sdk:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      path: "internal/sdk"
-      ref: "0.10.13"
-      resolved-ref: "605fa1a8212f807f08bcfa84b7d80f78b7d098c5"
-      url: "https://github.com/reclaimprotocol/reclaim-inapp-flutter-sdk.git"
-    source: git
-    version: "0.10.13"
+      path: "../internal/sdk"
+      relative: true
+    source: path
+    version: "0.15.0"
+  reclaim_verifier_module:
+    dependency: "direct overridden"
+    description:
+      path: "../internal/reclaim_verifier_module"
+      relative: true
+    source: path
+    version: "0.15.0"
   retry:
     dependency: transitive
     description:
@@ -850,14 +803,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.28.0"
-  sec:
-    dependency: transitive
-    description:
-      name: sec
-      sha256: "8bbd56df884502192a441b5f5d667265498f2f8728a282beccd9db79e215f379"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.0"
   shared_preferences:
     dependency: transitive
     description:
@@ -999,14 +944,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.4"
-  stream_transform:
-    dependency: transitive
-    description:
-      name: stream_transform
-      sha256: ad47125e588cfd37a9a7f86c7d6356dde8dfe89d071d293f80ca9e9273a33871
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.1.1"
   string_scanner:
     dependency: transitive
     description:
@@ -1043,10 +980,10 @@ packages:
     dependency: transitive
     description:
       name: test_api
-      sha256: fb31f383e2ee25fbbfe06b40fe21e1e458d14080e3c67e7ba0acfde4df4e0bbd
+      sha256: "522f00f556e73044315fa4585ec3270f1808a4b186c936e612cab0b565ff1e00"
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.4"
+    version: "0.7.6"
   typed_data:
     dependency: transitive
     description:
@@ -1155,10 +1092,10 @@ packages:
     dependency: transitive
     description:
       name: vector_math
-      sha256: "80b3257d1492ce4d091729e3a67a60407d227c27241d6927be0130c98e741803"
+      sha256: d530bd74fea330e6e364cda7a85019c434070188383e1cd8d9777ee586914c5b
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.4"
+    version: "2.2.0"
   vm_service:
     dependency: transitive
     description:
@@ -1167,14 +1104,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "15.0.0"
-  wallet:
-    dependency: transitive
-    description:
-      name: wallet
-      sha256: "687fd89a16557649b26189e597792962f405797fc64113e8758eabc2c2605c32"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.13"
   web:
     dependency: transitive
     description:
@@ -1183,14 +1112,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
-  web3dart:
-    dependency: transitive
-    description:
-      name: web3dart
-      sha256: "885e5e8f0cc3c87c09f160a7fce6279226ca41316806f7ece2001959c62ecced"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.7.3"
   web_socket:
     dependency: transitive
     description:
@@ -1257,4 +1178,4 @@ packages:
     version: "3.1.3"
 sdks:
   dart: ">=3.8.0 <4.0.0"
-  flutter: ">=3.32.0"
+  flutter: ">=3.29.0"

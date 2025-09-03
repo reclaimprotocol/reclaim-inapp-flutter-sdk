@@ -6,7 +6,9 @@ final _client = ReclaimHttpClient();
 Future<String> getPublicIp() async {
   final log = logging.child('getPublicIp');
   try {
-    final response = await _client.get(Uri.parse('https://api.ipify.org?format=json')).timeout(Duration(seconds: 5));
+    final response = await _client
+        .get(Uri.parse('https://api.ipify.org?format=json'))
+        .timeout(const Duration(seconds: 5));
     if (response.isSuccess) {
       final ip = response.bodyAsJson?['ip'];
       if (ip is String && ip.isNotEmpty) return ip;

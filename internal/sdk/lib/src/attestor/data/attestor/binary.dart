@@ -19,7 +19,7 @@ class AttestorBinaryData extends AttestorData {
         if (value is String) {
           return AttestorBinaryData(value: value);
         } else {
-          throw FormatException('Invalid attestor data for type uint8array');
+          throw const FormatException('Invalid attestor data for type uint8array');
         }
       } else {
         final data = Uint8List(json.length);
@@ -27,7 +27,7 @@ class AttestorBinaryData extends AttestorData {
           final index = key is int ? key : int.parse(key);
           final value = json[key];
           if (value is! int) {
-            throw FormatException('Invalid attestor data for type uint8array');
+            throw const FormatException('Invalid attestor data for type uint8array');
           }
           data[index] = value;
         }
@@ -36,7 +36,7 @@ class AttestorBinaryData extends AttestorData {
     } else if (json is List) {
       return AttestorBinaryData.fromBytes(json.whereType<int>().toList());
     } else {
-      throw FormatException('Invalid attestor data');
+      throw const FormatException('Invalid attestor data');
     }
   }
 }

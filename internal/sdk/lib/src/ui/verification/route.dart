@@ -42,7 +42,7 @@ class VerificationViewPageRoute extends PageRoute<dynamic> with CupertinoRouteTr
                   ? 0.32
                   // Androids always provide bottom padding as 0.
                   : 1,
-              child: VerificationView(),
+              child: const VerificationView(),
             ),
           ),
         ),

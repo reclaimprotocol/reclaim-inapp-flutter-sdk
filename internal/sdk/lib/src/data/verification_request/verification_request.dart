@@ -1,9 +1,11 @@
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
 import 'package:json_annotation/json_annotation.dart';
 import 'package:meta/meta.dart';
 
 import '../../logging/logging.dart';
+import '../../utils/link.dart';
 
 part 'verification_request.g.dart';
 
@@ -55,7 +57,7 @@ class ClientSdkVerificationRequest {
         // The deeplink url is not always correct, so we try to fix it by replacing the /template with /?template
         Uri.parse(url.replaceFirst('/template', '/?template')).queryParameters['template'];
     if (data == null) {
-      throw FormatException('No template found in url');
+      throw const FormatException('No template found in url');
     }
 
     dynamic template;
@@ -64,20 +66,43 @@ class ClientSdkVerificationRequest {
       template = json.decode(data);
     } catch (e, s) {
       _logger.severe('Not a valid json', e, s);
-      throw FormatException('Template data is not a valid json');
+      throw const FormatException('Template data is not a valid json');
     }
 
     if (template is! Map) {
       _logger.severe('Not a valid json map');
-      throw FormatException('Template data is not a valid json map');
+      throw const FormatException('Template data is not a valid json map');
+    }
+
+    if (template.isEmpty) {
+      _logger.severe('Template is empty');
+      throw const FormatException('Template is empty');
     }
 
     return template;
   }
 
-  factory ClientSdkVerificationRequest.fromUrl(String url) {
-    final template = parseTemplateFromUrl(url);
-    return ClientSdkVerificationRequest.fromJson(template);
+  static Future<ClientSdkVerificationRequest> fromUrl(
+    String url, {
+    bool followRedirects = true,
+    http.Client? client,
+    int followDepth = 0,
+  }) async {
+    try {
+      final template = parseTemplateFromUrl(url);
+      return ClientSdkVerificationRequest.fromJson(template);
+    } on FormatException {
+      if (!followRedirects) {
+        rethrow;
+      }
+
+      final location = await followUrlRedirects(url, followDepth, client: client);
+      if (location == null) {
+        rethrow;
+      }
+
+      return fromUrl(location, followRedirects: followRedirects, client: client, followDepth: followDepth + 1);
+    }
   }
 
   Map<String, dynamic> toJson() {

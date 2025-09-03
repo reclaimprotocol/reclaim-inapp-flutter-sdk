@@ -1,28 +1,18 @@
-import 'dart:convert';
+import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
-import 'package:reclaim_gnark_zkoperator/reclaim_gnark_zkoperator.dart';
-// ignore: implementation_imports
-import 'package:reclaim_gnark_zkoperator/src/download/download.dart'
-    show downloadWithHttp;
-import 'package:reclaim_inapp_sdk/capability_access.dart';
-import 'package:reclaim_inapp_sdk/logging.dart';
-import 'package:reclaim_inapp_sdk/overrides.dart';
-import 'package:reclaim_inapp_sdk/reclaim_inapp_sdk.dart';
-import 'package:reclaim_inapp_sdk/ui.dart';
-import 'src/util/link.dart';
-
-import 'data.dart';
+import 'package:reclaim_verifier_module/reclaim_verifier_module.dart';
 
 export 'package:reclaim_inapp_sdk/attestor.dart';
 export 'package:reclaim_inapp_sdk/overrides.dart';
 export 'package:reclaim_inapp_sdk/reclaim_inapp_sdk.dart'
     hide ReclaimVerification;
 
-export 'data.dart';
+export 'package:reclaim_verifier_module/reclaim_verifier_module.dart';
+export './src/extensions.dart';
 
+// ignore: unused_element
 final _logger = Logger('reclaim_flutter_sdk.reclaim_verifier_module');
 
 class ReclaimCapabilityException implements Exception {
@@ -34,237 +24,120 @@ class ReclaimCapabilityException implements Exception {
   String toString() => 'ReclaimCapabilityException: $message';
 }
 
+SessionIdentity? latestSessionIdentity;
+
+Future<T> _useFlow<T>(
+  BuildContext context,
+  Future<T> Function(ReclaimModuleExternalApi api) cb,
+) async {
+  CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY =
+      _CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY;
+  final key = GlobalKey<ReclaimModuleAppState>();
+  final completer = Completer<ReclaimModuleExternalApi>();
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (context) {
+        return ReclaimModuleApp.build(
+          key: key,
+          onApi: (api) {
+            completer.complete(api);
+          },
+        );
+      },
+    ),
+  );
+  final api = await completer.future.timeout(
+    Duration(seconds: 5),
+    onTimeout: () {
+      throw StateError('Could not start ReclaimModule');
+    },
+  );
+  api.setSessionIdentityListener((s) {
+    latestSessionIdentity = s;
+    return;
+  });
+  try {
+    final result = await cb(api);
+
+    return result;
+  } catch (e, s) {
+    logger.severe('API Failed', e, s);
+    rethrow;
+  } finally {
+    final inappSdkContext = key.currentContext;
+    if (inappSdkContext != null && inappSdkContext.mounted) {
+      final navigator = Navigator.of(inappSdkContext, rootNavigator: true);
+      navigator.pop();
+    }
+  }
+}
+
 class ReclaimInAppSdk {
   final BuildContext context;
-  final ReclaimVerification _reclaim;
 
-  ReclaimInAppSdk.of(this.context) : _reclaim = ReclaimVerification.of(context);
+  ReclaimInAppSdk.of(this.context);
 
   static Future<void> preWarm() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    startReclaimSdkLogging();
-    ReclaimZkOperator.getInstance();
-    _precacheFonts();
+    return ReclaimModuleApp.preWarm();
   }
-
-  static void _precacheFonts() async {
-    final log = _logger.child('_precacheFonts');
-    try {
-      await ReclaimThemeProvider.font.description.installFontIfRequired();
-    } catch (e, s) {
-      log.severe('Error precaching fonts', e, s);
-    }
-  }
-
-  final _defaultReclaimVerificationOptions = ReclaimVerificationOptions(
-    canAutoSubmit: true,
-    isCloseButtonVisible: true,
-    attestorZkOperator: AttestorZkOperatorWithCallback.withReclaimZKOperator(
-      onComputeProof: (type, args, onPerformanceReport) async {
-        // Get gnark prover instance and compute the attestor proof.
-        return (await ReclaimZkOperator.getInstance()).computeAttestorProof(
-          type,
-          args,
-          onPerformanceReport: (algorithm, report) {
-            onPerformanceReport(
-              ZKComputePerformanceReport(
-                algorithmName: algorithm?.name ?? '',
-                report: report,
-              ),
-            );
-          },
-        );
-      },
-      isPlatformSupported: () async =>
-          (await ReclaimZkOperator.getInstance()).isPlatformSupported(),
-    ),
-  );
-
-  late ReclaimVerificationOptions _reclaimVerificationOptions =
-      _defaultReclaimVerificationOptions;
 
   Future<void> setVerificationOptions(
-    ReclaimVerificationOptions? options,
+    ReclaimApiVerificationOptions? options,
   ) async {
-    final log = _logger.child('setVerificationOptions');
-    if (options == null) {
-      log.info('Setting verification options to null');
-      _reclaimVerificationOptions = _defaultReclaimVerificationOptions;
-    } else {
-      log.info({
-        'reason': 'Setting verification options',
-        'canDeleteCookiesBeforeVerificationStarts': options.canClearWebStorage,
-        'canUseAttestorAuthenticationRequest':
-            options.attestorAuthenticationRequest != null,
-        'claimCreationType': options.claimCreationType,
-      });
-      _reclaimVerificationOptions = options;
-    }
-  }
-
-  Future<ReclaimApiVerificationResponse> _startVerification(
-    ReclaimVerificationRequest request,
-    String requestSessionId,
-  ) async {
-    try {
-      preWarm();
-
-      final response = await _reclaim.startVerification(
-        request: request,
-        options: _reclaimVerificationOptions,
-      );
-      return ReclaimApiVerificationResponse(
-        sessionId: SessionIdentity.latest?.sessionId ?? requestSessionId,
-        didSubmitManualVerification: false,
-        proofs: (json.decode(json.encode(response.proofs)) as List)
-            .map((e) => e as Map<String, dynamic>)
-            .toList(),
-        exception: null,
-      );
-    } catch (e, s) {
-      _logger.severe('Failed verification response', e, s);
-      return ReclaimApiVerificationResponse(
-        sessionId: SessionIdentity.latest?.sessionId ?? requestSessionId,
-        didSubmitManualVerification:
-            e is ReclaimVerificationManualReviewException,
-        proofs: const [],
-        exception: e is ReclaimException
-            ? e
-            : ReclaimVerificationCancelledException(e.toString()),
-      );
-    }
+    return _useFlow(context, (api) {
+      return api.setVerificationOptions(options);
+    });
   }
 
   Future<ReclaimApiVerificationResponse> startVerification(
     ReclaimVerificationRequest request,
   ) async {
-    return _startVerification(request, SessionIdentity.latest?.sessionId ?? '');
+    final sessionFuture = request.sessionProvider();
+    return _useFlow(context, (api) async {
+      final session = await sessionFuture;
+      return api.startVerification(
+        ReclaimApiVerificationRequest(
+          appId: request.applicationId,
+          providerId: request.providerId,
+          // always generated from session
+          secret: '',
+          signature: session.signature,
+          timestamp: session.timestamp,
+          context: request.contextString ?? '',
+          sessionId: session.sessionId,
+          parameters: request.parameters,
+          providerVersion: ProviderVersionApi(
+            versionExpression: session.version.versionExpression,
+            resolvedVersion: session.version.resolvedVersion,
+          ),
+        ),
+      );
+    });
   }
 
   Future<ReclaimApiVerificationResponse> startVerificationFromUrl(
     String url, {
     int depth = 0,
   }) async {
-    try {
-      final request = ClientSdkVerificationRequest.fromUrl(url);
-      final debugMessage = 'Starting verification with url: $url';
-      if (kDebugMode) {
-        debugPrint(debugMessage);
-      } else {
-        _logger.info(debugMessage);
-      }
-      return _startVerification(
-        ReclaimVerificationRequest.fromSdkRequest(request),
-        request.sessionId ?? '',
-      );
-    } catch (e, s) {
-      if (e is FormatException) {
-        final location = await followLink(url, depth);
-        if (location != null) {
-          return startVerificationFromUrl(location, depth: depth + 1);
-        }
-      }
-      _logger.severe('Failed to start verification from url', e, s);
-      return Future.value(
-        ReclaimApiVerificationResponse(
-          sessionId: 'unknown',
-          didSubmitManualVerification: false,
-          proofs: const [],
-          exception: e is ReclaimException
-              ? e
-              : ReclaimVerificationCancelledException(e.toString()),
-        ),
-      );
-    }
+    return _useFlow(context, (api) {
+      return api.startVerificationFromUrl(url);
+    });
   }
 
   Future<ReclaimApiVerificationResponse> startVerificationFromJson(
     Map<dynamic, dynamic> template,
   ) {
-    try {
-      final debugMessage =
-          'Starting verification with json: ${json.encode(template)}';
-      if (kDebugMode) {
-        debugPrint(debugMessage);
-      } else {
-        _logger.info(debugMessage);
-      }
-
-      if (template.containsKey('reclaimProofRequestConfig')) {
-        final config = template['reclaimProofRequestConfig'];
-        if (config is String) {
-          return startVerificationFromJson(json.decode(config));
-        }
-        if (config is Map) {
-          return startVerificationFromJson(<String, dynamic>{
-            for (final entry in config.entries)
-              (entry.key?.toString() ?? ''): entry.value,
-          });
-        }
-      }
-      if (template.containsKey('context')) {
-        final context = template['context'];
-        if (context is Map) {
-          return startVerificationFromJson(<String, dynamic>{
-            ...template,
-            'context': json.encode(context),
-          });
-        }
-      }
-      if (template.containsKey('timeStamp')) {
-        template['timestamp'] = template['timeStamp'];
-      }
-
-      final request = ClientSdkVerificationRequest.fromJson(
-        json.decode(json.encode(template)),
-      );
-      return _startVerification(
-        ReclaimVerificationRequest.fromSdkRequest(request),
-        request.sessionId ?? '',
-      );
-    } catch (e, s) {
-      _logger.severe('Failed to start verification from json', e, s);
-      return Future.value(
-        ReclaimApiVerificationResponse(
-          sessionId: 'unknown',
-          didSubmitManualVerification: false,
-          proofs: const [],
-          exception: e is ReclaimException
-              ? e
-              : ReclaimVerificationCancelledException(e.toString()),
-        ),
-      );
-    }
+    return _useFlow(context, (api) {
+      return api.startVerificationFromJson(template);
+    });
   }
 
   Future<void> clearAllOverrides() async {
-    ReclaimOverride.clearAll();
-  }
-
-  Future<bool> assertCanUseCapability(String capabilityName) async {
-    final capabilityAccessVerifier = CapabilityAccessVerifier();
-
-    if (await capabilityAccessVerifier.canUse(capabilityName)) {
-      return true;
-    }
-
-    throw ReclaimVerificationCancelledException(
-      'Unauthorized use of capability: $capabilityName',
-    );
-  }
-
-  Future<bool> assertCanUseAnyCapability(List<String> capabilityNames) async {
-    final capabilityAccessVerifier = CapabilityAccessVerifier();
-    for (final capabilityName in capabilityNames) {
-      if (await capabilityAccessVerifier.canUse(capabilityName)) {
-        return true;
-      }
-    }
-
-    throw ReclaimVerificationCancelledException(
-      'Unauthorized use of capability: $capabilityNames',
-    );
+    return _useFlow(context, (api) {
+      return api.clearAllOverrides();
+    });
   }
 
   Future<void> setOverrides({
@@ -274,214 +147,19 @@ class ReclaimInAppSdk {
     ClientReclaimSessionManagementOverride? sessionManagement,
     ClientReclaimAppInfoOverride? appInfo,
     String? capabilityAccessToken,
-    ReclaimHostOverridesApi? overridesHandlerApi,
+    required ReclaimHostOverridesApi overridesHandlerApi,
   }) async {
-    if (capabilityAccessToken != null) {
-      try {
-        ReclaimOverride.set(
-          CapabilityAccessToken.import(
-            capabilityAccessToken,
-            _CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY,
-          ),
-        );
-      } on CapabilityAccessTokenException catch (e, s) {
-        _logger.severe('Failed to set capability access token', e, s);
-        throw ReclaimVerificationCancelledException(e.message);
-      }
-    }
-
-    if (logConsumer?.canSdkPrintLogs == true) {
-      await assertCanUseAnyCapability([
-        'overrides_v1',
-        'sdk_console_logging_v1',
-      ]);
-    }
-
-    if (feature?.attestorBrowserRpcUrl != null) {
-      await assertCanUseAnyCapability([
-        'overrides_v1',
-        'sdk_attestor_browser_rpc_v1',
-      ]);
-    }
-
-    if (provider != null ||
-        logConsumer?.canSdkPrintLogs == true ||
-        logConsumer?.canSdkCollectTelemetry == false ||
-        sessionManagement?.enableSdkSessionManagement == true) {
-      await assertCanUseCapability('overrides_v1');
-    }
-
-    void sendLogsToHost(LogRecord record, SessionIdentity? identity) {
-      final entry = LogEntry.fromRecord(
-        record,
-        identity,
-        fallbackSessionIdentity:
-            SessionIdentity.latest ??
-            SessionIdentity(appId: '', providerId: '', sessionId: ''),
+    return _useFlow(context, (api) {
+      return api.setOverrides(
+        provider,
+        feature,
+        logConsumer,
+        sessionManagement,
+        appInfo,
+        capabilityAccessToken,
+        overridesHandlerApi: overridesHandlerApi,
       );
-      assert(
-        overridesHandlerApi != null,
-        'ReclaimInAppSdk.setOverrides(overridesHandlerApi:) is required',
-      );
-      overridesHandlerApi?.onLogs(json.encode(entry));
-    }
-
-    ReclaimOverride.setAll([
-      if (feature != null)
-        ReclaimFeatureFlagData(
-          cookiePersist: feature.cookiePersist,
-          singleReclaimRequest: feature.singleReclaimRequest,
-          attestorBrowserRpcUrl: feature.attestorBrowserRpcUrl,
-          idleTimeThresholdForManualVerificationTrigger:
-              feature.idleTimeThresholdForManualVerificationTrigger,
-          sessionTimeoutForManualVerificationTrigger:
-              feature.sessionTimeoutForManualVerificationTrigger,
-          canUseAiFlow: feature.isAIFlowEnabled ?? false,
-          manualReviewMessage: feature.manualReviewMessage,
-          loginPromptMessage: feature.loginPromptMessage,
-        ),
-      if (provider != null)
-        ReclaimProviderOverride(
-          fetchProviderInformation:
-              ({
-                required String appId,
-                required String providerId,
-                required String sessionId,
-                required String signature,
-                required String timestamp,
-                required String resolvedVersion,
-              }) async {
-                Map<String, dynamic> providerInformation = {};
-                try {
-                  if (provider.providerInformationUrl != null) {
-                    final response = await downloadWithHttp(
-                      provider.providerInformationUrl!,
-                      cacheDirName: 'inapp_sdk_provider_information',
-                    );
-
-                    if (response == null) {
-                      throw ReclaimVerificationCancelledException(
-                        'Failed to fetch provider information from ${provider.providerInformationUrl}',
-                      );
-                    }
-
-                    providerInformation = json.decode(utf8.decode(response));
-                  } else if (provider.providerInformationJsonString != null) {
-                    providerInformation = json.decode(
-                      provider.providerInformationJsonString!,
-                    );
-                  } else if (provider.canFetchProviderInformationFromHost) {
-                    assert(
-                      overridesHandlerApi != null,
-                      'ReclaimInAppSdk.setOverrides(overridesHandlerApi:) is required',
-                    );
-
-                    final String rawProviderInformation =
-                        await overridesHandlerApi!.fetchProviderInformation(
-                          appId: appId,
-                          providerId: providerId,
-                          sessionId: sessionId,
-                          signature: signature,
-                          timestamp: timestamp,
-                          resolvedVersion: resolvedVersion,
-                        );
-                    providerInformation = json.decode(rawProviderInformation);
-                  }
-                } catch (e, s) {
-                  _logger.severe('Failed to fetch provider information', e, s);
-                  if (e is ReclaimException) {
-                    rethrow;
-                  }
-                  throw ReclaimVerificationCancelledException(
-                    'Failed to fetch provider information due to $e',
-                  );
-                }
-
-                try {
-                  return HttpProvider.fromJson(providerInformation);
-                } catch (e, s) {
-                  _logger.severe('Failed to parse provider information', e, s);
-                  throw ReclaimVerificationCancelledException(
-                    'Failed to parse provider information: ${e.toString()}',
-                  );
-                }
-              },
-        ),
-      if (logConsumer != null)
-        LogConsumerOverride(
-          // Setting this to true will print logs from reclaim_flutter_sdk to the console.
-          canPrintLogs: logConsumer.canSdkPrintLogs == true,
-          onRecord: logConsumer.enableLogHandler
-              ? (record, identity) {
-                  sendLogsToHost(record, identity);
-                  return logConsumer.canSdkCollectTelemetry;
-                }
-              : (!logConsumer.canSdkCollectTelemetry ? (_, _) => false : null),
-        ),
-      // A handler has been provided. We'll not let SDK manage sessions in this case.
-      // Disabling [enableSdkSessionManagement] lets the host manage sessions.
-      if (sessionManagement != null &&
-          !sessionManagement.enableSdkSessionManagement)
-        ReclaimSessionOverride.session(
-          createSession:
-              ({
-                required String appId,
-                required String providerId,
-                required String timestamp,
-                required String signature,
-                required String providerVersion,
-              }) async {
-                assert(
-                  overridesHandlerApi != null,
-                  'ReclaimInAppSdk.setOverrides(overridesHandlerApi:) is required',
-                );
-                final response = await overridesHandlerApi!.createSession(
-                  appId: appId,
-                  providerId: providerId,
-                  timestamp: timestamp,
-                  signature: signature,
-                  providerVersion: providerVersion,
-                );
-                return SessionInitResponse(
-                  sessionId: response.sessionId,
-                  resolvedProviderVersion: response.resolvedProviderVersion,
-                );
-              },
-          // TODO: metadata is not sent to host
-          updateSession: (sessionId, status, metadata) async {
-            return overridesHandlerApi!.updateSession(
-              sessionId: sessionId,
-              status: status,
-            );
-          },
-          logRecord:
-              ({
-                required appId,
-                required logType,
-                required providerId,
-                required sessionId,
-                Map<String, dynamic>? metadata,
-              }) {
-                assert(
-                  overridesHandlerApi != null,
-                  'ReclaimInAppSdk.setOverrides(overridesHandlerApi:) is required',
-                );
-                overridesHandlerApi!.logSession(
-                  appId: appId,
-                  providerId: providerId,
-                  sessionId: sessionId,
-                  logType: logType,
-                  metadata: metadata,
-                );
-              },
-        ),
-      if (appInfo != null)
-        AppInfo(
-          appName: appInfo.appName,
-          appImage: appInfo.appImageUrl,
-          isRecurring: appInfo.isRecurring,
-        ),
-    ]);
+    });
   }
 }
 

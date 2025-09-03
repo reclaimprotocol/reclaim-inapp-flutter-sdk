@@ -154,7 +154,7 @@ class AttestorWebViewClient extends AttestorClient {
       }
       final response = await controller
           .evaluateJavascript(source: '(() => { return 0 + 1; })()')
-          .timeout(Duration(seconds: 5));
+          .timeout(const Duration(seconds: 5));
       log.info({'tag': 'evaluateIsWebviewReady', 'response': response});
       return response == 1 || response.toString() == '1';
     }
@@ -162,7 +162,7 @@ class AttestorWebViewClient extends AttestorClient {
     await retry(
       () async {
         if (!await evaluateIsWebviewReady()) {
-          throw AttestorWebViewClientNotReadyException('Attestor webview did not respond to liveliness check');
+          throw const AttestorWebViewClientNotReadyException('Attestor webview did not respond to liveliness check');
         } else {
           log.info('Webview is ready');
         }

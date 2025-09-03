@@ -49,7 +49,7 @@ final class CreateClaimOutput {
   final List<WitnessData> witnesses;
   @JsonKey(includeIfNull: false)
   final int? taskId;
-  Object? publicData;
+  final Object? publicData;
   // Used for tracking the proof by provider request
   @JsonKey(includeIfNull: false)
   DataProviderRequest? providerRequest;
@@ -64,15 +64,15 @@ final class CreateClaimOutput {
     this.providerRequest,
   });
 
-  CreateClaimOutput copyWith({int? taskId}) {
+  CreateClaimOutput copyWith({int? taskId, Object? publicData}) {
     return CreateClaimOutput(
       identifier: identifier,
       claimData: claimData,
       signatures: signatures,
       witnesses: witnesses,
-      publicData: publicData,
       providerRequest: providerRequest,
       taskId: taskId,
+      publicData: publicData ?? this.publicData,
     );
   }
 

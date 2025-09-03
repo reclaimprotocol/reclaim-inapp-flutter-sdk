@@ -5,8 +5,8 @@ import 'dart:math' as math;
 import 'package:json_annotation/json_annotation.dart';
 import 'package:meta/meta.dart';
 
-import '../utils/crypto/ethers.dart';
 import '../utils/list.dart';
+import '../utils/restoration_identifier.dart';
 
 part 'providers.g.dart';
 
@@ -385,11 +385,7 @@ class DataProviderRequest {
   late final String requestIdentifier = () {
     final canoncalizedJsonString = requestIdentifierParams;
     final data = utf8.encode(canoncalizedJsonString);
-    final keccakHash = keccak256(data);
-
-    return '0x${keccakHash.map((byte) {
-      return byte.toRadixString(16).padLeft(2, '0');
-    }).join()}';
+    return createRestorationIdentifierFromBytes(data);
   }();
 }
 

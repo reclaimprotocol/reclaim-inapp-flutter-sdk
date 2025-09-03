@@ -17,6 +17,7 @@ import '../../logging/logging.dart';
 import '../../repository/feature_flags.dart';
 import '../../services/ai_services/ai_client_services.dart';
 import '../../services/cookie_service.dart';
+import '../../services/hybrid_screenshot_service.dart';
 import '../../services/request_matcher.dart';
 import '../../usecase/ai_flow/ai_action_controller.dart';
 import '../../usecase/login_detection.dart';
@@ -34,6 +35,7 @@ import '../../widgets/feature_flags.dart';
 import '../../widgets/verification_review/verification_review.dart';
 import '../dev/dev.dart';
 import 'manual_review/manual_review.dart';
+import 'user_interaction_handler.dart';
 import 'view_model.dart';
 
 // wait for a few moments before automatically continuing to capture any claim triggers on this same page
@@ -51,8 +53,12 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     with WebViewCompanionMixin<ClaimCreationWebClient> {
   final List<StreamSubscription> _subscriptions = [];
   late final ManualReviewController _manualReviewController = ManualReviewController();
-  late AIActionController _aiActionController;
+  AIActionController? _aiActionController;
+  HybridScreenshotService? _screenshotService;
+  AiServiceClient? _aiServiceClientRef;
+  String? _sessionIdRef;
   late ClaimCreationController _claimCreationController;
+  final GlobalKey _appRepaintBoundaryKey = GlobalKey();
   bool _hasContinueSucceeded = false;
   late VerificationController _verificationController;
 
@@ -72,6 +78,12 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     vm.onUpdateWebView = _onUpdateWebView;
     _initializeAIActionController();
     _verificationController = VerificationController.readOf(context);
+    AIFlowCoordinatorWidget.readOf(context)?.webContext.setHideReviewSheetCallback(() async {
+      if (!mounted) return;
+      final vm = ClaimCreationWebClientViewModel.readOf(context);
+      final controller = vm.getController();
+      return _hideReviewSheetIfRequired(controller, await controller.getUrl());
+    });
   }
 
   late GlobalKey _webviewKey = GlobalKey();
@@ -93,9 +105,25 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     final session = await verification.sessionStartFuture;
     if (!mounted) return;
     final aiServiceClient = AiServiceClient(session.sessionInformation.sessionId, session.identity.providerId);
+    _aiServiceClientRef = aiServiceClient;
+    _sessionIdRef = session.sessionInformation.sessionId;
     _aiActionController = AIActionController(context, aiServiceClient);
 
     _setupAIActionController(verification);
+    // Initialize screenshot service for AI providers
+    if (verification.value.provider?.isAIProvider == true) {
+      _initializeScreenshotService(aiServiceClient, session.sessionInformation.sessionId);
+    }
+  }
+
+  void _initializeScreenshotService(AiServiceClient aiServiceClient, String sessionId) {
+    logger.info('Initializing hybrid screenshot service for AI provider');
+    final verification = VerificationController.readOf(context);
+    _screenshotService = HybridScreenshotService(
+      aiServiceClient: aiServiceClient,
+      sessionId: sessionId,
+      providerId: verification.identity.providerId,
+    );
   }
 
   void _setupAIActionController(VerificationController verification) {
@@ -104,12 +132,20 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
         verification.subscribe((change) {
           final (oldValue, value) = change.record;
           if (value.provider != null && value.provider?.isAIProvider == true) {
-            _aiActionController.start();
+            _aiActionController?.start();
+            if (_screenshotService == null && _aiServiceClientRef != null && _sessionIdRef != null) {
+              logger.info('Initializing hybrid screenshot service (late) for AI provider');
+              _initializeScreenshotService(_aiServiceClientRef!, _sessionIdRef!);
+            }
           }
         }),
       );
     } else if (verification.value.provider?.isAIProvider == true) {
-      _aiActionController.start();
+      _aiActionController?.start();
+      if (_screenshotService == null && _aiServiceClientRef != null && _sessionIdRef != null) {
+        logger.info('Initializing hybrid screenshot service (immediate) for AI provider');
+        _initializeScreenshotService(_aiServiceClientRef!, _sessionIdRef!);
+      }
     }
   }
 
@@ -121,7 +157,8 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     for (final s in _subscriptions) {
       s.cancel();
     }
-    _aiActionController.stop();
+    _aiActionController?.stop();
+    _screenshotService?.dispose();
     _manualReviewController.dispose();
     super.dispose();
   }
@@ -178,7 +215,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
 
       // wait for continuation to complete
       try {
-        final didContinue = await options?.onContinue(nextLocation).timeout(Duration(seconds: 10));
+        final didContinue = await options?.onContinue(nextLocation).timeout(const Duration(seconds: 10));
         if (didContinue != true) {
           log.finest('onContinueAutomatically [$didContinue]: $nextLocation');
         }
@@ -261,7 +298,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     if (!claimCreationController.value.isWaitingForContinuation) return;
 
     // Wait for page to render elements
-    await Future.delayed(Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (vm.value.isLoading) {
       log.fine('not hiding review sheet because webview is loading');
@@ -282,7 +319,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       // TODO: hide if user interaction is required (from ai suggestion) even if zk operator is not initialized yet
       if (claimCreationController.value.isIdle) {
         // Wait for a few seconds to let any proof generation or js injection activity
-        await Future.delayed(Duration(seconds: 4));
+        await Future.delayed(const Duration(seconds: 4));
       } else {
         for (var i = 0; i < 3; i++) {
           await Future.delayed(Duration(seconds: _estimateZKOperatorInitDuration()));
@@ -302,7 +339,9 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       if (await controller.isLoading()) return;
       if (!claimCreationController.value.isWaitingForContinuation) return;
 
-      log.fine('Closing review sheet because no proof generation started. can hide: ${_hideToken == token}');
+      log.fine(
+        'Checking if review sheet can be closed (no proof generation started). can hide: ${_hideToken == token}',
+      );
 
       // Another _hideReviewSheetIfRequired call had been made
       if (_hideToken != token) return;
@@ -326,7 +365,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     if (!claimCreationController.value.isWaitingForContinuation) return;
 
     // Wait for page to render elements
-    await Future.delayed(Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (vm.value.isLoading) {
       log.fine('not hiding review sheet because webview is loading');
@@ -357,24 +396,29 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
         if (!claimCreationController.value.isWaitingForContinuation) return;
       }
 
-      log.fine('Closing review sheet because no proof generation started. can hide: ${_hideToken == token}');
+      log.fine(
+        'Checking if review sheet can be closed (no proof generation started). can hide: ${_hideToken == token}',
+      );
 
       // Another _hideReviewSheetIfRequired call had been made
       if (_hideToken != token) return;
 
       log.info(
-        'Closing review sheet because ai flow is done and user is not signed out by ai before that. webContext.signedOutByAi: ${!webContext.signedOutByAi}, webContext.aiFlowDone: ${webContext.aiFlowDone}',
+        'Checking if review sheet can be closed (ai flow is done and user is not signed out by ai before that). webContext.signedOutByAi: ${!webContext.signedOutByAi}, webContext.aiFlowDone: ${webContext.aiFlowDone}',
       );
 
       if (!webContext.signedOutByAi && webContext.aiFlowDone) {
         await verification.signUserOut(controller);
         webContext.setSignedOutByAi();
+        log.info(
+          'Closing review sheet and signing user out because ai flow is done and user is not signed out by ai before that',
+        );
         requiresUserInteraction(true);
         return;
       }
 
       log.info(
-        'Closing review sheet because ai did not respond recently. ai responded recently: ${webContext.aiRespondedRecently()}, isLoggedIn: ${webContext.isLoggedIn}',
+        'Checking if review sheet can be closed (ai did not respond recently). ai responded recently: ${webContext.aiRespondedRecently()}, isLoggedIn: ${webContext.isLoggedIn}',
       );
 
       // If the ai flow responded recently and the user is logged in, we don't want to close the review sheet
@@ -393,6 +437,16 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       logger.info('added js handlers');
       vm.setController(controller);
       logger.info('set controller');
+
+      // Start hybrid screenshot capturing if this is an AI provider
+      if (_screenshotService != null) {
+        logger.info('Starting hybrid screenshot capture for AI provider');
+        _screenshotService!.startCapturing(
+          webViewController: controller,
+          appKey: _appRepaintBoundaryKey,
+          interval: const Duration(seconds: 1),
+        );
+      }
     } catch (e, s) {
       logger.severe('Failed to set controller', e, s);
     }
@@ -441,56 +495,59 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
 
   @override
   Widget build(BuildContext context) {
-    return ManualReviewObserver(
-      controller: _manualReviewController,
-      child: VerificationReview(
-        child: FutureBuilder(
-          // This delay is to ensure that the webview plugin is ready before it makes android surface call.
-          // without this, the webview crashes on react native inapp sdk.
-          future: _webviewInitializationDelay,
-          builder: (context, asyncSnapshot) {
-            final settings = defaultWebViewSettings.copy();
-            final controller = VerificationController.of(context);
-            final provider = controller.value.provider;
+    return RepaintBoundary(
+      key: _appRepaintBoundaryKey,
+      child: ManualReviewObserver(
+        controller: _manualReviewController,
+        child: VerificationReview(
+          child: FutureBuilder(
+            // This delay is to ensure that the webview plugin is ready before it makes android surface call.
+            // without this, the webview crashes on react native inapp sdk.
+            future: _webviewInitializationDelay,
+            builder: (context, asyncSnapshot) {
+              final settings = defaultWebViewSettings.copy();
+              final controller = VerificationController.of(context);
+              final provider = controller.value.provider;
 
-            // keep showing blank until the webview init delay has passed.
-            if (asyncSnapshot.connectionState != ConnectionState.done || provider == null) {
-              return const SizedBox.shrink();
-            }
+              // keep showing blank until the webview init delay has passed.
+              if (asyncSnapshot.connectionState != ConnectionState.done || provider == null) {
+                return const SizedBox.shrink();
+              }
 
-            final incognito = provider.useIncognitoWebview;
-            settings.incognito = incognito;
-            settings.isInspectable = isInspectablePreference ?? kDebugMode;
+              final incognito = provider.useIncognitoWebview;
+              settings.incognito = incognito;
+              settings.isInspectable = isInspectablePreference ?? kDebugMode;
 
-            final value = incognito;
-            if (_wasInitializedWithIncognito == null) {
-              logger.info('setting _wasInitializedWithIncognito to $value');
-              _wasInitializedWithIncognito = value;
-            }
+              final value = incognito;
+              if (_wasInitializedWithIncognito == null) {
+                logger.info('setting _wasInitializedWithIncognito to $value');
+                _wasInitializedWithIncognito = value;
+              }
 
-            return InAppWebView(
-              key: _webviewKey,
-              onUpdateVisitedHistory: (controller, uri, isReloaded) {
-                final vm = ClaimCreationWebClientViewModel.readOf(context);
-                if (uri != null) {
-                  vm.setDisplayUrl(uri.toString());
-                }
-              },
-              gestureRecognizers: gestureRecognizers,
-              onGeolocationPermissionsShowPrompt: onGeolocationPermissionsShowPrompt,
-              onPermissionRequest: onPermissionRequestedFromWeb,
-              onWebViewCreated: _onWebViewCreated,
-              onLoadStart: _onLoad,
-              initialSettings: settings,
-              onProgressChanged: (controller, progress) {
-                final vm = ClaimCreationWebClientViewModel.readOf(context);
-                vm.setDisplayProgress(progress / 100);
-              },
-              onLoadStop: _onLoadStop,
-              onCreateWindow: onCreateWindowAction,
-              shouldOverrideUrlLoading: shouldOverrideUrlLoading,
-            );
-          },
+              return InAppWebView(
+                key: _webviewKey,
+                onUpdateVisitedHistory: (controller, uri, isReloaded) {
+                  final vm = ClaimCreationWebClientViewModel.readOf(context);
+                  if (uri != null) {
+                    vm.setDisplayUrl(uri.toString());
+                  }
+                },
+                gestureRecognizers: gestureRecognizers,
+                onGeolocationPermissionsShowPrompt: onGeolocationPermissionsShowPrompt,
+                onPermissionRequest: onPermissionRequestedFromWeb,
+                onWebViewCreated: _onWebViewCreated,
+                onLoadStart: _onLoad,
+                initialSettings: settings,
+                onProgressChanged: (controller, progress) {
+                  final vm = ClaimCreationWebClientViewModel.readOf(context);
+                  vm.setDisplayProgress(progress / 100);
+                },
+                onLoadStop: _onLoadStop,
+                onCreateWindow: onCreateWindowAction,
+                shouldOverrideUrlLoading: shouldOverrideUrlLoading,
+              );
+            },
+          ),
         ),
       ),
     );
@@ -500,11 +557,16 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     controller.addJavaScriptHandler(
       handlerName: 'publicData',
       callback: (args) async {
-        _onActivity();
-        final publicData = json.decode(args[0]);
-        logger.child('proof_generation_events').info('Received public data ');
-        final claimCreationController = ClaimCreationController.of(context, listen: false);
-        claimCreationController.setPublicData(publicData);
+        final log = logger.child('proof_generation_events');
+        try {
+          _onActivity();
+          final publicData = json.decode(args[0]);
+          log.info('Received public data ');
+          final claimCreationController = ClaimCreationController.of(context, listen: false);
+          claimCreationController.setPublicData(publicData);
+        } catch (e, s) {
+          log.severe('failed to update public data', e, s);
+        }
       },
     );
     controller.addJavaScriptHandler(
@@ -575,19 +637,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     );
     controller.addJavaScriptHandler(
       handlerName: 'userInteraction',
-      callback: (args) async {
-        final userInteractionData = json.decode(args[0]);
-        final interactionType = userInteractionData['eventType'];
-        var url = userInteractionData['url'];
-        if (url == null) {
-          final currentUrl = await controller.getUrl().then((value) => value?.toString());
-          if (currentUrl != null && currentUrl.isNotEmpty) {
-            url = currentUrl;
-          }
-        }
-        final userInteraction = UserInteractionEvent(interactionType: interactionType, metadata: {'url': url});
-        AIFlowCoordinatorWidget.pushEvent(userInteraction);
-      },
+      callback: (args) async => await handleUserInteraction(args, controller),
     );
     controller.addJavaScriptHandler(
       handlerName: 'debugLogs',
@@ -670,7 +720,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
   void _startNoActivityObserver(int durationInMins) {
     final noActivityDuration = Duration(minutes: durationInMins);
     logger.info('Starting no activity observer with duration: $noActivityDuration');
-    _sessionNoActivityObserverTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+    _sessionNoActivityObserverTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -702,7 +752,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
         logger.info('No activity detected for $durationSinceLastActivity');
         _claimCreationController.setClientError(
           // This may show a different message in UI
-          ReclaimVerificationNoActivityDetectedException(
+          const ReclaimVerificationNoActivityDetectedException(
             'The verification did not complete in expected amount of time',
           ),
         );
@@ -723,7 +773,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       try {
         final timeoutDurationInMins = await FeatureFlagsProvider.readOf(
           context,
-        ).get(FeatureFlag.claimCreationTimeoutDurationInMins).timeout(Duration(seconds: 5));
+        ).get(FeatureFlag.claimCreationTimeoutDurationInMins).timeout(const Duration(seconds: 5));
         return Duration(minutes: timeoutDurationInMins);
       } catch (e, s) {
         logger.severe('Failed to get claim creation timeout duration', e, s);
@@ -773,9 +823,9 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     final claimCreationTimeoutDurationFuture = _getClaimCreationTimeoutDuration();
 
     final userAgent = await vm.getWebViewUserAgent();
-    final actionControl = messenger.show(ActionBarMessage(type: ActionMessageType.claim));
+    final actionControl = messenger.show(const ActionBarMessage(type: ActionMessageType.claim));
     try {
-      _aiActionController.pause();
+      _aiActionController?.pause();
 
       DevController.shared.push('matchedRequest', proofData);
 
@@ -851,7 +901,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
             final canRetry = e is AttestorWebViewClientNotReadyException || e is TimeoutException;
             if (canRetry) {
               Attestor.instance
-                  .executeJavascript('(() => { return 0 + 1; })()', timeout: Duration(seconds: 10))
+                  .executeJavascript('(() => { return 0 + 1; })()', timeout: const Duration(seconds: 10))
                   .catchError((e, s) {
                     logger.severe('Error evaluating test javascript in attestor webview', e, s);
                     return null;
@@ -902,9 +952,9 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     final claimCreationTimeoutDurationFuture = _getClaimCreationTimeoutDuration();
 
     final userAgent = await vm.getWebViewUserAgent();
-    final actionControl = messenger.show(ActionBarMessage(type: ActionMessageType.claim));
+    final actionControl = messenger.show(const ActionBarMessage(type: ActionMessageType.claim));
     try {
-      _aiActionController.pause();
+      _aiActionController?.pause();
 
       if (args[0] == 'onboarding:exit_webview') {
         logger.info('Exiting webview because of exit webview');

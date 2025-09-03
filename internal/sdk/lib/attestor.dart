@@ -85,7 +85,7 @@ class Attestor {
       (client) async {
         return await client.ping().response;
       },
-      timeout: Duration(seconds: 5),
+      timeout: const Duration(seconds: 5),
       retryOnTimeout: false,
       isCompute: isCompute,
       canMarkNotResponding: false,
@@ -230,7 +230,7 @@ class Attestor {
           }
         });
       },
-      maxDelay: Duration(seconds: 5),
+      maxDelay: const Duration(seconds: 5),
       maxAttempts: maxAttempts,
       retryIf: (e) {
         log.warning('failed, attempt: $attempt', e);

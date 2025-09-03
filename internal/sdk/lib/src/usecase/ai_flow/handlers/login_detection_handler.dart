@@ -16,18 +16,7 @@ class LoginDetectionHandler implements AIFlowHandler {
       final lastInputUrl = webContext.lastInputUrl;
       if (currentUrl != lastInputUrl && lastInputUrl.isNotEmpty) {
         logger.info('LoginDetectionHandler: the user is potentially logged in');
-        webContext.setLastInputUrl('');
-        webContext.setIsLoggedIn(true);
-
-        // Add delay and check if markedLoggedInByAI is false
-        Timer(const Duration(seconds: 30), () {
-          if (!webContext.markedLoggedInByAI) {
-            logger.info(
-              'LoginDetectionHandler: markedLoggedInByAI is false after 20 seconds, setting isLoggedIn to false',
-            );
-            webContext.setIsLoggedIn(false);
-          }
-        });
+        webContext.handlePotentialLoginTimeout();
       }
     }
   }

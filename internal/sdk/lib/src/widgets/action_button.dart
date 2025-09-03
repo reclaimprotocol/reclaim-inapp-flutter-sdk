@@ -24,7 +24,7 @@ class ActionButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: backgroundColor ?? colorScheme.primary,
         foregroundColor: foregroundColor ?? colorScheme.onPrimary,
-        textStyle: (textTheme.labelLarge ?? TextStyle()).merge(
+        textStyle: (textTheme.labelLarge ?? const TextStyle()).merge(
           TextStyle(fontWeight: FontWeight.w600, fontSize: 17, height: 1.3, color: foregroundColor),
         ),
         shape: const RoundedRectangleBorder(

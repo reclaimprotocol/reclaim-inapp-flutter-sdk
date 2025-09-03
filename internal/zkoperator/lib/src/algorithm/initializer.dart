@@ -17,7 +17,8 @@ typedef ProverAlgorithmAssetUrlsProvider = KeyAlgorithmAssetUrls Function(Prover
 /// The key is the [ProverAlgorithmType] and the value is a boolean indicating
 /// whether the initialization was successful.
 final _algorithmInitializerFutureCache = <ProverAlgorithmType, Future<bool>?>{};
-final _initAlgorithmWorkerFuture = InitAlgorithmWorker.spawn('prover_http_cache');
+final _initAlgorithmWorkerFuture =
+    const WorkerManager(InitAlgorithmRunnable(httpCacheDirName: 'prover_http_cache')).createWorker();
 
 final _initializerLog = Logger('reclaim_flutter_sdk.reclaim_gnark_zkoperator.initializer');
 
@@ -41,7 +42,13 @@ Future<bool> _initialize(ProverAlgorithmType algorithm, ProverAlgorithmAssetUrls
       final stopwatch = Stopwatch();
       stopwatch.start();
       _initializerLog.info('Initializing algorithm $algorithm');
-      await worker.initializeAlgorithmInBackground(algorithm, assetUrls.keyAssetUrls, assetUrls.r1csAssetUrls);
+      await worker.executeInBackground(
+        InitAlgorithmInput(
+          algorithm: algorithm,
+          keyAssetUrls: assetUrls.keyAssetUrls,
+          r1csAssetUrls: assetUrls.r1csAssetUrls,
+        ),
+      );
       stopwatch.stop();
       _initializerLog.info('Initialized algorithm $algorithm in ${stopwatch.elapsed}');
       completer.complete(true);

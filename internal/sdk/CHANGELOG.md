@@ -1,3 +1,23 @@
+## 0.15.0
+
+* Add interception of document with `pre` text in html document or the html document on DOMContentLoaded event when `disableRequestReplay` is true
+* Fix default user agent for iOS
+* Fix url parsing when using hawkeye with default settings
+* Fix claim creation to not use `bodySniff.template` when disabled
+
+## 0.14.0
+
+* Fix an edge case where public data wasn't attached to proofs when updating public data after verification completes
+* Add improvements to AI
+* Update [internal] internal hashing hashing of claim requests with a faster algorithm for request identification
+* Fix [internal] web context initial state setup for use in AI
+* Fix reporting of no activity and verification requirement failure exceptions in session logs
+
+## 0.13.0
+
+* Add improvements to login detection when using AI
+* Add support to follow redirects when parsing a url using `ClientSdkVerificationRequest.fromUrl`
+
 ## 0.12.0
 
 * Add support for optional response matches

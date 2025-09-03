@@ -1,79 +1,21 @@
 part of '../../reclaim_gnark_zkoperator.dart';
 
-class InitAlgorithmWorker {
-  final SendPort _commands;
-  final ReceivePort _responses;
-  final String? _httpCacheDirName;
+class InitAlgorithmInput {
+  final ProverAlgorithmType algorithm;
+  final List<String> keyAssetUrls;
+  final List<String> r1csAssetUrls;
 
-  static const _debugLabel = '_InitAlgorithmWorker';
+  const InitAlgorithmInput({required this.algorithm, required this.keyAssetUrls, required this.r1csAssetUrls});
+}
 
-  InitAlgorithmWorker._(this._commands, this._responses, this._httpCacheDirName) {
-    _responses.listen(_handleResponsesFromIsolate);
-  }
+class InitAlgorithmRunnable extends Runnable<InitAlgorithmInput, bool> {
+  final String httpCacheDirName;
 
-  final Map<int, Completer<Object?>> _activeRequests = {};
-  int _idCounter = 0;
+  const InitAlgorithmRunnable({required this.httpCacheDirName});
 
-  Future<bool> initializeAlgorithmInBackground(
-    ProverAlgorithmType algorithm,
-    List<String> keyAssetUrls,
-    List<String> r1csAssetUrls,
-  ) async {
-    if (_closed) throw StateError('$_debugLabel is disposed');
-
-    final completer = Completer<Object?>.sync();
-    final id = _idCounter++;
-    _activeRequests[id] = completer;
-    _commands.send((id, algorithm, keyAssetUrls, r1csAssetUrls, _httpCacheDirName));
-
-    return await completer.future as bool;
-  }
-
-  // Only for use on master isolate
-  static final _httpCacheDirInUseByIsolates = <String>{};
-
-  static Future<InitAlgorithmWorker> spawn([String? perIsolateHttpCacheDirName]) async {
-    if (perIsolateHttpCacheDirName != null) {
-      if (_httpCacheDirInUseByIsolates.contains(perIsolateHttpCacheDirName)) {
-        throw ArgumentError('Http cache dir $perIsolateHttpCacheDirName is already in use');
-      }
-      _httpCacheDirInUseByIsolates.add(perIsolateHttpCacheDirName);
-    }
-    // Create a receive port and add its initial message handler
-    final initPort = RawReceivePort(null, _debugLabel);
-    final connection = Completer<(ReceivePort, SendPort)>.sync();
-    initPort.handler = (initialMessage) {
-      final commandPort = initialMessage as SendPort;
-      connection.complete((ReceivePort.fromRawReceivePort(initPort), commandPort));
-    };
-    // Spawn the isolate.
-    try {
-      final rootToken = RootIsolateToken.instance!;
-      await Isolate.spawn(_startRemoteIsolate, (rootToken, initPort.sendPort), debugName: _debugLabel);
-    } on Object {
-      initPort.close();
-      rethrow;
-    }
-
-    final (ReceivePort receivePort, SendPort sendPort) = await connection.future;
-
-    return InitAlgorithmWorker._(sendPort, receivePort, perIsolateHttpCacheDirName);
-  }
-
-  void _handleResponsesFromIsolate(dynamic message) {
-    if (message is _LogRecordIsolateMessage) {
-      _LogRecordIsolateMessage.log(message, _debugLabel);
-      return;
-    }
-
-    final (int id, Object? response) = message as (int, Object?);
-    final completer = _activeRequests.remove(id)!;
-
-    if (response is RemoteError) {
-      completer.completeError(response);
-    } else {
-      completer.complete(response);
-    }
+  @override
+  Future<bool> call(InitAlgorithmInput input, {required String debugLabel}) {
+    return initializeAlgorithm(input.algorithm, input.keyAssetUrls, input.r1csAssetUrls, httpCacheDirName);
   }
 
   static Future<Uint8List?> downloadWithMirrors({
@@ -194,44 +136,5 @@ class InitAlgorithmWorker {
         calloc.free(r1csPointer);
       }
     }
-  }
-
-  static void _handleCommandsToIsolate(ReceivePort receivePort, SendPort sendPort) async {
-    receivePort.listen((message) async {
-      if (message == 'shutdown') {
-        receivePort.close();
-        return;
-      }
-      final (id, algorithm, keyAssetUrls, r1csAssetUrls, httpCacheDirName) =
-          message as (int, ProverAlgorithmType, List<String>, List<String>, String?);
-      try {
-        final initResponse = await initializeAlgorithm(algorithm, keyAssetUrls, r1csAssetUrls, httpCacheDirName);
-        sendPort.send((id, initResponse));
-      } catch (e) {
-        sendPort.send((id, RemoteError(e.toString(), '')));
-      }
-    });
-  }
-
-  static void _startRemoteIsolate((RootIsolateToken, SendPort) args) {
-    final (rootToken, sendPort) = args;
-    BackgroundIsolateBinaryMessenger.ensureInitialized(rootToken);
-    final receivePort = ReceivePort(_debugLabel);
-    sendPort.send(receivePort.sendPort);
-    _LogRecordIsolateMessage.setup(sendPort.send);
-    _handleCommandsToIsolate(receivePort, sendPort);
-  }
-
-  bool _closed = false;
-
-  bool close() {
-    if (!_closed) {
-      _closed = true;
-      _commands.send('shutdown');
-      if (_activeRequests.isEmpty) _responses.close();
-      _httpCacheDirInUseByIsolates.remove(_httpCacheDirName);
-      return true;
-    }
-    return true;
   }
 }

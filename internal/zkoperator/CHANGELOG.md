@@ -1,3 +1,7 @@
+## 1.5.0
+
+* Refactor all isolate workers to be a runnable and add `WorkerManager` that manages background worker with runnables and runs them on isolate
+
 ## 1.4.0
 
 * Add 16kb memory page alignment support for android archive

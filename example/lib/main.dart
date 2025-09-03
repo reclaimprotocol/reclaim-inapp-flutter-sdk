@@ -88,7 +88,7 @@ class _ExampleState extends State<Example> {
       setState(() {
         // trigger rebuild to show received proofs
       });
-      print({'proof.length': response?.proofs.length, 'proofs': json.encode(response)});
+      print({'proof.length': response?.proofs.length, 'proofs': json.encode(response?.toEncodable())});
       msg.removeCurrentSnackBar();
       final proofs = response?.proofs;
       if (proofs == null || proofs.isEmpty) {
@@ -156,7 +156,9 @@ class _ExampleState extends State<Example> {
                     maxLines: 10,
                     textCapitalization: TextCapitalization.none,
                     style: TextStyle(fontFamily: "monospace", fontFamilyFallback: <String>["Courier"]),
-                    controller: TextEditingController.fromValue(TextEditingValue(text: json.encode(response))),
+                    controller: TextEditingController.fromValue(
+                      TextEditingValue(text: json.encode(response?.toEncodable())),
+                    ),
                     decoration: InputDecoration(
                       label: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -167,7 +169,7 @@ class _ExampleState extends State<Example> {
                   ),
                   OutlinedButton.icon(
                     onPressed: () {
-                      Clipboard.setData(ClipboardData(text: json.encode(response)));
+                      Clipboard.setData(ClipboardData(text: json.encode(response?.toEncodable())));
                     },
                     label: Text('Copy Proof'),
                     icon: const Icon(Icons.copy),

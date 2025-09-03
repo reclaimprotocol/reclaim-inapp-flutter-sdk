@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:native_dio_adapter/native_dio_adapter.dart';
 
+import '../build_env.dart';
 import '../logging/logging.dart';
 
 import 'interceptor/api_client.dart';
@@ -12,7 +12,7 @@ import 'interceptor/api_client.dart';
 Dio buildDio() {
   final logger = logging.child('buildDio.RetryInterceptor');
   final dio = Dio();
-  if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+  if (!BuildEnv.IS_FLUTTER_TEST) {
     dio.httpClientAdapter = NativeAdapter(
       createCupertinoConfiguration: () {
         return URLSessionConfiguration.ephemeralSessionConfiguration();

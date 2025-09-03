@@ -16,7 +16,7 @@ class ReclaimAddressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconSize = IconTheme.of(context).size ?? 24;
-    final visualDensity = VisualDensity(horizontal: 4.0, vertical: -4.0);
+    final visualDensity = const VisualDensity(horizontal: 4.0, vertical: -4.0);
     final effectiveIconSize = iconSize + visualDensity.vertical;
     final minAddressBarHeight = effectiveIconSize * 2;
     final visualDensityHeightFactor = 1.2 + (visualDensity.vertical / 10);
@@ -50,8 +50,8 @@ class ReclaimAddressBar extends StatelessWidget {
                           return AnimatedSwitcher(
                             duration: Durations.medium1,
                             child: isVisible
-                                ? SizedBox(width: 16)
-                                : SvgImageIcon($ReclaimAssetImageProvider.lock, color: Colors.green, size: 16),
+                                ? const SizedBox(width: 16)
+                                : const SvgImageIcon($ReclaimAssetImageProvider.lock, color: Colors.green, size: 16),
                           );
                         },
                       ),
@@ -67,7 +67,7 @@ class ReclaimAddressBar extends StatelessWidget {
                               final isVisible = VerificationReviewController.of(context).value.isVisible;
                               return AnimatedSwitcher(
                                 duration: Durations.medium1,
-                                child: isVisible ? SizedBox(height: 19.04) : _AddressBarUrl(webviewUrl: url),
+                                child: isVisible ? const SizedBox(height: 19.04) : _AddressBarUrl(webviewUrl: url),
                               );
                             },
                           ),
@@ -129,14 +129,14 @@ class _AddressBarUrl extends StatelessWidget {
         children: [
           TextSpan(
             text: uri.authority,
-            style: TextStyle(color: Colors.black87),
+            style: const TextStyle(color: Colors.black87),
           ),
           TextSpan(text: uri.path),
           if (uri.query.isNotEmpty) TextSpan(text: '?${uri.query}'),
         ],
       ),
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontWeight: FontWeight.normal, color: Colors.grey, fontSize: 16, height: 1.19),
+      style: const TextStyle(fontWeight: FontWeight.normal, color: Colors.grey, fontSize: 16, height: 1.19),
       textAlign: TextAlign.start,
     );
   }

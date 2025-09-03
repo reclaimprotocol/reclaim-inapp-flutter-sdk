@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -8,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../attestor.dart';
+import '../build_env.dart';
 import '../data/identity.dart';
 import '../overrides/overrides.dart';
 import '../services/logging.dart';
@@ -31,7 +31,7 @@ extension LoggerExtension on Logger {
   }
 
   void debug(Object? message, [Level? level]) {
-    final canUseInfo = kDebugMode || (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST'));
+    final canUseInfo = kDebugMode || (!kIsWeb && BuildEnv.IS_FLUTTER_TEST);
     log(canUseInfo ? Level.INFO : (level ?? Level.FINE), message);
   }
 
@@ -48,7 +48,7 @@ Logger _createSdkLogger() {
 
   l.onRecord.listen(_onLoggingLogRecord);
 
-  if (Platform.environment.containsKey('FLUTTER_TEST')) {
+  if (BuildEnv.IS_FLUTTER_TEST) {
     l.level = Level.ALL;
   } else {
     unawaited(
@@ -97,6 +97,10 @@ Logger _createSdkLogger() {
 }
 
 Future<bool> _canAppSeeConsoleLogs() async {
+  if (BuildEnv.IS_FLUTTER_TEST) {
+    return true;
+  }
+
   final packageInfo = await PackageInfo.fromPlatform();
   return switch (packageInfo.packageName) {
     'org.reclaimprotocol.app' => true,
@@ -114,7 +118,7 @@ void _onLoggingLogRecord(LogRecord record) async {
   try {
     // Only print logs if not release mode and app is allowed (when not overriden)
     final canPrintLogs =
-        ReclaimOverrides.logsConsumer?.canPrintLogs ?? (!kReleaseMode && await _canAppSeeConsoleLogs());
+        (ReclaimOverrides.logsConsumer?.canPrintLogs ?? (!kReleaseMode && await _canAppSeeConsoleLogs()));
     if (canPrintLogs) {
       _onLogsToConsole(record);
     }

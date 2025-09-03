@@ -14,8 +14,9 @@ sealed class ReclaimUrls {
     defaultValue: 'https://logs.reclaimprotocol.org/api/business-logs/logDump',
   );
   static const String DEFAULT_CALLBACK_URL_PATH = '$SDK_API_BASE_URL/api/sdk/callback';
-  static const String AI_SERVICE_SEND_EVENTS = 'https://service.reclaimprotocol.org/api/network-requests/add-to-queue';
-  static const String AI_SERVICE_GET_AI_RESPONSE = 'https://service.reclaimprotocol.org/api/ai-actions';
+  static const String AI_SERVICE_BASE_URL = 'https://service.reclaimprotocol.org/api';
+  static const String AI_SERVICE_SEND_EVENTS = '$AI_SERVICE_BASE_URL/network-requests/add-to-queue';
+  static const String AI_SERVICE_GET_AI_RESPONSE = '$AI_SERVICE_BASE_URL/ai-actions';
   static String getApplicationProviderUrl(String appId, String providerId) {
     return '$SDK_API_BASE_URL/api/applications/$appId/provider/$providerId';
   }

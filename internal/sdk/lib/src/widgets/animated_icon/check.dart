@@ -85,7 +85,7 @@ class DataSharedCheckAnimatedIconState extends State<DataSharedCheckAnimatedIcon
               end: 1.0,
             ).animate(CurvedAnimation(parent: _icon2Animation, curve: Curves.easeInOut)),
             size: dimension,
-            color: Color(0xFF0000EE),
+            color: const Color(0xFF0000EE),
             strokeWidth: strokeWidth,
           ),
         ),

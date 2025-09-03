@@ -17,6 +17,7 @@ class UserScriptService {
     required Map<String, String> parameters,
     required int idleTimeThreshold,
     required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
+    required int debounceTimeoutMs,
   }) async {
     try {
       logger.info('Creating user scripts with provider: ${providerData.name}');
@@ -62,7 +63,10 @@ class UserScriptService {
 
       // Add page load event injection
       scripts.add(
-        UserScript(source: PAGE_CONTENT_CAPTURE_ON_LOAD, injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
+        UserScript(
+          source: pageContentCaptureOnLoad(debounceTimeoutMs: debounceTimeoutMs),
+          injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+        ),
       );
 
       logger.info('Successfully created ${scripts.length} user scripts');

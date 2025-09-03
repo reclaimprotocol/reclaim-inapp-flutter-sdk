@@ -127,7 +127,7 @@ class AIActionController {
   }
 
   void _handleRecommendation(String text) {
-    logger.info('AI Recommendation: $text');
+    logger.info('Executing AI action: Recommendation: $text');
     VerificationReviewController.readOf(context).setIsVisible(false);
     final messenger = ActionBarMessenger.of(context);
     messenger.show(
@@ -140,7 +140,7 @@ class AIActionController {
   }
 
   void _handleShowInfo(String text) {
-    logger.info('AI Show Info: $text');
+    logger.info('Executing AI action: Show Info: $text');
     final webContext = AIFlowCoordinatorWidget.of(context).webContext;
     webContext.setInfoText(text);
 
@@ -152,13 +152,13 @@ class AIActionController {
   }
 
   void _handleNavigation(String url) {
-    logger.info('AI Navigation: $url');
+    logger.info('Executing AI action: Navigation: $url');
     final vm = ClaimCreationWebClientViewModel.readOf(context);
     vm.navigateToUrl(url);
   }
 
   void _handleProviderVersionUpdate(String versionNumber) {
-    logger.info('AI suggested provider version update: $versionNumber');
+    logger.info('Executing AI action: Provider Version Update: $versionNumber');
 
     final webContext = AIFlowCoordinatorWidget.of(context).webContext;
     webContext.setAiFlowDone();
@@ -172,7 +172,7 @@ class AIActionController {
   }
 
   void _handleButtonClick(String jsSelector) {
-    logger.info('AI suggested button click: $jsSelector');
+    logger.info('Executing AI action: Button Click: $jsSelector');
     final vm = ClaimCreationWebClientViewModel.readOf(context);
 
     final script = '$jsSelector.click();';
@@ -181,7 +181,7 @@ class AIActionController {
   }
 
   void _handleGoBack() {
-    logger.info('AI suggested go back');
+    logger.info('Executing AI action: Go Back');
     final vm = ClaimCreationWebClientViewModel.readOf(context);
     vm.goBack();
   }

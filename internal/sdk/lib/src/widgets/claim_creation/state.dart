@@ -319,7 +319,7 @@ class ClaimCreationControllerState {
     ClaimCreationUIScopeState? delegate,
     Map<ClaimRequestIdentifier, ClaimStatus>? claimsByRequest,
     ClaimCreationStatus? status,
-    Object? publicData,
+    Optional<Object?> publicData = const Optional<Object?>.none(),
     bool? didNotifySessionAsRetry,
     bool? canExpectManyClaims,
     ReclaimVerificationProviderScriptException? providerError,
@@ -330,7 +330,7 @@ class ClaimCreationControllerState {
       delegate: delegate ?? this.delegate,
       claimsByRequest: claimsByRequest ?? this.claimsByRequest,
       status: status ?? this.status,
-      publicData: publicData ?? this.publicData,
+      publicData: publicData.map(value: (value) => value, none: () => this.publicData),
       // once status is set to retryRequested, then hasRequestedRetry should always be true afterwards for any other status changes
       hasRequestedRetry: hasRequestedRetry || status == ClaimCreationStatus.retryRequested,
       didNotifySessionAsRetry: didNotifySessionAsRetry ?? this.didNotifySessionAsRetry,

@@ -23,7 +23,7 @@ class DiagnosticLogging {
     if (id != null) {
       return id;
     }
-    final newId = Uuid().v4();
+    final newId = const Uuid().v4();
     await _deviceLoggingIdPreference.setValue(newId);
     return newId;
   }
