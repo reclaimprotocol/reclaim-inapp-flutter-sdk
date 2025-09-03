@@ -23,7 +23,7 @@ dependencies:
       path: internal/zkoperator
   reclaim_verifier_module:
     git:
-      url: https://github.com/reclaimprotocol/reclaim_inapp_sdk_wrapper.git
+      url: https://github.com/reclaimprotocol/reclaim-inapp-flutter-sdk.git
       ref: 0.15.0
       path: internal/reclaim_verifier_module
   logging: ^1.3.0
