@@ -1,15 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../data/create_claim.dart';
 import '../../data/providers.dart';
+import '../../theme/theme.dart';
+import '../../utils/cache_manager.dart';
 import '../../utils/data.dart';
 import '../claim_creation/claim_creation.dart';
 import '../icon/icons.dart';
 import '../icon/spinning_hour_glass.dart';
 import '../loading/param_value.dart';
+import '../reclaim_image_provider.dart';
 import '../spoiler/widget.dart';
 import '../svg_icon.dart';
 import 'string.dart';
@@ -490,19 +495,24 @@ class _ParamsTileState extends State<ParamsTile> {
     final isPending = widget.param.isPending;
     final progress = widget.param.progress;
 
-    final theme = Theme.of(context);
-    final accentColor = theme.colorScheme.secondary;
+    final reclaimTheme = ReclaimTheme.of(context);
+    final accentColor = reclaimTheme.secondaryColor;
+
+    final loadingIconColor = reclaimTheme.loadingIconColor;
+    final fieldVerifiedIconProvider = reclaimTheme.fieldVerifiedIconProvider;
+
+    final circularProgressIndicator = CircularProgressIndicator(
+      valueColor: AlwaysStoppedAnimation<Color>(loadingIconColor ?? accentColor),
+      strokeWidth: 4.0,
+      value: null,
+    );
+
+    final loadingWidgetSize = widget.size - 6;
 
     final loadingWidget = Padding(
-      padding: const EdgeInsets.all(2.0),
-      child: SizedBox.square(
-        dimension: widget.size - 4,
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-          strokeWidth: 2.0,
-          value: null,
-        ),
-      ),
+      key: Key('$keyPrefix-pending'),
+      padding: const EdgeInsets.all(3.0),
+      child: SizedBox.square(dimension: loadingWidgetSize, child: circularProgressIndicator),
     );
 
     return Row(
@@ -524,9 +534,46 @@ class _ParamsTileState extends State<ParamsTile> {
                 }
               }
               if (isPending) {
+                if (loadingIconColor != null) {
+                  return loadingWidget;
+                }
                 return SpinningHourglass(key: Key('$keyPrefix-pending'), color: accentColor, size: widget.size);
               }
               if (!isPublic) {
+                if (fieldVerifiedIconProvider != null) {
+                  final placeholder = Icon(Icons.verified, color: Colors.green, size: widget.size);
+                  switch (fieldVerifiedIconProvider.asset) {
+                    case ReclaimVectorGraphicAsset(uri: final uri, options: final options):
+                      return SvgPicture.network(
+                        uri.toString(),
+                        key: Key('$keyPrefix-verified'),
+                        fit: BoxFit.scaleDown,
+                        height: widget.size,
+                        width: widget.size,
+                        placeholderBuilder: (context) => placeholder,
+                        alignment: options.alignment,
+                        errorBuilder: (BuildContext context, Object error, stacktrace) {
+                          return const SizedBox();
+                        },
+                      );
+                    case ReclaimRasterGraphicAsset(uri: final uri, options: final options):
+                      return CachedNetworkImage(
+                        key: Key('$keyPrefix-verified'),
+                        imageUrl: uri.toString(),
+                        cacheManager: ReclaimCacheManager(),
+                        fit: BoxFit.scaleDown,
+                        height: widget.size,
+                        width: widget.size,
+                        alignment: options.alignment,
+                        placeholder: (context, url) => placeholder,
+                        errorWidget: (BuildContext context, String url, Object error) {
+                          return const SizedBox();
+                        },
+                      );
+                    default:
+                      break;
+                  }
+                }
                 return Icon(key: Key('$keyPrefix-verified'), Icons.verified, color: Colors.green, size: widget.size);
               }
               if (progress < 1) {

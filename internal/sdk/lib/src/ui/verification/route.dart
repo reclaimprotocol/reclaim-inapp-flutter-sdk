@@ -30,23 +30,26 @@ class VerificationViewPageRoute extends PageRoute<dynamic> with CupertinoRouteTr
   /// Builds the primary contents of the route.
   @override
   Widget buildContent(BuildContext context) {
-    return verificationController.wrap(
-      child: AIFlowCoordinatorWidget(
-        child: ReclaimThemeProvider(
-          child: MediaQuery.fromView(
-            view: View.of(context),
-            child: FractionallyPaddedSafeArea(
-              top: false,
-              bottomFraction: Theme.of(context).platform == TargetPlatform.iOS
-                  // Eyeballed on iphone that ~32% of safe area bottom padding should be safe
-                  ? 0.32
-                  // Androids always provide bottom padding as 0.
-                  : 1,
-              child: const VerificationView(),
+    return ReclaimThemeProvider(
+      applicationId: verificationController.request.applicationId,
+      builder: (context) {
+        return verificationController.wrap(
+          child: AIFlowCoordinatorWidget(
+            child: MediaQuery.fromView(
+              view: View.of(context),
+              child: FractionallyPaddedSafeArea(
+                top: false,
+                bottomFraction: Theme.of(context).platform == TargetPlatform.iOS
+                    // Eyeballed on iphone that ~32% of safe area bottom padding should be safe
+                    ? 0.32
+                    // Androids always provide bottom padding as 0.
+                    : 1,
+                child: const VerificationView(),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

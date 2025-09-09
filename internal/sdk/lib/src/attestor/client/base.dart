@@ -1,15 +1,23 @@
 import 'dart:async';
 
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
+import 'package:web_socket/web_socket.dart';
 
 import '../../data/claim_creation_type.dart';
 import '../../data/create_claim.dart';
+import '../../logging/logging.dart';
 import '../../utils/provider_performance_report.dart';
 import '../claim/options.dart';
 import '../claim/request.dart';
 import '../data/data.dart';
+import '../data/message.dart';
 import '../data/request.dart';
+import '../exception/exception.dart';
 import '../operator/operator.dart';
+import 'manager.dart';
+
+export '../data/message.dart';
+export '../exception/exception.dart';
 
 typedef AttestorResponseTransformer<RESPONSE> = FutureOr<RESPONSE> Function(dynamic value);
 typedef AttestorCreateClaimPerformanceReportCallback =
@@ -18,6 +26,13 @@ typedef AttestorCreateClaimPerformanceReportCallback =
 abstract class AttestorClient {
   final String debugLabel;
   final DateTime createdAt;
+
+  @protected
+  // Using runtime type as name in debug mode to make it easier to identify the client in logs
+  // In release mode, we use a string constant because real runtime type names may be obfuscated
+  late final Logger logger = logging.child(
+    '${kDebugMode ? runtimeType.toString() : 'AttestorClient'}#$hashCode.$debugLabel',
+  );
 
   AttestorClient({required this.debugLabel}) : createdAt = DateTime.now();
 
@@ -53,8 +68,6 @@ abstract class AttestorClient {
   void _clearPerformanceReports() {
     _performanceReports.clear();
   }
-
-  Future<Object?> executeJavascript(String js);
 
   AttestorProcess<AttestorClaimRequest, List<CreateClaimOutput>> createClaim({
     required Map<String, Object?> request,
@@ -119,14 +132,111 @@ abstract class AttestorClient {
     return sendRequest(type: 'ping', request: null, transformResponse: (value) => value);
   }
 
+  final Map<String, AttestorRpcProcessManager> _processManagers = {};
+
+  @protected
+  AttestorRpcProcessManager? getProcessManagerById(String id) {
+    return _processManagers[id];
+  }
+
+  @protected
+  List<AttestorRpcProcessManager> getProcessManagers() {
+    return _processManagers.values.toList();
+  }
+
+  /// Post a message to the attestor client's browser rpc handler
+  Future<void> postMessage(RpcMessage rpcMessage);
+
+  static const String hostMessengerChannelName = 'HostMessenger';
+
   AttestorProcess<REQUEST, RESPONSE> sendRequest<REQUEST, RESPONSE>({
     required String type,
     // request should be json serializable
     required REQUEST request,
-    required AttestorResponseTransformer<RESPONSE> transformResponse,
-  });
+    required FutureOr<RESPONSE> Function(dynamic value) transformResponse,
+  }) {
+    final log = logger.child('sendRequest');
+    log.info({'tag': 'sendRequest', 'type': type, 'request': request});
 
-  Future<void> dispose();
+    final manager = AttestorRpcProcessManager<REQUEST, RESPONSE>.create(
+      requestType: type,
+      request: request,
+      transformer: transformResponse,
+    );
+
+    log.info({'tag': 'manager', 'manager': manager});
+
+    final process = manager.process;
+
+    log.info({'tag': 'process', 'process': process, 'process.id': process.id});
+
+    _processManagers[process.id] = manager;
+
+    log.info({
+      'tag': 'process.id',
+      'process.id': process.id,
+      'event': 'sending message',
+      'currentManagers': getProcessManagers().map((e) => e.process.id).toList(),
+    });
+
+    () async {
+      try {
+        await postMessage(process.createRequest(channel: hostMessengerChannelName));
+        log.info({'tag': 'response'});
+      } catch (e, s) {
+        log.severe('Error sending request', e, s);
+        final completer = manager.completer;
+        if (completer.isCompleted) return;
+        completer.completeError(AttestorRequestMessagingException(e), s);
+      }
+    }();
+
+    log.info({'tag': 'process.id', 'process.id': process.id, 'event': 'message sent'});
+
+    return process;
+  }
+
+  final Map<String, WebSocket> _sockets = {};
+
+  @protected
+  void addSocket(String id, WebSocket ws) {
+    _sockets[id] = ws;
+  }
+
+  @protected
+  WebSocket? getSocketById(String id) {
+    return _sockets[id];
+  }
+
+  @protected
+  Future<void> removeSocket(String id) async {
+    final ws = _sockets.remove(id);
+    try {
+      await ws?.close();
+    } catch (e, s) {
+      if (e is WebSocketConnectionClosed) {
+        return;
+      }
+      logger.severe('Error closing socket $ws for id $id', e, s);
+    }
+  }
+
+  @mustCallSuper
+  Future<void> dispose() async {
+    logger.info('disposing with following managers: ${_processManagers.values.map((e) => e.process.id).toList()}');
+    for (final controller in _processManagers.values) {
+      controller.onCancel();
+    }
+
+    _processManagers.clear();
+
+    for (final s in _sockets.entries) {
+      s.value.close().catchError((e, s) {
+        logger.severe('Error closing socket $s for id ${s.key}', e, s);
+      });
+    }
+    _sockets.clear();
+  }
 
   @override
   String toString() {

@@ -207,11 +207,26 @@ class _VerificationViewState extends State<VerificationView> {
                   VerificationController.readOf(context).updateException(e);
                 },
               ),
-              child: Scaffold(
-                key: verificationViewKey,
-                appBar: ReclaimAppBar(controller: appBarController, onPressed: _showDebugMenu),
-                body: const ClaimCreationWebClient(),
-                bottomNavigationBar: const WebviewBottomBar(),
+              child: Builder(
+                builder: (context) {
+                  final isReviewVisible = VerificationReviewController.of(context).value.isVisible;
+                  return Scaffold(
+                    key: verificationViewKey,
+                    appBar: ReclaimAppBar(controller: appBarController, onPressed: _showDebugMenu),
+                    extendBodyBehindAppBar: isReviewVisible,
+                    extendBody: isReviewVisible,
+                    body: const ClaimCreationWebClient(),
+                    bottomNavigationBar: Builder(
+                      builder: (context) {
+                        final padding = MediaQuery.paddingOf(context);
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: padding.bottom + WebviewBottomBar.estimateHeight),
+                          child: const WebviewBottomBar(),
+                        );
+                      },
+                    ),
+                  );
+                },
               ),
             ),
           ),

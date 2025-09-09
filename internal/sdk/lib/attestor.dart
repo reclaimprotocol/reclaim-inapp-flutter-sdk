@@ -29,10 +29,16 @@ class Attestor {
     final attestor = AttestorWebViewClient(attestorBrowserRpcUrl: effectiveUrl, debugLabel: debugLabel);
 
     if (_level != null) {
-      attestor.setAttestorDebugLevel(_level!);
+      try {
+        attestor.setAttestorDebugLevel(_level!);
+      } catch (e) {
+        _log.severe('Error setting attestor debug level', e);
+      }
     }
 
     attestor.zkOperator = _attestorZkOperator;
+
+    _log.info('attestor client created');
 
     return attestor;
   }
@@ -235,7 +241,7 @@ class Attestor {
       retryIf: (e) {
         log.warning('failed, attempt: $attempt', e);
         attempt++;
-        return e is AttestorWebViewClientReloadException || (retryOnTimeout && e is TimeoutException);
+        return e is AttestorClientReloadException || (retryOnTimeout && e is TimeoutException);
       },
     );
   }
@@ -263,18 +269,6 @@ class Attestor {
       timeout: _computeTimeout,
       retryOnTimeout: true,
       canMarkNotResponding: true,
-    );
-  }
-
-  Future<Object?> executeJavascript(String js, {required Duration timeout}) {
-    return useClient(
-      (attestor) {
-        return attestor.executeJavascript(js);
-      },
-      isCompute: true,
-      timeout: timeout,
-      retryOnTimeout: false,
-      canMarkNotResponding: false,
     );
   }
 

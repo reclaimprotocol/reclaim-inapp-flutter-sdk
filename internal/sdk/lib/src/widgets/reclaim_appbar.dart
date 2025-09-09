@@ -58,14 +58,16 @@ class ReclaimAppBar extends StatefulWidget implements PreferredSizeWidget {
   @override
   State<StatefulWidget> createState() => _ReclaimAppBarState();
 
+  static const preferredAppBarSize = Size.fromHeight(kToolbarHeight - 10);
+
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight - 10);
+  Size get preferredSize => preferredAppBarSize;
 }
 
 class _ReclaimAppBarState extends State<ReclaimAppBar> {
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = ReclaimTheme.of(context).grayBackground;
+    final backgroundColor = ReclaimTheme.of(context).surfaceColor;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(

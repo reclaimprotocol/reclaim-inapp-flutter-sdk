@@ -1,6 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
+import '../../theme/theme.dart';
+import '../icon.dart';
+import '../reclaim_image_provider.dart';
+
 class DataSharedCheckAnimatedIcon extends StatefulWidget {
   final double? height;
   const DataSharedCheckAnimatedIcon({super.key, required this.height});
@@ -21,6 +25,10 @@ class DataSharedCheckAnimatedIconState extends State<DataSharedCheckAnimatedIcon
 
   late final Animation<double> _icon1Animation = Tween<double>(
     begin: 0,
+    end: 1,
+  ).animate(CurvedAnimation(parent: _icon1Controller, curve: Curves.easeInOutCirc));
+  late final Animation<double> _icon1ScaleAnimation = Tween<double>(
+    begin: 0.8,
     end: 1,
   ).animate(CurvedAnimation(parent: _icon1Controller, curve: Curves.easeInOutCirc));
   late final Animation<double> _icon2Animation = Tween<double>(
@@ -62,6 +70,44 @@ class DataSharedCheckAnimatedIconState extends State<DataSharedCheckAnimatedIcon
     final double dimension = widget.height?.clamp(0, 160.0) ?? 140.0;
     final double strokeWidth = dimension * 0.07;
     final double distance = 9.0;
+    final appTheme = ReclaimTheme.of(context);
+    final iconProvider = appTheme.verificationCompleteIconProvider;
+
+    final placeholder = TransparentPlaceholder(size: dimension);
+
+    final Widget? iconWidget = switch (iconProvider?.asset) {
+      ReclaimRasterGraphicAsset(uri: final uri) => LogoIcon(
+        logoUrl: uri.toString(),
+        size: dimension,
+        fit: BoxFit.scaleDown,
+        borderRadius: BorderRadius.zero,
+        placeholder: placeholder,
+      ),
+      ReclaimVectorGraphicAsset(uri: final uri) => LogoSvgIcon(
+        logoUrl: uri.toString(),
+        size: dimension,
+        fit: BoxFit.scaleDown,
+        borderRadius: BorderRadius.zero,
+        placeholder: placeholder,
+      ),
+      null => null,
+    };
+
+    if (iconWidget != null) {
+      final opacityAnim = CurvedAnimation(parent: _icon1Animation, curve: Curves.easeInOut);
+      final scaleAnim = CurvedAnimation(parent: _icon1ScaleAnimation, curve: Curves.easeInOut);
+
+      return AnimatedBuilder(
+        animation: Listenable.merge([opacityAnim, scaleAnim]),
+        builder: (context, child) {
+          return Opacity(
+            opacity: opacityAnim.value,
+            child: Transform.scale(scale: scaleAnim.value, child: iconWidget),
+          );
+        },
+      );
+    }
+
     return Stack(
       alignment: Alignment.center,
       children: [

@@ -31,7 +31,7 @@ class PermissionDialog extends StatelessWidget {
         TextSpan(
           children: [
             TextSpan(
-              text: request.origin.toString(),
+              text: request.origin.authority.toString().replaceAll('www.', ''),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const TextSpan(text: ' wants to access your '),

@@ -114,6 +114,7 @@ DataProviderRequest _$DataProviderRequestFromJson(Map<String, dynamic> json) => 
           ?.map((e) => ResponseRedaction.fromJson(e as Map<String, dynamic>))
           .toList() ??
       [],
+  writeRedactionMode: WriteRedactionMode.tryFromJson(json['writeRedactionMode']),
   bodySniff: json['bodySniff'] == null ? null : BodySniff.fromJson(json['bodySniff'] as Map<String, dynamic>),
   requestHash: json['requestHash'] as String?,
   expectedPageUrl: json['expectedPageUrl'] as String?,
@@ -128,6 +129,7 @@ Map<String, dynamic> _$DataProviderRequestToJson(DataProviderRequest instance) =
   'method': _$RequestMethodTypeEnumMap[instance.method]!,
   'responseMatches': instance.responseMatches,
   'responseRedactions': instance.responseRedactions,
+  'writeRedactionMode': _$WriteRedactionModeEnumMap[instance.writeRedactionMode],
   'bodySniff': instance.bodySniff,
   'credentials': _$WebCredentialsTypeEnumMap[instance.credentials]!,
   'requestHash': instance.requestHash,
@@ -137,6 +139,8 @@ Map<String, dynamic> _$DataProviderRequestToJson(DataProviderRequest instance) =
 const _$UrlTypeEnumMap = {UrlType.REGEX: 'REGEX', UrlType.CONSTANT: 'CONSTANT', UrlType.TEMPLATE: 'TEMPLATE'};
 
 const _$RequestMethodTypeEnumMap = {RequestMethodType.GET: 'GET', RequestMethodType.POST: 'POST'};
+
+const _$WriteRedactionModeEnumMap = {WriteRedactionMode.zk: 'zk', WriteRedactionMode.keyUpdate: 'key-update'};
 
 const _$WebCredentialsTypeEnumMap = {
   WebCredentialsType.OMIT: 'omit',

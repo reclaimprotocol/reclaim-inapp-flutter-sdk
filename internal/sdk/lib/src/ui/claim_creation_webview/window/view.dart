@@ -24,16 +24,19 @@ class WebViewWindow extends StatefulWidget {
   final WebViewWindowParameters parameters;
 
   static Future<void> open({required BuildContext context, required WebViewWindowParameters parameters}) async {
-    final vm = VerificationController.readOf(context);
+    final verificationController = VerificationController.readOf(context);
     final verificationReviewController = VerificationReviewController.readOf(context);
 
     return Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (context) {
-          return vm.wrap(
-            child: verificationReviewController.wrap(
-              child: ReclaimThemeProvider(child: WebViewWindow(parameters: parameters)),
-            ),
+          return ReclaimThemeProvider(
+            applicationId: verificationController.request.applicationId,
+            builder: (context) {
+              return verificationController.wrap(
+                child: verificationReviewController.wrap(child: WebViewWindow(parameters: parameters)),
+              );
+            },
           );
         },
       ),

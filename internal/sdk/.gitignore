@@ -33,3 +33,4 @@ sdk.dart
 .flutter-plugins-dependencies
 .flutter-plugins
 launch.json
+pubspec_overrides.yaml

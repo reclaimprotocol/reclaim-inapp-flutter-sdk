@@ -45,6 +45,33 @@ class ClientSdkVerificationRequest {
     this.resolvedProviderVersion,
   });
 
+  ClientSdkVerificationRequest copyWith({
+    String? callbackUrl,
+    String? contextString,
+    String? redirectUrl,
+    Map<String, String>? parameters,
+    bool? isCloseButtonVisible,
+    bool? jsonProofResponse,
+    String? providerVersion,
+    String? resolvedProviderVersion,
+  }) {
+    return ClientSdkVerificationRequest(
+      providerId: providerId,
+      applicationId: applicationId,
+      signature: signature,
+      callbackUrl: callbackUrl ?? this.callbackUrl,
+      timestamp: timestamp,
+      contextString: contextString ?? this.contextString,
+      sessionId: sessionId,
+      redirectUrl: redirectUrl ?? this.redirectUrl,
+      parameters: parameters ?? this.parameters,
+      isCloseButtonVisible: isCloseButtonVisible ?? this.isCloseButtonVisible,
+      jsonProofResponse: jsonProofResponse ?? this.jsonProofResponse,
+      providerVersion: providerVersion ?? this.providerVersion,
+      resolvedProviderVersion: resolvedProviderVersion ?? this.resolvedProviderVersion,
+    );
+  }
+
   factory ClientSdkVerificationRequest.fromJson(Map<dynamic, dynamic> json) {
     return _$ClientSdkVerificationRequestFromJson(<String, dynamic>{
       for (final key in json.keys) key.toString(): json[key],

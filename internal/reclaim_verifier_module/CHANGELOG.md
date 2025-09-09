@@ -1,3 +1,14 @@
+## 0.16.0
+
+* Refactor [internal] attestor client code for better compatibility with new architectures
+* Add support for custom verification flow theme for any reclaim devtool app
+* Add a whitelist to automatically allow permissions for autoplay and protected media id when requested from webview
+* Add `writeRedactionMode` in requestData for provider
+* Skip and extend time for no activity error when try again is pressed
+* Update loading screen messages
+* Add [Breaking] `AI_PROOF_SUBMITTED` in a session status type when using overrides
+* Add [Breaking] `metadata` to `ReclaimHostOverridesApi.updateSession` callback when using overrides
+
 ## 0.15.0
 
 * Add interception of document with `pre` text in html document or the html document on DOMContentLoaded event when `disableRequestReplay` is true

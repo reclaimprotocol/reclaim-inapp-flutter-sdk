@@ -1,17 +1,19 @@
 import 'dart:async';
 import 'dart:math';
 
-import '../../data/process.dart';
-import '../../exception/exception.dart';
-import '../base.dart';
+import '../../logging/logging.dart';
+import '../data/process.dart';
+import 'base.dart';
 
 class AttestorRpcProcessManager<REQUEST, RESPONSE> {
+  final StreamController<Map<String, Object?>> updatesController;
   final Sink<Map<String, Object?>> emitUpdate;
   final AttestorProcess<REQUEST, RESPONSE> process;
   final Completer<Object?> completer;
   final void Function() onCancel;
 
   const AttestorRpcProcessManager({
+    required this.updatesController,
     required this.process,
     required this.emitUpdate,
     required this.completer,
@@ -23,11 +25,13 @@ class AttestorRpcProcessManager<REQUEST, RESPONSE> {
     required REQUEST request,
     required AttestorResponseTransformer<RESPONSE> transformer,
   }) {
+    final log = logging.child('AttestorRpcProcessManager.create');
     final requestId = generateRequestId();
     final completer = Completer<Object?>();
     final updateStream = StreamController<Map<String, Object?>>.broadcast();
 
     void closeUpdateStream() {
+      log.finest('closing update stream');
       if (!updateStream.isClosed) {
         updateStream.close();
       }
@@ -54,6 +58,7 @@ class AttestorRpcProcessManager<REQUEST, RESPONSE> {
       ),
       emitUpdate: updateStream.sink,
       completer: completer,
+      updatesController: updateStream,
       onCancel: () {
         if (completer.isCompleted) return;
         completer.completeError(const AttestorRequestCancelledException());

@@ -18,6 +18,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     this.sessionNoActivityTimeoutDurationInMins,
     this.pageLoadedCompletedDebounceTimeoutMs,
     this.potentialLoginTimeoutS,
+    this.screenshotCaptureIntervalSeconds,
   });
 
   final bool? cookiePersist;
@@ -33,6 +34,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
   final int? sessionNoActivityTimeoutDurationInMins;
   final int? pageLoadedCompletedDebounceTimeoutMs;
   final int? potentialLoginTimeoutS;
+  final int? screenshotCaptureIntervalSeconds;
 
   @override
   ReclaimFeatureFlagData copyWith({
@@ -49,6 +51,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     int? sessionNoActivityTimeoutDurationInMins,
     int? pageLoadedCompletedDebounceTimeoutMs,
     int? potentialLoginTimeoutS,
+    int? screenshotCaptureIntervalSeconds,
   }) {
     return ReclaimFeatureFlagData(
       cookiePersist: cookiePersist ?? this.cookiePersist,
@@ -68,6 +71,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       pageLoadedCompletedDebounceTimeoutMs:
           pageLoadedCompletedDebounceTimeoutMs ?? this.pageLoadedCompletedDebounceTimeoutMs,
       potentialLoginTimeoutS: potentialLoginTimeoutS ?? this.potentialLoginTimeoutS,
+      screenshotCaptureIntervalSeconds: screenshotCaptureIntervalSeconds ?? this.screenshotCaptureIntervalSeconds,
     );
   }
 
@@ -86,6 +90,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       sessionNoActivityTimeoutDurationInMins: json['sessionNoActivityTimeoutDurationInMins'] as int?,
       pageLoadedCompletedDebounceTimeoutMs: json['pageLoadedCompletedDebounceTimeoutMs'] as int?,
       potentialLoginTimeoutS: json['potentialLoginTimeoutS'] as int?,
+      screenshotCaptureIntervalSeconds: json['screenshotCaptureIntervalSeconds'] as int?,
     );
   }
 
@@ -104,6 +109,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       'sessionNoActivityTimeoutDurationInMins': sessionNoActivityTimeoutDurationInMins,
       'pageLoadedCompletedDebounceTimeoutMs': pageLoadedCompletedDebounceTimeoutMs,
       'potentialLoginTimeoutS': potentialLoginTimeoutS,
+      'screenshotCaptureIntervalSeconds': screenshotCaptureIntervalSeconds,
     };
   }
 

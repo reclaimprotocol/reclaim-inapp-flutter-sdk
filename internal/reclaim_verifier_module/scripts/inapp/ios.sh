@@ -15,7 +15,7 @@ export IOS_CLONE_DIR="$WORK_DIR/build/ios-sdk";
 if [[ -z "$PACKAGE_CLONE_USER" ]]; then
     git clone git@github.com:reclaimprotocol/reclaim-inapp-ios-sdk.git $IOS_CLONE_DIR;
 else
-    git clone https://$PACKAGE_CLONE_USER:$PACkAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim-inapp-ios-sdk.git $IOS_CLONE_DIR;
+    git clone https://$PACKAGE_CLONE_USER:$PACKAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim-inapp-ios-sdk.git $IOS_CLONE_DIR;
 fi
 
 cd $IOS_CLONE_DIR;

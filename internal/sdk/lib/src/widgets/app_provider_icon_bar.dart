@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:simple_shimmer/simple_shimmer.dart';
 
+import '../theme/theme.dart';
 import 'claim_creation/claim_creation.dart';
 import 'claim_creation/trigger_indicator.dart';
 import 'icon.dart';
 import 'item_alignment.dart';
+import 'reclaim_image_provider.dart';
 import 'verification_review/controller.dart';
 
 class AppProviderIconsBar extends StatelessWidget {
@@ -15,6 +17,7 @@ class AppProviderIconsBar extends StatelessWidget {
     required this.appName,
     required this.providerImageUrl,
     required this.providerName,
+    required this.hasProviderData,
     this.borderRadius = const BorderRadius.all(Radius.circular(12)),
     this.useInheritedVerificationInformation = false,
     this.logoSize = 70.0,
@@ -26,6 +29,7 @@ class AppProviderIconsBar extends StatelessWidget {
   final String? providerImageUrl;
   final String? providerName;
   final BorderRadius borderRadius;
+  final bool hasProviderData;
   final bool useInheritedVerificationInformation;
   final double logoSize;
 
@@ -34,7 +38,23 @@ class AppProviderIconsBar extends StatelessWidget {
     final double defaultIconSize = logoSize;
 
     final appImageUrl = this.appImageUrl;
+
+    final reclaimTheme = ReclaimTheme.of(context);
+
     final providerImageUrl = this.providerImageUrl;
+
+    final theme = ReclaimTheme.of(context);
+    final appIconProvider = theme.verifyScreenAppIconProvider;
+
+    final placeholder = TransparentPlaceholder(size: logoSize);
+
+    final mainAppImageProvider = ReclaimGraphicProvider.fromUrl(
+      appImageUrl,
+      reclaimTheme.appIconGraphicOptions ?? const ReclaimGraphicOptions(),
+    );
+
+    // Provider hasn't loaded yet or we don't have app icon provider in theme
+    final isUsingMainAppIcon = !hasProviderData || appIconProvider?.asset == null;
 
     final applicationIcon = InkWell(
       onDoubleTap: useInheritedVerificationInformation
@@ -45,9 +65,25 @@ class AppProviderIconsBar extends StatelessWidget {
       borderRadius: borderRadius,
       child: AnimatedSwitcher(
         duration: Durations.medium1,
-        child: appImageUrl != null && appImageUrl.isNotEmpty
-            ? LogoIcon(logoUrl: appImageUrl, size: logoSize, borderRadius: borderRadius)
-            : SimpleShimmer(height: logoSize, width: logoSize),
+        child: switch (isUsingMainAppIcon ? mainAppImageProvider.asset : appIconProvider?.asset) {
+          ReclaimRasterGraphicAsset(uri: final uri, options: final options) => LogoIcon(
+            key: ValueKey('app-${isUsingMainAppIcon ? 'main-' : ''}icon.raster'),
+            logoUrl: uri.toString(),
+            size: logoSize,
+            borderRadius: borderRadius,
+            placeholder: placeholder,
+            fit: options.fit,
+          ),
+          ReclaimVectorGraphicAsset(uri: final uri, options: final options) => LogoSvgIcon(
+            key: ValueKey('app-${isUsingMainAppIcon ? 'main-' : ''}icon.vector'),
+            logoUrl: uri.toString(),
+            size: logoSize,
+            borderRadius: borderRadius,
+            placeholder: placeholder,
+            fit: options.fit,
+          ),
+          null => placeholder,
+        },
       ),
     );
 
@@ -126,6 +162,7 @@ class _AppVerificationTransferIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final appTheme = ReclaimTheme.of(context);
 
     if (useInheritedVerificationInformation) {
       final controller = ClaimCreationController.of(context);
@@ -136,7 +173,9 @@ class _AppVerificationTransferIcon extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: size),
           child: ClaimTriggerIndicator(
             key: const ValueKey('iw-progress-indicator'),
-            color: claimCreationValue.hasError ? colorScheme.error : colorScheme.primary,
+            color: claimCreationValue.hasError
+                ? colorScheme.error
+                : (appTheme.providerToAppLoaderColor ?? colorScheme.primary),
             progress: claimCreationValue.progress ?? 0.0,
             padding: const EdgeInsetsDirectional.symmetric(horizontal: 4),
             thickness: 3,

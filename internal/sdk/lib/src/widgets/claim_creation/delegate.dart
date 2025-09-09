@@ -70,7 +70,18 @@ class ClaimCreationUIScopeState extends State<ClaimCreationUIScope> {
         (oldValue?.providerError != value.providerError && value.hasProviderScriptError) ||
         (oldValue?.clientError != value.clientError && value.hasClientError) ||
         (oldValue?.isFinished != value.isFinished && value.isFinished)) {
-      logging.info('notifying error');
+      logging.info('notifying error - checking for AI proofs first');
+
+      // Try to show AI proofs instead of error if available (AI flow only)
+      if (value.isFinished != true) {
+        final controller = ClaimCreationController.of(context, listen: false);
+        if (controller.tryShowAIProofsInsteadOfError()) {
+          return;
+        }
+      }
+
+      // Default behavior: show error message and review
+      logging.info('Showing error in review');
       final messenger = actionBarMessengerKey.currentState;
       messenger?.show(ActionBarMessage(type: value.hasError ? ActionMessageType.error : ActionMessageType.claim));
       showReview();

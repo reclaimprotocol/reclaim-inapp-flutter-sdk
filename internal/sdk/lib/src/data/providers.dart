@@ -218,6 +218,25 @@ enum WebCredentialsType {
   }
 }
 
+enum WriteRedactionMode {
+  @JsonValue('zk')
+  zk,
+  @JsonValue('key-update')
+  keyUpdate;
+
+  String? toRawValue() {
+    return _$WriteRedactionModeEnumMap[this];
+  }
+
+  static WriteRedactionMode? tryFromJson(Object? object) {
+    return switch (object?.toString().toLowerCase()) {
+      'zk' => WriteRedactionMode.zk,
+      'keyupdate' || 'key-update' => WriteRedactionMode.keyUpdate,
+      _ => null,
+    };
+  }
+}
+
 @JsonSerializable()
 class DataProviderRequest {
   @JsonKey(name: "url")
@@ -230,6 +249,8 @@ class DataProviderRequest {
   final List<ResponseMatch> responseMatches;
   @JsonKey(name: "responseRedactions", defaultValue: [])
   final List<ResponseRedaction> responseRedactions;
+  @JsonKey(name: "writeRedactionMode", fromJson: WriteRedactionMode.tryFromJson)
+  final WriteRedactionMode? writeRedactionMode;
   @JsonKey(name: "bodySniff")
   final BodySniff? bodySniff;
   @JsonKey(name: "credentials", defaultValue: WebCredentialsType.INCLUDE, fromJson: WebCredentialsType.fromString)
@@ -248,6 +269,7 @@ class DataProviderRequest {
     required this.method,
     required this.responseMatches,
     required this.responseRedactions,
+    this.writeRedactionMode,
     this.bodySniff,
     this.requestHash,
     this.expectedPageUrl,

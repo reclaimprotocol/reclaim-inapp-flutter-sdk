@@ -14,7 +14,7 @@ class SvgImageIcon extends StatelessWidget {
   /// Creates an image icon.
   ///
   /// The [size] and [color] default to the value given by the current [IconTheme].
-  const SvgImageIcon(this.image, {super.key, this.size, this.color, this.semanticLabel});
+  const SvgImageIcon(this.image, {super.key, this.size, this.color, this.semanticLabel, this.noColorFilter = false});
 
   /// The image to display as the icon.
   ///
@@ -49,6 +49,8 @@ class SvgImageIcon extends StatelessWidget {
   ///    underlying	 [Semantics] widget.
   final String? semanticLabel;
 
+  final bool noColorFilter;
+
   @override
   Widget build(BuildContext context) {
     final IconThemeData iconTheme = IconTheme.of(context);
@@ -74,7 +76,7 @@ class SvgImageIcon extends StatelessWidget {
         image!,
         width: iconSize,
         height: iconSize,
-        colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+        colorFilter: noColorFilter ? null : ColorFilter.mode(iconColor, BlendMode.srcIn),
         fit: BoxFit.scaleDown,
         excludeFromSemantics: true,
       ),

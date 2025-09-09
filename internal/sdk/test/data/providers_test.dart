@@ -207,4 +207,16 @@ void main() {
       expect(() => WebCredentialsType.fromString('x'), throwsA(isA<ArgumentError>()));
     });
   });
+
+  group('WriteRedactionMode', () {
+    test('tryFromJson', () {
+      expect(WriteRedactionMode.tryFromJson('ZK'), equals(WriteRedactionMode.zk));
+      expect(WriteRedactionMode.tryFromJson('zk'), equals(WriteRedactionMode.zk));
+      expect(WriteRedactionMode.tryFromJson('keyUpdate'), equals(WriteRedactionMode.keyUpdate));
+      expect(WriteRedactionMode.tryFromJson('keyupdate'), equals(WriteRedactionMode.keyUpdate));
+      expect(WriteRedactionMode.tryFromJson('key-update'), equals(WriteRedactionMode.keyUpdate));
+      expect(WriteRedactionMode.tryFromJson(null), isNull);
+      expect(WriteRedactionMode.tryFromJson(''), isNull);
+    });
+  });
 }

@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'create_claim.dart';
+
 class AIResponse {
   final List<AIJob> jobs;
 
@@ -68,6 +72,20 @@ sealed class AIAction {
           throw ArgumentError('jsSelector is required for BUTTON_CLICK type');
         }
         return ButtonClickAction(jsSelector);
+
+      case 'set_ai_proofs':
+        final proofs = json['content'] as String?;
+        if (proofs == null || proofs.isEmpty) {
+          throw ArgumentError('proofs is required for SET_AI_PROOFS type');
+        }
+        return SetAIProofsAction.fromJson(jsonDecode(proofs));
+
+      case 'trigger_ai_proofs':
+        final proofs = json['content'] as String?;
+        if (proofs == null || proofs.isEmpty) {
+          throw ArgumentError('proofs is required for TRIGGER_AI_PROOFS type');
+        }
+        return TriggerAIProofsAction.fromJson(jsonDecode(proofs));
 
       case 'go_back':
         return const GoBackAction();
@@ -186,6 +204,53 @@ class ButtonClickAction extends AIAction {
   int get hashCode => jsSelector.hashCode;
 }
 
+sealed class BaseProofsAction extends AIAction {
+  final List<CreateClaimOutput> proofs;
+
+  const BaseProofsAction(this.proofs);
+
+  static List<CreateClaimOutput> parseProofs(dynamic json) {
+    if (json is List) {
+      return json.map((item) => CreateClaimOutput.fromJson(item as Map<String, dynamic>)).toList();
+    } else if (json is Map<String, dynamic>) {
+      return [CreateClaimOutput.fromJson(json)];
+    } else {
+      throw ArgumentError('Invalid JSON format for proofs');
+    }
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other.runtimeType == runtimeType && other is BaseProofsAction && other.proofs == proofs;
+  }
+
+  @override
+  int get hashCode => proofs.hashCode;
+}
+
+class SetAIProofsAction extends BaseProofsAction {
+  const SetAIProofsAction(super.proofs);
+
+  factory SetAIProofsAction.fromJson(dynamic json) {
+    return SetAIProofsAction(BaseProofsAction.parseProofs(json));
+  }
+
+  @override
+  String get type => 'setAIProofs';
+}
+
+class TriggerAIProofsAction extends BaseProofsAction {
+  const TriggerAIProofsAction(super.proofs);
+
+  factory TriggerAIProofsAction.fromJson(dynamic json) {
+    return TriggerAIProofsAction(BaseProofsAction.parseProofs(json));
+  }
+
+  @override
+  String get type => 'trigger_ai_proofs';
+}
+
 class GoBackAction extends AIAction {
   const GoBackAction();
 
@@ -222,6 +287,8 @@ extension AIActionFactory on AIAction {
   static AIAction navigation(String url) => NavigationAction(url);
   static AIAction providerVersionUpdate(String versionNumber) => ProviderVersionUpdateAction(versionNumber);
   static AIAction buttonClick(String jsSelector) => ButtonClickAction(jsSelector);
+  static AIAction setAIProofs(List<CreateClaimOutput> proofs) => SetAIProofsAction(proofs);
+  static AIAction triggerAIProofs(List<CreateClaimOutput> proofs) => TriggerAIProofsAction(proofs);
   static AIAction goBack() => const GoBackAction();
   static AIAction noAction() => const NoAction();
 }

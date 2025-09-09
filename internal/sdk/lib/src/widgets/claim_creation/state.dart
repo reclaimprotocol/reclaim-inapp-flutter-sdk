@@ -92,7 +92,7 @@ class ClaimStatus {
       return getMeChainProgress(step['type']);
     }
     final stepName = step?["name"];
-    if (stepName != 'witness-progress') return null;
+    if (stepName != 'witness-progress' && stepName != 'attestor-progress') return null;
     final info = step?['step'];
     final infoName = info?['name'];
     switch (infoName) {
@@ -167,6 +167,7 @@ class ClaimCreationControllerState {
   final bool didNotifySessionAsRetry;
   final bool canExpectManyClaims;
   final ReclaimException? clientError;
+  final List<CreateClaimOutput>? aiProofs;
 
   /// An exception raised by provider script that halts any and all verification & proof generation activity.
   final ReclaimVerificationProviderScriptException? providerError;
@@ -182,6 +183,7 @@ class ClaimCreationControllerState {
     this.providerError,
     this.clientError,
     this.canExpectManyClaims = false,
+    this.aiProofs,
   });
 
   int get _maxExpectedClaims {
@@ -324,6 +326,7 @@ class ClaimCreationControllerState {
     bool? canExpectManyClaims,
     ReclaimVerificationProviderScriptException? providerError,
     Optional<ReclaimException?> clientError = const Optional<ReclaimException?>.none(),
+    List<CreateClaimOutput>? aiProofs,
   }) {
     return ClaimCreationControllerState(
       httpProvider: httpProvider ?? this.httpProvider,
@@ -337,6 +340,7 @@ class ClaimCreationControllerState {
       canExpectManyClaims: canExpectManyClaims ?? this.canExpectManyClaims,
       providerError: providerError ?? this.providerError,
       clientError: clientError.map(value: (value) => value, none: () => this.clientError),
+      aiProofs: aiProofs ?? this.aiProofs,
     );
   }
 }

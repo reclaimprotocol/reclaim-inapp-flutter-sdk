@@ -48,8 +48,6 @@ class ScreenshotStorage {
       final metadataFile = File(path.join(dir.path, metadata.metadataFilename));
       await metadataFile.writeAsString(json.encode(metadata.toJson()));
 
-      _logger.fine('Saved screenshot: ${metadata.id}');
-
       // Clean up old screenshots if we have too many
       await _cleanupOldScreenshots(dir);
     } catch (e, stackTrace) {
