@@ -15,11 +15,11 @@ echo "OVERRIDE_GNARK_PROVER_GIT=$OVERRIDE_GNARK_PROVER_GIT"
 echo "dependency_overrides:
   reclaim_gnark_zkoperator:
     git:
-      url: https://$PACKAGE_CLONE_USER:$PACkAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim-gnark-zkoperator-flutter.git
+      url: https://$PACKAGE_CLONE_USER:$PACKAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim-gnark-zkoperator-flutter.git
       ref: $OVERRIDE_GNARK_PROVER_GIT
-  reclaim_flutter_sdk:
+  reclaim_inapp_sdk:
     git:
-      url: https://$PACKAGE_CLONE_USER:$PACkAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim-inapp-sdk.git
+      url: https://$PACKAGE_CLONE_USER:$PACKAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim-inapp-sdk.git
       ref: $OVERRIDE_RECLAIM_FLUTTER_SDK_GIT
 " > pubspec_overrides.yaml
 

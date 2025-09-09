@@ -9,6 +9,11 @@ sealed class ReclaimUrls {
   static const String LOGS_API = 'https://logs.reclaimprotocol.org/api/business-logs/app';
   static const String FEATURE_FLAGS_API = '$SDK_API_BASE_URL/api/feature-flags';
   static const String DEFAULT_ATTESTOR_WEB_URL = 'https://attestor.reclaimprotocol.org/browser-rpc';
+  // NOTES:
+  // - Includes a version or hash in query params to force update cache when updated script
+  // - Last updated copy was hosted at: https://reclaim-inapp-sdk.s3.ap-south-1.amazonaws.com/attestor-jsc.min.mjs?v=0
+  // TODO: Change to default production url when we have it
+  static const String DEFAULT_ATTESTOR_WEB_SCRIPT_URL = '$DEFAULT_ATTESTOR_WEB_URL/resources/attestor-jsc.min.mjs?v=0';
   static const String DIAGNOSTIC_LOGGING = String.fromEnvironment(
     'org.reclaimprotocol.inapp_sdk.DIAGNOSTIC_LOGGING_API',
     defaultValue: 'https://logs.reclaimprotocol.org/api/business-logs/logDump',

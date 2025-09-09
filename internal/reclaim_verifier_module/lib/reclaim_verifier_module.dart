@@ -51,6 +51,7 @@ extension ReclaimSessionStatusExtension on ReclaimSessionStatus {
       SessionStatus.USER_STARTED_VERIFICATION => ReclaimSessionStatus.USER_STARTED_VERIFICATION,
       SessionStatus.PROOF_GENERATION_STARTED => ReclaimSessionStatus.PROOF_GENERATION_STARTED,
       SessionStatus.PROOF_GENERATION_RETRY => ReclaimSessionStatus.PROOF_GENERATION_RETRY,
+      SessionStatus.AI_PROOF_SUBMITTED => ReclaimSessionStatus.AI_PROOF_SUBMITTED,
     };
   }
 }
@@ -95,7 +96,8 @@ class ReclaimModuleApp extends StatefulWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: ReclaimThemeProvider(
-        child: ReclaimModuleApp._(key: key, onApi: onApi),
+        applicationId: null,
+        builder: (context) => ReclaimModuleApp._(key: key, onApi: onApi),
       ),
     );
   }
@@ -543,11 +545,11 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
                   resolvedProviderVersion: response.resolvedProviderVersion,
                 );
               },
-          // TODO: metadata is not sent to host
           updateSession: (sessionId, status, metadata) async {
             return overridesHandler.updateSession(
               sessionId: sessionId,
               status: ReclaimSessionStatusExtension.fromSessionStatus(status),
+              metadata: metadata,
             );
           },
           logRecord:

@@ -60,3 +60,50 @@ class AttestorRequestMessagingException implements AttestorException {
     return 'AttestorRequestMessagingException: $message';
   }
 }
+
+sealed class AttestorClientNotReadyException implements Exception {
+  const AttestorClientNotReadyException(this.message);
+
+  final String message;
+
+  @override
+  String toString() {
+    return 'AttestorClientNotReadyException: $message';
+  }
+}
+
+final class AttestorClientInitializationException implements AttestorClientNotReadyException {
+  const AttestorClientInitializationException(this.message);
+
+  @override
+  final String message;
+
+  @override
+  String toString() {
+    return 'AttestorClientInitializationException: $message';
+  }
+}
+
+final class AttestorClientReloadException implements AttestorClientNotReadyException {
+  const AttestorClientReloadException(this.message);
+
+  @override
+  final String message;
+
+  @override
+  String toString() {
+    return 'AttestorClientReloadException: $message';
+  }
+}
+
+final class AttestorClientGoneException implements AttestorClientNotReadyException {
+  const AttestorClientGoneException(this.message);
+
+  @override
+  final String message;
+
+  @override
+  String toString() {
+    return 'AttestorClientGoneException: $message';
+  }
+}

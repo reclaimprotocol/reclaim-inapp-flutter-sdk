@@ -133,6 +133,13 @@ class FeatureFlag<T> {
     selector: (data) => data.potentialLoginTimeoutS,
   );
 
+  static final screenshotCaptureIntervalSeconds = FeatureFlag<int>(
+    key: 'screenshotCaptureIntervalSeconds',
+    canFetchFromRemote: true,
+    valueIfNull: 5,
+    selector: (data) => data.screenshotCaptureIntervalSeconds,
+  );
+
   T _select(ReclaimFeatureFlagData data) => _selector?.call(data) ?? _valueIfNull;
 
   static bool isFlagSessionIndependent(String key) {

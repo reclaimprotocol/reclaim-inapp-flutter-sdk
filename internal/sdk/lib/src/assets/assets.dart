@@ -10,27 +10,7 @@ abstract class $ReclaimAssetImageProvider {
   static const checkCircle = AssetImage('assets/animated_icons/check_circle.png', package: _packageName);
   static const lock = SvgAssetLoader('assets/icons/lock.svg', packageName: _packageName);
   static const shieldTick = SvgAssetLoader('assets/icons/shield_tick.svg', packageName: _packageName);
-  static const steps = [
-    SvgAssetLoader('assets/icons/claim_creation/step1.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step2.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step3.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step4.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step5.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step6.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step7.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step8.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step9.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step10.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step11.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step12.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step13.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step14.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step15.svg', packageName: _packageName),
-    SvgAssetLoader('assets/icons/claim_creation/step16.svg', packageName: _packageName),
-  ];
-  static const navigateIcon = SvgAssetLoader('assets/icons/navigate_icon.svg', packageName: _packageName);
-  static const pointerIcon = SvgAssetLoader('assets/icons/pointer_icon.svg', packageName: _packageName);
-  static const rightArrow = SvgAssetLoader('assets/icons/right_arrow_icon.svg', packageName: _packageName);
+  static const copy = SvgAssetLoader('assets/icons/copy.svg', packageName: _packageName);
 }
 
 class $ReclaimFont {

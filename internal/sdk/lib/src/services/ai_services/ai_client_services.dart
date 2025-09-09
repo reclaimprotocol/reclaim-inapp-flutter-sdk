@@ -88,8 +88,6 @@ class AiServiceClient {
   Future<void> uploadScreenshot({required ScreenshotMetadata metadata, required Uint8List imageData}) async {
     final logger = logging.child('AiServiceClient.uploadScreenshot');
     try {
-      logger.fine('Uploading screenshot to AI service');
-
       // Create multipart request for screenshot upload
       final request = http.MultipartRequest('POST', Uri.parse('${ReclaimUrls.AI_SERVICE_BASE_URL}/screenshot'));
 
@@ -128,9 +126,7 @@ class AiServiceClient {
       final streamedResponse = await client.send(request);
       final response = await http.Response.fromStream(streamedResponse);
 
-      if (response.statusCode == 200) {
-        logger.fine('Screenshot uploaded successfully: ${metadata.id}');
-      } else {
+      if (response.statusCode != 200) {
         logger.warning('Failed to upload screenshot: ${response.statusCode} - ${response.body}');
       }
     } catch (e, stackTrace) {
@@ -150,7 +146,7 @@ class AiServiceClient {
 
   AIAction _getMockAIAction() {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final responseType = (now ~/ 5000) % 7;
+    final responseType = (now ~/ 5000) % 8;
 
     switch (responseType) {
       case 0:
@@ -168,6 +164,46 @@ class AiServiceClient {
           "#root > div.sc-dXvKWL.sc-kryrqB.eYNZQS.iSvphn > div > div.sc-cuTPZC.gSBegW > div.sc-fHNdyW.jrSmXv > div:nth-child(1) > a > button",
         );
       case 6:
+        return SetAIProofsAction.fromJson({
+          "identifier": "0xfe2eb73e2047a21182736ec969b50d695f8f788afa5b5ce8451189b1615134e5",
+          "claimData": {
+            "provider": "http",
+            "parameters":
+                "{\"additionalClientOptions\":{},\"body\":\"{\\\"includeGroups\\\":false,\\\"includeLogins\\\":false,\\\"includeVerificationStatus\\\":true}\",\"geoLocation\":\"\",\"headers\":{\"Sec-Fetch-Mode\":\"same-origin\",\"Sec-Fetch-Site\":\"same-origin\",\"User-Agent\":\"AppleWebKit/602.1.50 (KHTML, like Gecko) CriOS/56.0.2924.75\",\"accept\":\"application/json\"},\"method\":\"POST\",\"paramValues\":{\"username\":\"karamshbeb\"},\"responseMatches\":[{\"invert\":false,\"type\":\"contains\",\"value\":\"\\\"userName\\\":\\\"{{username}}\\\"\"}],\"responseRedactions\":[{\"jsonPath\":\"\$.userName\",\"regex\":\"\\\"userName\\\":\\\"(.*)\\\"\",\"xPath\":\"\"}],\"url\":\"https://www.kaggle.com/api/i/users.UsersService/GetCurrentUser\"}",
+            "owner": "0xf5393eb1b27bc0869d8402aac4336575d248d7dc",
+            "timestampS": 1757077872,
+            "context":
+                "{\"extractedParameters\":{\"username\":\"karamshbeb\"},\"isAIProofs\":true,\"providerHash\":\"0xc9e2404b50af02ddd8797e218f19b0b2a896cdcd9dbf9ea525b89db2fa37de76\"}",
+            "identifier": "0xfe2eb73e2047a21182736ec969b50d695f8f788afa5b5ce8451189b1615134e5",
+            "epoch": 1,
+          },
+          "signatures": [
+            "0x36391c8aba08878f85f1bda850aaab25749fba6e8b0f0117051585a3ca805a0a696ca0b1a6333cd44563a9a2ba9c3c4ae348e0bbc04a263bb498db83ba7855891c",
+          ],
+          "witnesses": [
+            {"id": "0x244897572368eadf65bfbc5aec98d8e5443a9072", "url": "wss://attestor.reclaimprotocol.org/ws"},
+          ],
+          "publicData": null,
+          "providerRequest": {
+            "bodySniff": {
+              "enabled": false,
+              "template": "{\"includeGroups\":false,\"includeLogins\":false,\"includeVerificationStatus\":true}",
+            },
+            "credentials": "include",
+            "expectedPageUrl": "",
+            "method": "POST",
+            "requestHash": "0x8f3ebf2865a1dce8f5c070ea087a3af86ee9127b82dc79cefff76c45d8968c42",
+            "responseMatches": [
+              {"invert": false, "type": "contains", "value": "\"userName\":\"{{username}}\""},
+            ],
+            "responseRedactions": [
+              {"jsonPath": "\$.userName", "regex": "\"userName\":\"(.*)\"", "xPath": ""},
+            ],
+            "url": "https://www.kaggle.com/api/i/users.UsersService/GetCurrentUser",
+            "urlType": "TEMPLATE",
+          },
+        });
+      case 7:
         return const GoBackAction();
       default:
         return const NoAction();

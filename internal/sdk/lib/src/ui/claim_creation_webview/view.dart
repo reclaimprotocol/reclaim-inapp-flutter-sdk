@@ -96,6 +96,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       return;
     }
     setState(() {
+      _wasInitializedWithIncognito = null;
       _webviewKey = GlobalKey();
     });
   }
@@ -429,7 +430,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     }
   }
 
-  void _onWebViewCreated(InAppWebViewController controller) {
+  void _onWebViewCreated(InAppWebViewController controller) async {
     try {
       logger.info('onWebViewCreated');
       final vm = ClaimCreationWebClientViewModel.readOf(context);
@@ -441,10 +442,13 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       // Start hybrid screenshot capturing if this is an AI provider
       if (_screenshotService != null) {
         logger.info('Starting hybrid screenshot capture for AI provider');
+        final intervalSeconds = await FeatureFlagsProvider.readOf(
+          context,
+        ).get(FeatureFlag.screenshotCaptureIntervalSeconds);
         _screenshotService!.startCapturing(
           webViewController: controller,
           appKey: _appRepaintBoundaryKey,
-          interval: const Duration(seconds: 1),
+          interval: Duration(seconds: intervalSeconds),
         );
       }
     } catch (e, s) {
@@ -500,6 +504,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       child: ManualReviewObserver(
         controller: _manualReviewController,
         child: VerificationReview(
+          onExtendNoActivity: _onActivity,
           child: FutureBuilder(
             // This delay is to ensure that the webview plugin is ready before it makes android surface call.
             // without this, the webview crashes on react native inapp sdk.
@@ -536,6 +541,36 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
                 onGeolocationPermissionsShowPrompt: onGeolocationPermissionsShowPrompt,
                 onPermissionRequest: onPermissionRequestedFromWeb,
                 onWebViewCreated: _onWebViewCreated,
+                onRenderProcessGone: (controller, details) async {
+                  logger.severe('os murdered foreground webview', details);
+                  if (!mounted) return;
+
+                  try {
+                    _onUpdateWebView();
+
+                    await Future.delayed(const Duration(seconds: 1));
+
+                    if (!context.mounted) return;
+
+                    final value = VerificationController.readOf(context).value;
+                    final provider = value.provider;
+                    final userScripts = value.userScripts;
+                    if (provider != null && userScripts != null) {
+                      ClaimCreationWebClientViewModel.readOf(
+                        context,
+                      ).load(provider: provider, userScripts: userScripts).catchError((e, s) {
+                        if (context.mounted) {
+                          logger.severe('Failed to load client web', e, s);
+                          VerificationController.readOf(
+                            context,
+                          ).updateException(const ReclaimVerificationProviderLoadException('Failed to load scripts'));
+                        }
+                      });
+                    }
+                  } catch (e, s) {
+                    logger.severe('Failed to load client web after render process gone', e, s);
+                  }
+                },
                 onLoadStart: _onLoad,
                 initialSettings: settings,
                 onProgressChanged: (controller, progress) {
@@ -898,20 +933,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
           },
           retryIf: (e) {
             logger.warning('failed to create request with updated provider params, checking if we can retry', e);
-            final canRetry = e is AttestorWebViewClientNotReadyException || e is TimeoutException;
-            if (canRetry) {
-              Attestor.instance
-                  .executeJavascript('(() => { return 0 + 1; })()', timeout: const Duration(seconds: 10))
-                  .catchError((e, s) {
-                    logger.severe('Error evaluating test javascript in attestor webview', e, s);
-                    return null;
-                  })
-                  .then((it) {
-                    logger.info('Successfully evaluated test javascript in attestor webview: $it');
-                  })
-                  .ignore();
-            }
-            return canRetry;
+            return e is AttestorClientNotReadyException || e is TimeoutException;
           },
         );
       }

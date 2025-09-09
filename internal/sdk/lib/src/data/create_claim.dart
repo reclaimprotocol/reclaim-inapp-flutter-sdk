@@ -102,6 +102,7 @@ class ExtractedData {
   final Map<String, String> witnessParams;
   final List<ResponseMatch> responseMatches;
   final String? geoLocation;
+  final WriteRedactionMode? writeRedactionMode;
 
   const ExtractedData({
     required this.url,
@@ -112,7 +113,8 @@ class ExtractedData {
     required this.responseRedactions,
     required this.witnessParams,
     required this.responseMatches,
-    this.geoLocation,
+    required this.geoLocation,
+    required this.writeRedactionMode,
   });
 
   ExtractedData copyWith({
@@ -125,6 +127,7 @@ class ExtractedData {
     Map<String, String>? witnessParams,
     List<ResponseMatch>? responseMatches,
     String? geoLocation,
+    WriteRedactionMode? writeRedactionMode,
   }) {
     return ExtractedData(
       url: url ?? this.url,
@@ -136,6 +139,7 @@ class ExtractedData {
       witnessParams: witnessParams ?? this.witnessParams,
       responseMatches: responseMatches ?? this.responseMatches,
       geoLocation: geoLocation ?? this.geoLocation,
+      writeRedactionMode: writeRedactionMode ?? this.writeRedactionMode,
     );
   }
 }

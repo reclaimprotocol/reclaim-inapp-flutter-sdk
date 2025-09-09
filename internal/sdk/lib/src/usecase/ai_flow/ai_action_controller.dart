@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../controller.dart';
 import '../../data/ai_response.dart';
+import '../../data/create_claim.dart';
 import '../../logging/logging.dart';
 import '../../repository/ai_response_puller.dart';
 import '../../services/ai_services/ai_client_services.dart';
@@ -118,6 +119,12 @@ class AIActionController {
       case ButtonClickAction(jsSelector: final jsSelector):
         _handleButtonClick(jsSelector);
         break;
+      case SetAIProofsAction(proofs: final proofs):
+        _handleSetAIProofs(proofs);
+        break;
+      case TriggerAIProofsAction(proofs: final proofs):
+        _handleTriggerAIProofs(proofs);
+        break;
       case GoBackAction():
         _handleGoBack();
         break;
@@ -178,6 +185,25 @@ class AIActionController {
     final script = '$jsSelector.click();';
 
     vm.evaluateJavascript(script);
+  }
+
+  void _handleSetAIProofs(List<CreateClaimOutput> proofs) {
+    logger.info('Executing AI action: Set AI Proofs: $proofs');
+    final claimCreationController = ClaimCreationController.readOf(context);
+    claimCreationController.setAIProofs(proofs);
+  }
+
+  void _handleTriggerAIProofs(List<CreateClaimOutput> proofs) {
+    logger.info('Executing AI action: Trigger AI Proofs: $proofs');
+
+    final claimCreationController = ClaimCreationController.readOf(context);
+
+    claimCreationController.showAIProofsDirectly(proofs);
+
+    final verificationReviewController = VerificationReviewController.readOf(context);
+    verificationReviewController.setIsVisible(true);
+
+    logger.info('AI proofs triggered and verification review shown');
   }
 
   void _handleGoBack() {

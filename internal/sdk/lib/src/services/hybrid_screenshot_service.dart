@@ -25,7 +25,7 @@ class HybridScreenshotService {
   bool _isCapturing = false;
   int _screenshotCounter = 0;
 
-  static const Duration _defaultCaptureInterval = Duration(seconds: 1);
+  static const Duration _defaultCaptureInterval = Duration(seconds: 5);
   static const int _maxScreenshotsPerSession = 300;
 
   final _logger = logging.child('HybridScreenshotService');
@@ -45,7 +45,6 @@ class HybridScreenshotService {
     Duration interval = _defaultCaptureInterval,
   }) {
     if (_isCapturing) {
-      _logger.info('Screenshot capturing already in progress');
       return;
     }
 
@@ -96,8 +95,6 @@ class HybridScreenshotService {
     if (!_isCapturing) return;
 
     try {
-      _logger.fine('Capturing hybrid screenshot #${_screenshotCounter + 1}');
-
       // Get current URL and page title from webview
       String? url;
       String? title;
@@ -113,9 +110,6 @@ class HybridScreenshotService {
 
           // Capture webview content
           webviewScreenshot = await _webViewController!.takeScreenshot();
-          if (webviewScreenshot != null && webviewScreenshot.isNotEmpty) {
-            _logger.fine('Captured webview content successfully');
-          }
         } catch (e) {
           _logger.warning('Failed to capture webview content: $e');
         }
@@ -144,7 +138,6 @@ class HybridScreenshotService {
                   if (hasContent) {
                     appUIScreenshot = appScreenshot;
                     appUICaptured = true;
-                    _logger.fine('Captured full app UI screenshot');
                   } else {
                     _logger.fine('App UI screenshot appears blank');
                   }
@@ -198,8 +191,6 @@ class HybridScreenshotService {
         await _storage.saveScreenshot(metadata: appMetadata, imageData: appUIScreenshot);
 
         await _sendScreenshotToAIService(metadata: appMetadata, imageData: appUIScreenshot);
-
-        _logger.fine('App UI screenshot #$_screenshotCounter sent');
       }
 
       // Always send webview screenshot if available
@@ -225,11 +216,7 @@ class HybridScreenshotService {
         await _storage.saveScreenshot(metadata: webviewMetadata, imageData: webviewScreenshot);
 
         await _sendScreenshotToAIService(metadata: webviewMetadata, imageData: webviewScreenshot);
-
-        _logger.fine('Webview screenshot #$_screenshotCounter sent');
       }
-
-      _logger.fine('Screenshot pair #$_screenshotCounter captured and sent successfully');
     } catch (e, stackTrace) {
       _logger.severe('Error capturing hybrid screenshot', e, stackTrace);
     }
@@ -243,8 +230,6 @@ class HybridScreenshotService {
     }
 
     try {
-      _logger.info('Capturing on-demand hybrid screenshot for event: $eventType');
-
       String? url;
       String? title;
       Uint8List? screenshotData;

@@ -13,7 +13,7 @@ ScreenshotMetadata _$ScreenshotMetadataFromJson(Map<String, dynamic> json) => Sc
   timestamp: DateTime.parse(json['timestamp'] as String),
   url: json['url'] as String,
   pageTitle: json['pageTitle'] as String,
-  screenshotNumber: json['screenshotNumber'] as int?,
+  screenshotNumber: (json['screenshotNumber'] as num?)?.toInt(),
   eventType: json['eventType'] as String?,
   additionalData: json['additionalData'] as Map<String, dynamic>?,
 );

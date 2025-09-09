@@ -25,6 +25,7 @@ enum SessionStatus {
   PROOF_GENERATION_SUCCESS,
   PROOF_GENERATION_FAILED,
   PROOF_SUBMITTED,
+  AI_PROOF_SUBMITTED,
   PROOF_SUBMISSION_FAILED,
   // This spelling mistake is intentional to match the backend.
   PROOF_MANUAL_VERIFICATION_SUBMITED,

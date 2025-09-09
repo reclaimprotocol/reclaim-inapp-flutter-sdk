@@ -27,7 +27,7 @@ set -ex;
 git add $file;
 git commit -m "[CI] Bump version (next version)";
 git remote rm origin;
-git remote add origin https://$PACKAGE_CLONE_USER:$PACkAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim_inapp_sdk_wrapper.git;
+git remote add origin https://$PACKAGE_CLONE_USER:$PACKAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim_inapp_sdk_wrapper.git;
 
 get_timestamp() {
     date "+%Y%m%d%H%M"
@@ -42,7 +42,7 @@ git push;
 curl -L \
   -X POST \
   -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer $PACkAGE_CLONE_PASSWD" \
+  -H "Authorization: Bearer $PACKAGE_CLONE_PASSWD" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   https://api.github.com/repos/reclaimprotocol/reclaim_inapp_sdk_wrapper/pulls \
   -d '{"title":"[CI] Bump version (next version)","body":"[CI] Bump version (next version)","head":"'$BUILD_BRANCH'","base":"main"}'

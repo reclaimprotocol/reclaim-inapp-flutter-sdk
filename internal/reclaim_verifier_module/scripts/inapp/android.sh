@@ -15,7 +15,7 @@ export ANDROID_CLONE_DIR="$WORK_DIR/build/android-sdk";
 if [[ -z "$PACKAGE_CLONE_USER" ]]; then
     git clone git@github.com:reclaimprotocol/reclaim-inapp-android-sdk.git $ANDROID_CLONE_DIR;
 else
-    git clone https://$PACKAGE_CLONE_USER:$PACkAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim-inapp-android-sdk.git $ANDROID_CLONE_DIR;
+    git clone https://$PACKAGE_CLONE_USER:$PACKAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim-inapp-android-sdk.git $ANDROID_CLONE_DIR;
 fi
 
 cd $ANDROID_CLONE_DIR;

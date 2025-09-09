@@ -16,6 +16,11 @@ final defaultWebViewSettings = InAppWebViewSettings(
   supportMultipleWindows: true,
   isInspectable: false,
   incognito: false,
+  mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+  rendererPriorityPolicy: RendererPriorityPolicy(
+    waivedWhenNotVisible: false,
+    rendererRequestedPriority: RendererPriority.RENDERER_PRIORITY_IMPORTANT,
+  ),
 );
 
 /// ref: https://github.com/WebKit/WebKit/blob/995f6b1595611c934e742a4f3a9af2e678bc6b8d/Source/WebKit/UIProcess/API/Cocoa/WKNavigationDelegatePrivate.h#L61
@@ -65,6 +70,11 @@ mixin WebViewCompanionMixin<T extends StatefulWidget> implements State<T> {
     return GeolocationPermissionShowPromptResponse(allow: true, origin: origin, retain: true);
   }
 
+  static final allowedResourceWhitelist = <PermissionResourceType>{
+    PermissionResourceType.AUTOPLAY,
+    PermissionResourceType.PROTECTED_MEDIA_ID,
+  };
+
   @protected
   Future<PermissionResponse?> onPermissionRequestedFromWeb(
     InAppWebViewController controller,
@@ -96,7 +106,9 @@ mixin WebViewCompanionMixin<T extends StatefulWidget> implements State<T> {
 
     if (!mounted) return null;
 
-    final bool response = await PermissionDialog.show(context: context, request: request);
+    final bool response = request.resources.every(allowedResourceWhitelist.contains)
+        ? true
+        : await PermissionDialog.show(context: context, request: request);
 
     return PermissionResponse(
       action: response ? PermissionResponseAction.GRANT : PermissionResponseAction.PROMPT,

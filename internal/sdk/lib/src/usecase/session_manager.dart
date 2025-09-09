@@ -87,15 +87,12 @@ class SessionManager {
     required String applicationId,
     required String providerId,
     required String sessionId,
+    bool isAIProofs = false,
   }) async {
+    final status = isAIProofs ? SessionStatus.AI_PROOF_SUBMITTED : SessionStatus.PROOF_SUBMITTED;
     unawaitedSequence([
-      ReclaimSession.sendLogs(
-        appId: applicationId,
-        sessionId: sessionId,
-        providerId: providerId,
-        logType: 'PROOF_SUBMITTED',
-      ),
-      ReclaimSession.updateSession(sessionId, SessionStatus.PROOF_SUBMITTED),
+      ReclaimSession.sendLogs(appId: applicationId, sessionId: sessionId, providerId: providerId, logType: status.name),
+      ReclaimSession.updateSession(sessionId, status),
     ]);
   }
 

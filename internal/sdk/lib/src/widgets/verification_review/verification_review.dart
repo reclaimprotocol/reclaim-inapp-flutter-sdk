@@ -1,41 +1,38 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:simple_shimmer/simple_shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../ui.dart';
 import '../../constants.dart';
 import '../../controller.dart';
 import '../../data/data.dart';
 import '../../data/web_context.dart';
 import '../../exception/exception.dart';
 import '../../logging/logging.dart';
+import '../../theme/theme.dart';
 import '../../ui/claim_creation_webview/view_model.dart';
 import '../../usecase/login_detection.dart';
 import '../../utils/observable_notifier.dart';
 import '../../utils/url.dart';
-import '../action_button.dart';
 import '../ai/recommendation_text.dart';
 import '../ai_flow_coordinator_widget.dart';
 import '../animated_icon/check.dart';
-import '../app_provider_icon_bar.dart';
 import '../claim_creation/claim_creation.dart';
 import '../claim_creation/trigger_indicator.dart';
-import '../fonts_loaded.dart';
-import '../item_alignment.dart';
+import '../color_or_image.dart';
 import '../loading/shimmer_shader.dart';
-import '../params/params_text.dart';
-import '../potential_failure_reasons.dart';
 import 'controller.dart';
 import 'live_background.dart';
 
 const _borderRadius = BorderRadius.all(Radius.circular(12));
 
 class VerificationReview extends StatefulWidget {
-  const VerificationReview({super.key, required this.child});
+  const VerificationReview({super.key, required this.onExtendNoActivity, required this.child});
 
+  final VoidCallback onExtendNoActivity;
   final Widget child;
 
   @override
@@ -67,6 +64,9 @@ class _VerificationReviewState extends State<VerificationReview> {
   @override
   Widget build(BuildContext context) {
     final isEffectivelyVisible = controller.value.isVisible;
+
+    final padding = MediaQuery.paddingOf(context);
+
     return Stack(
       fit: StackFit.passthrough,
       children: [
@@ -77,10 +77,18 @@ class _VerificationReviewState extends State<VerificationReview> {
             duration: Durations.extralong4,
             opacity: isEffectivelyVisible ? 1 : 0,
             curve: Curves.fastEaseInToSlowEaseOut,
-            child: VerificationReviewPage(key: verificationReviewPageKey),
+            child: VerificationReviewPage(
+              key: verificationReviewPageKey,
+              onExtendNoActivity: widget.onExtendNoActivity,
+            ),
           ),
         ),
-        const IgnorePointer(child: ClaimCreationIndicatorOverlay()),
+        IgnorePointer(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: padding.bottom),
+            child: const ClaimCreationIndicatorOverlay(),
+          ),
+        ),
       ],
     );
   }
@@ -98,36 +106,46 @@ class VerificationReviewPageSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Material(
-      color: theme.scaffoldBackgroundColor,
-      child: LiveBackground(
-        child: Padding(
-          padding: const EdgeInsets.only(top: 10.0, left: 20.0, right: 20.0, bottom: 20.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              Flexible(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: VerificationReviewPageSurface.smallScreenWidthExtent),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: alignment.isStarting ? CrossAxisAlignment.start : CrossAxisAlignment.stretch,
-                    children: children,
-                  ),
+    late final liveBackground = LiveBackground(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 10.0, left: 20.0, right: 20.0, bottom: 10.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Flexible(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: VerificationReviewPageSurface.smallScreenWidthExtent),
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: alignment.isStarting ? CrossAxisAlignment.start : CrossAxisAlignment.stretch,
+                  children: children,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
+
+    Color scaffoldBackgroundColor = theme.scaffoldBackgroundColor;
+
+    final reclaimTheme = ReclaimTheme.of(context);
+
+    switch (reclaimTheme.background) {
+      case ColorDecorationProvider(color: final color):
+        return Material(color: color, child: liveBackground);
+      default:
+        return Material(color: scaffoldBackgroundColor, child: liveBackground);
+    }
   }
 }
 
 class VerificationReviewPage extends StatefulWidget {
-  const VerificationReviewPage({super.key});
+  const VerificationReviewPage({super.key, required this.onExtendNoActivity});
+
+  final VoidCallback onExtendNoActivity;
 
   @override
   State<VerificationReviewPage> createState() => _VerificationReviewPageState();
@@ -191,6 +209,7 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
             itemAlignment: itemAlignment,
             appImageUrl: appInfo?.appImage,
             appName: appInfo?.appName,
+            hasProviderData: providerData != null,
             providerImageUrl: providerData?.logoUrl,
             providerName: providerData?.name,
             borderRadius: _borderRadius,
@@ -218,7 +237,7 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               if (!value.hasError)
-                                const Padding(padding: EdgeInsets.only(top: 32.0), child: CupertinoActivityIndicator()),
+                                const Padding(padding: EdgeInsets.only(top: 32.0), child: _AppProgressIndicator()),
                             ],
                           )
                         : FontsLoaded(
@@ -239,8 +258,12 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
                 Flexible(
                   flex: 0,
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 0.0, bottom: 20.0),
-                    child: _ActionView(isFinished: value.isFinished, hasError: value.hasError),
+                    padding: const EdgeInsets.only(top: 0.0, bottom: 0.0),
+                    child: _ActionView(
+                      isFinished: value.isFinished,
+                      hasError: value.hasError,
+                      onExtendNoActivity: widget.onExtendNoActivity,
+                    ),
                   ),
                 ),
               ],
@@ -248,6 +271,38 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AppProgressIndicator extends StatelessWidget {
+  const _AppProgressIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Builder(
+      builder: (context) {
+        final reclaimTheme = ReclaimTheme.of(context);
+        final accentColor = reclaimTheme.secondaryColor;
+
+        final loadingIconColor = reclaimTheme.loadingIconColor;
+
+        final circularProgressIndicator = CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(loadingIconColor ?? accentColor),
+          strokeCap: StrokeCap.round,
+          strokeWidth: 4.0,
+          value: null,
+        );
+
+        final loadingWidgetSize = 20.0 - 6;
+
+        final loadingWidget = Padding(
+          padding: const EdgeInsets.all(3.0),
+          child: SizedBox.square(dimension: loadingWidgetSize, child: circularProgressIndicator),
+        );
+
+        return loadingWidget;
+      },
     );
   }
 }
@@ -272,14 +327,17 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
 
   late final List<String Function()> _loadingTextsQueue = [
     () => 'Looking for information to verify',
-    () => 'Your data resides exclusively on your phone',
+    () => 'You are in complete control of your data',
+    () => 'You always control who you share your data with',
     () => 'Waiting for verification',
     () => 'This might take a few seconds',
     () {
       final webViewController = ClaimCreationWebClientViewModel.readOf(context);
       return 'Verifying data from ${extractHost(webViewController.value.webAppBarValue.url)}';
     },
+    () => 'This shouldn\'t take much longer',
     () => 'Please hold on for just a little longer',
+    () => 'Almost there, just finalizing the details',
   ];
 
   String get currentLoadingText => _loadingTextsQueue.first();
@@ -634,10 +692,11 @@ class _TermsOfUseNotice extends StatelessWidget {
 }
 
 class _ActionView extends StatefulWidget {
-  const _ActionView({this.isFinished = false, this.hasError = false});
+  const _ActionView({this.isFinished = false, this.hasError = false, required this.onExtendNoActivity});
 
   final bool isFinished;
   final bool hasError;
+  final VoidCallback onExtendNoActivity;
 
   @override
   State<_ActionView> createState() => _ActionViewState();
@@ -724,7 +783,10 @@ class _ActionViewState extends State<_ActionView> {
           switchOutCurve: Curves.easeOut,
           child: () {
             if (widget.hasError) {
-              return SizedBox(height: textScaler.scale(148), child: const _ErrorWidget());
+              return SizedBox(
+                height: textScaler.scale(148),
+                child: _ErrorWidget(onExtendNoActivity: widget.onExtendNoActivity),
+              );
             }
             if (!widget.isFinished) {
               return const SizedBox(height: 100);
@@ -833,7 +895,9 @@ class _SubmitWidget extends StatelessWidget {
 }
 
 class _ErrorWidget extends StatelessWidget {
-  const _ErrorWidget();
+  const _ErrorWidget({required this.onExtendNoActivity});
+
+  final VoidCallback onExtendNoActivity;
 
   @override
   Widget build(BuildContext context) {
@@ -860,6 +924,8 @@ class _ErrorWidget extends StatelessWidget {
                   backgroundColor: colorScheme.error,
                   foregroundColor: colorScheme.onError,
                   onPressed: () {
+                    // extend timer
+                    onExtendNoActivity();
                     // clear the error and let the user continue
                     controller.setClientError(null);
                     // hide this review screen

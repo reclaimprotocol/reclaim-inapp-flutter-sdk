@@ -126,6 +126,7 @@ class ClaimCreationRequest {
         // through RPC. Below values are placeholders.
         responseRedactions: requestData.responseRedactions,
         responseMatches: requestData.responseMatches,
+        writeRedactionMode: requestData.writeRedactionMode,
       ),
       claimCreationTimeoutDuration: claimCreationTimeoutDuration,
     );
@@ -246,12 +247,14 @@ Map<String, dynamic> _getHttpParams(ExtractedData data, Map<String, dynamic> add
   }
 
   logger.info('publicHeaders: $publicHeaders');
+  final writeRedactionModeString = data.writeRedactionMode?.toRawValue();
   return {
     'geoLocation': data.geoLocation,
     'url': data.url,
     'method': data.method,
     'body': data.requestBody,
     'headers': publicHeaders,
+    if (writeRedactionModeString != null) 'writeRedactionMode': writeRedactionModeString,
     'responseMatches': data.responseMatches.map((e) => e.toJson()).toList(),
     'responseRedactions': data.responseRedactions.map((e) => e.toJson()).toList(),
     'paramValues': publicWitnessParams,

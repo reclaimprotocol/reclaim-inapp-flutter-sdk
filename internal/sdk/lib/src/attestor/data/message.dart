@@ -3,6 +3,8 @@
 // This sealed class defines the common properties for all RPC messages
 // and enforces implementation of the `toJson` method for serialization.
 
+const _rpcModule = 'witness-sdk';
+
 sealed class RpcMessage {
   const RpcMessage({required this.id, required this.type, required this.module});
 
@@ -18,7 +20,7 @@ final class RpcRequest<REQUEST extends Object?> extends RpcMessage {
   const RpcRequest({
     required super.id,
     required super.type,
-    required super.module,
+    super.module = _rpcModule,
     required this.request,
     required this.channel,
   });
@@ -33,7 +35,7 @@ final class RpcRequest<REQUEST extends Object?> extends RpcMessage {
 }
 
 final class RpcResponse<RESPONSE extends Object?> extends RpcMessage {
-  const RpcResponse({required super.id, required super.type, required super.module, required this.response});
+  const RpcResponse({required super.id, required super.type, super.module = _rpcModule, required this.response});
 
   final RESPONSE response;
 
@@ -62,7 +64,7 @@ class RpcResponseErrorData {
 }
 
 final class RpcResponseError extends RpcMessage {
-  const RpcResponseError({required super.id, required super.module, required this.data}) : super(type: 'error');
+  const RpcResponseError({required super.id, super.module = _rpcModule, required this.data}) : super(type: 'error');
 
   final RpcResponseErrorData data;
 

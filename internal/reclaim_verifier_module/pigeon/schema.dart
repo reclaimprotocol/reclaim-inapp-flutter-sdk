@@ -144,6 +144,7 @@ enum ReclaimSessionStatus {
   PROOF_SUBMITTED,
   PROOF_SUBMISSION_FAILED,
   PROOF_MANUAL_VERIFICATION_SUBMITTED,
+  AI_PROOF_SUBMITTED,
 }
 
 /// Identification information of a session.
@@ -268,7 +269,11 @@ abstract class ReclaimHostOverridesApi {
     required String providerVersion,
   });
   @async
-  bool updateSession({required String sessionId, required ReclaimSessionStatus status});
+  bool updateSession({
+    required String sessionId,
+    required ReclaimSessionStatus status,
+    required Map<String, Object?>? metadata,
+  });
   @async
   void logSession({
     required String appId,

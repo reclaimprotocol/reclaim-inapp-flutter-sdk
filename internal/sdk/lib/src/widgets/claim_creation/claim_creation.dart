@@ -109,11 +109,43 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     value = value.copyWith(publicData: Optional.value(publicData));
   }
 
+  void setAIProofs(List<CreateClaimOutput>? aiProofs) {
+    logging.fine('Setting AI proofs: ${aiProofs?.length} proofs');
+    value = value.copyWith(aiProofs: aiProofs);
+  }
+
   void canExpectManyClaims(bool canExpectManyClaims) {
     value = value.copyWith(canExpectManyClaims: canExpectManyClaims);
   }
 
+  /// Checks if AI proofs should be shown instead of an error
+  /// This is used in AI flow only, if the provider fails for any reason
+  bool tryShowAIProofsInsteadOfError() {
+    logging.info('trying to show AI proofs instead of error');
+    final hasAiProofs = value.aiProofs != null && value.aiProofs!.isNotEmpty;
+    logging.info('hasAiProofs: $hasAiProofs');
+    if (hasAiProofs) {
+      final httpProvider = value.httpProvider;
+
+      final isAiProvider = httpProvider?.verificationType == 'AI';
+      logging.info('isAiProvider: $isAiProvider');
+      if (isAiProvider) {
+        logging.info('showing AI proofs directly');
+        showAIProofsDirectly(value.aiProofs!);
+        return true;
+      }
+    }
+    logging.info('not showing AI proofs directly');
+    return false;
+  }
+
   void setProviderError(Map<String, dynamic> error) {
+    // Try to show AI proofs instead of error (AI flow only)
+    if (tryShowAIProofsInsteadOfError()) {
+      return;
+    }
+
+    // Default behavior: set the provider error
     value = value.copyWith(
       providerError: ReclaimVerificationProviderScriptException(error['message'] ?? 'Verification failed', error),
     );
@@ -289,6 +321,13 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
                 markForRemoval(responseRedactionI, responseMatchI);
                 return;
               }
+              if (value.httpProvider?.verificationType == 'AI' &&
+                  value.aiProofs != null &&
+                  value.aiProofs!.isNotEmpty) {
+                logger.info('AI verification with proofs available, will show AI proofs instead of throwing exception');
+                tryShowAIProofsInsteadOfError();
+                return;
+              }
               throw const ReclaimVerificationRequirementException();
             } else {
               rethrow;
@@ -312,6 +351,13 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
               if (isFieldOptional) {
                 logger.info('skipping optional response match because xpath not found: $responseMatchI');
                 markForRemoval(responseRedactionI, responseMatchI);
+                return;
+              }
+              if (value.httpProvider?.verificationType == 'AI' &&
+                  value.aiProofs != null &&
+                  value.aiProofs!.isNotEmpty) {
+                logger.info('AI verification with proofs available, will show AI proofs instead of throwing exception');
+                tryShowAIProofsInsteadOfError();
                 return;
               }
               throw const ReclaimVerificationRequirementException();
@@ -372,6 +418,11 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
           if (isFieldOptional) {
             logger.info('skipping because optional response match');
             markForRemoval(responseRedactionI, responseMatchI);
+            return;
+          }
+          if (value.httpProvider?.verificationType == 'AI' && value.aiProofs != null && value.aiProofs!.isNotEmpty) {
+            logger.info('AI verification with proofs available, will show AI proofs instead of throwing exception');
+            tryShowAIProofsInsteadOfError();
             return;
           }
           throw const ReclaimVerificationRequirementException();
@@ -516,13 +567,16 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
 
       const responseWaitDuration = Duration(seconds: 10);
       Timer? responseWaitTimer = Timer(responseWaitDuration, () {
-        log.warning('No response received from attestor in $responseWaitDuration since claim creation started');
+        log.warning(
+          'No response received from attestor for id ${attestorRequest.id} in $responseWaitDuration since claim creation started',
+        );
       });
 
       attestorRequest.updateStream.listen((data) {
+        final logger = log.child('update-create-claim');
+        logger.finest({'update-create-claim': data});
         responseWaitTimer?.cancel();
         responseWaitTimer = null;
-        final logger = log.child('update-create-claim');
         _onStep(requestIdentifier, data);
         final delegate = value.delegate;
         if (delegate == null) {
@@ -534,7 +588,11 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
         delegateCallbackFutures.add(delegate._onClaimUpdate(data, requestIdentifier));
       });
 
+      log.info('attestor request created ${attestorRequest.id}');
+
       final proofs = await attestorRequest.response;
+
+      log.info('attestor request response received ${attestorRequest.id}');
 
       requestMeasurePerformance.stop();
 
@@ -663,6 +721,79 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     }
 
     return null;
+  }
+
+  /// Shows the verification review directly with AI-generated proofs,
+  /// bypassing the normal claim creation flow
+  void showAIProofsDirectly(List<CreateClaimOutput> aiProofs) {
+    final logger = logging.child('ClaimCreationController.showAIProofsDirectly');
+    logger.info('Showing AI proofs directly in verification review');
+
+    if (aiProofs.isEmpty) {
+      logger.warning('No AI proofs provided');
+      return;
+    }
+
+    final Map<ClaimRequestIdentifier, ClaimStatus> claimsByRequest = {};
+
+    final currentProvider = value.httpProvider;
+
+    for (int i = 0; i < aiProofs.length; i++) {
+      final proof = aiProofs[i];
+      final requestIdentifier = 'ai_proof_$i';
+
+      // Create a minimal DataProviderRequest if the proof doesn't have one
+      final providerRequest =
+          proof.providerRequest ??
+          DataProviderRequest(
+            url: 'https://ai-generated.example.com',
+            method: RequestMethodType.GET,
+            responseMatches: const [],
+            responseRedactions: const [],
+            credentials: WebCredentialsType.INCLUDE,
+          );
+
+      proof.providerRequest = providerRequest;
+
+      // Create a minimal ClaimStatus that holds the proof
+      final claimStatus = ClaimStatus(
+        request: ClaimCreationRequest(
+          appId: '',
+          httpProviderId: 'ai_generated',
+          claimContext: 'ai_verification',
+          sessionId: '',
+          proofData: {'url': providerRequest.url ?? ''},
+          providerData:
+              currentProvider ??
+              const HttpProvider(
+                logoUrl: 'https://example.com/ai.png',
+                requestData: [], // Empty request data as mentioned
+                useIncognitoWebview: false,
+              ),
+          headers: const {},
+          initialWitnessParams: const {},
+          cookieString: '',
+          createClaimOptions: const AttestorClaimOptions(),
+          useSingleRequest: true,
+          requestData: providerRequest,
+          claimCreationTimeoutDuration: const Duration(minutes: 5),
+        ),
+        proofs: [proof],
+        error: null,
+        stepInformation: null,
+        performanceReports: null,
+        previousStatus: null,
+        creationDate: DateTime.now(),
+        attestorLoadingProgress: 1.0,
+      );
+
+      claimsByRequest[requestIdentifier] = claimStatus;
+    }
+
+    // Update the controller state with the AI proofs
+    value = value.copyWith(claimsByRequest: claimsByRequest, status: ClaimCreationStatus.ready);
+
+    logger.info('AI proofs set for verification review: ${aiProofs.length} proofs');
   }
 
   Widget wrap({required Widget child}) {
