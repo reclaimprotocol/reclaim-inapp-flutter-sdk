@@ -15,11 +15,7 @@ import 'package:reclaim_inapp_flutter_sdk/reclaim_inapp_flutter_sdk.dart';
 // Check example.env, and https://dart.dev/guides/environment-declarations for more details.
 const String appId = String.fromEnvironment('APP_ID');
 const String appSecret = String.fromEnvironment('APP_SECRET');
-const providerId = String.fromEnvironment(
-  'PROVIDER_ID',
-  // Using github username's http provider id as default.
-  defaultValue: '6d3f6753-7ee6-49ee-a545-62f1b1822ae5',
-);
+const providerId = String.fromEnvironment('PROVIDER_ID');
 
 void main() async {
   // Asserting to check if the environment variables are set.
