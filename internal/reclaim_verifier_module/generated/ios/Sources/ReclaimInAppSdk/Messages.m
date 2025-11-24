@@ -860,6 +860,25 @@ NSObject<FlutterMessageCodec> *nullGetMessagesCodec(void) {
     } 
   }];
 }
+- (void)setConsoleLoggingEnabled:(BOOL)arg_enabled completion:(void (^)(FlutterError *_Nullable))completion {
+  NSString *channelName = [NSString stringWithFormat:@"%@%@", @"dev.flutter.pigeon.reclaim_verifier_module.ReclaimModuleApi.setConsoleLogging", _messageChannelSuffix];
+  FlutterBasicMessageChannel *channel =
+    [FlutterBasicMessageChannel
+      messageChannelWithName:channelName
+      binaryMessenger:self.binaryMessenger
+      codec:nullGetMessagesCodec()];
+  [channel sendMessage:@[@(arg_enabled)] reply:^(NSArray<id> *reply) {
+    if (reply != nil) {
+      if (reply.count > 1) {
+        completion([FlutterError errorWithCode:reply[0] message:reply[1] details:reply[2]]);
+      } else {
+        completion(nil);
+      }
+    } else {
+      completion(createConnectionError(channelName));
+    } 
+  }];
+}
 - (void)pingWithCompletion:(void (^)(NSNumber *_Nullable, FlutterError *_Nullable))completion {
   NSString *channelName = [NSString stringWithFormat:@"%@%@", @"dev.flutter.pigeon.reclaim_verifier_module.ReclaimModuleApi.ping", _messageChannelSuffix];
   FlutterBasicMessageChannel *channel =

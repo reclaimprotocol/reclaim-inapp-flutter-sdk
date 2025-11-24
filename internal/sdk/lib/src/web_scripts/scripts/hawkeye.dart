@@ -46,6 +46,8 @@ const HAWKEYE_SCRIPT = r'''
       this.options = {
         disableFetch: options.disableFetch || false,
         disableXHR: options.disableXHR || false,
+        disableFormIntercept: options.disableFormIntercept || false,
+        delayFormSubmitForFetch: options.delayFormSubmitForFetch || false, // Delay form submission until fetch completes
         useProxyForFetch: options.useProxyForFetch !== false, // Default to true for backward compatibility
         useGetterForFetch: options.useGetterForFetch || false, // Use getter/setter for maximum robustness
         ...options,
@@ -145,6 +147,30 @@ const HAWKEYE_SCRIPT = r'''
         return true;
       } catch {
         return false;
+      }
+    }
+
+    /**
+     * Resolve a potentially relative URL to an absolute URL
+     * @param {string} url - The URL to resolve
+     * @returns {string|URL} - The absolute URL
+     */
+    resolveUrl(url) {
+      try {
+        // Try to parse as absolute URL first
+        const newUrl = new URL(url);
+        // If it's already an absolute URL, return as-is
+        return newUrl;
+      } catch {
+        // If parsing fails, try to resolve relative to current location
+        try {
+          if (typeof location !== "undefined") {
+            return new URL(url, location.href);
+          }
+        } catch (error) {
+          debug.error("Error resolving URL:", error);
+        }
+        return url;
       }
     }
 
@@ -501,7 +527,7 @@ const HAWKEYE_SCRIPT = r'''
 
           const requestInfo = {
             id: requestId,
-            url,
+            url: self.resolveUrl(url).href,
             method,
             headers: {},
             body: null,
@@ -649,6 +675,177 @@ const HAWKEYE_SCRIPT = r'''
       } else {
         debug.info("XHR interceptor disabled");
       }
+
+      // Setup Form interceptor (only if not disabled)
+      if (!this.options.disableFormIntercept) {
+        const self = this;
+        const originalSubmit = HTMLFormElement.prototype.submit;
+
+        /**
+         * Helper function to convert form data to appropriate format and replay submission
+         * @param {HTMLFormElement} form - The form element
+         */
+        const replayFormSubmission = async (form) => {
+          const requestId = `form_${Date.now()}_${Math.random()
+            .toString(36)
+            .substr(2, 9)}`;
+
+          // Get form data
+          const formData = new FormData(form);
+          const method = (form.method || "GET").toUpperCase();
+          const action = form.action || window.location.href;
+
+          // Build request data
+          const requestData = {
+            id: requestId,
+            url: action,
+            method: method,
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: null,
+            formData: Object.fromEntries(formData.entries()),
+            timestamp: Date.now(),
+          };
+
+          debug.info(`[${requestId}] ${method} ${action} (Form Submit)`);
+
+          try {
+            // Process request middlewares
+            await Promise.all(
+              Array.from(self.requestMiddlewares.values()).map((middleware) =>
+                middleware(requestData)
+              )
+            );
+          } catch (error) {
+            debug.error("Error in form request middleware:", error);
+          }
+
+          // Prepare fetch options
+          let fetchUrl = action;
+          let fetchOptions = {
+            method: method,
+            headers: requestData.headers,
+            credentials: "same-origin",
+          };
+
+          if (method === "POST") {
+            // For POST, send as URLSearchParams in body
+            const params = new URLSearchParams();
+            for (const [key, value] of formData.entries()) {
+              params.append(key, value);
+            }
+            fetchOptions.body = params.toString();
+            requestData.body = fetchOptions.body;
+          } else if (method === "GET") {
+            // For GET, append to URL
+            const params = new URLSearchParams();
+            for (const [key, value] of formData.entries()) {
+              params.append(key, value);
+            }
+            const separator = action.includes("?") ? "&" : "?";
+            fetchUrl = `${action}${separator}${params.toString()}`;
+            requestData.url = fetchUrl;
+          }
+
+          // Replay the form submission via fetch
+          try {
+            const response = await self.originalFetch(fetchUrl, fetchOptions);
+
+            debug.info(`[${requestId}] Response received:`, {
+              status: response.status,
+              statusText: response.statusText,
+              url: response.url,
+            });
+
+            // Log the response body
+            try {
+              const responseText = await response.clone().text();
+              debug.log(`[${requestId}] Response body (first 500 chars):`, responseText.substring(0, 500));
+
+              // Try to parse as JSON if possible
+              try {
+                const responseJson = JSON.parse(responseText);
+                debug.log(`[${requestId}] Response JSON:`, responseJson);
+              } catch (e) {
+                // Not JSON, that's fine
+                debug.log(`[${requestId}] Response is HTML/text, not JSON`);
+              }
+            } catch (textError) {
+              debug.error(`[${requestId}] Could not read response body:`, textError);
+            }
+
+            // Process response middlewares without blocking
+            if (self.responseMiddlewares.size > 0) {
+              const responseClone = response.clone();
+              self
+                .processResponseMiddlewares(responseClone, requestData)
+                .catch((error) => {
+                  debug.error("Error in form response middleware:", error);
+                });
+            }
+          } catch (error) {
+            debug.error(`[${requestId}] Form replay failed:`, error);
+          }
+        };
+
+        // Intercept submit events
+        const submitHandler = function (event) {
+          const form = event.target;
+          if (form && form.tagName === "FORM") {
+            if (self.options.delayFormSubmitForFetch) {
+              // Prevent default, wait for fetch, then submit
+              event.preventDefault();
+
+              debug.info("Delaying form submission until fetch completes...");
+
+              replayFormSubmission(form)
+                .then(() => {
+                  debug.info("Fetch complete, now submitting form");
+                  // Submit the form after fetch completes
+                  originalSubmit.call(form);
+                })
+                .catch((error) => {
+                  debug.error("Error replaying form submission:", error);
+                  // Still submit the form even if replay fails
+                  originalSubmit.call(form);
+                });
+            } else {
+              // Don't prevent default - let the form navigate
+              // But replay in background for middleware processing
+              replayFormSubmission(form).catch((error) => {
+                debug.error("Error replaying form submission:", error);
+              });
+            }
+          }
+        };
+
+        document.addEventListener("submit", submitHandler, true);
+
+        // Override HTMLFormElement.prototype.submit for programmatic submits
+        HTMLFormElement.prototype.submit = function () {
+          debug.info("Intercepted programmatic form.submit()");
+
+          // Replay form submission in background
+          replayFormSubmission(this).catch((error) => {
+            debug.error("Error replaying programmatic form submission:", error);
+          });
+
+          // Call original submit to allow navigation
+          return originalSubmit.apply(this, arguments);
+        };
+
+        // Store cleanup function
+        this.subscriptions.push(() => {
+          HTMLFormElement.prototype.submit = originalSubmit;
+          document.removeEventListener("submit", submitHandler, true);
+          debug.info("Restored native form submit methods!");
+        });
+
+        debug.info("Form interceptor enabled");
+      } else {
+        debug.info("Form interceptor disabled");
+      }
     }
 
     /**
@@ -756,6 +953,8 @@ const HAWKEYE_SCRIPT = r'''
   const interceptor = new RequestInterceptor({
     disableFetch: false, // Set to true to disable fetch interception
     disableXHR: false, // Set to true to disable XHR interception
+    disableFormIntercept: \(disableFormIntercept), // Set to true to disable form submission interception
+    delayFormSubmitForFetch: \(delayFormSubmitForFetch), // Set to true to wait for fetch before form navigation
     useProxyForFetch: \(useProxyForFetch), // Set to false to use direct replacement instead of Proxy (default: true)
     useGetterForFetch: \(useGetterForFetch), // Set to true to use getter/setter approach (most robust)
   });
@@ -791,6 +990,8 @@ const HAWKEYE_SCRIPT = r'''
    * const interceptor = new RequestInterceptor({
    *   disableFetch: false,        // Set to true to disable fetch interception
    *   disableXHR: false,         // Set to true to disable XHR interception
+   *   disableFormIntercept: false, // Set to true to disable form submission interception
+   *   delayFormSubmitForFetch: true, // Set to true to delay form submission until fetch completes
    *   useProxyForFetch: true,    // Set to false to use direct replacement instead of Proxy (default: true)
    *   useGetterForFetch: false,  // Set to true to use getter/setter approach (most robust)
    * });

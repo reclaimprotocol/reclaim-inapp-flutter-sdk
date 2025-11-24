@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'animated_progress.dart';
+import '../theme/theme.dart';
+import 'widgets.dart';
 
 const _loadingIndicatorHeight = 3.0;
 
@@ -22,5 +23,58 @@ class ReclaimLinearProgress extends StatelessWidget {
         ),
       },
     );
+  }
+}
+
+class ReclaimCircularProgressIndicator extends StatelessWidget {
+  const ReclaimCircularProgressIndicator({
+    super.key,
+    this.padding = const EdgeInsets.all(3.0),
+    this.size,
+    this.defaultIndicatorStrokeWidth = 4.0,
+  });
+
+  final EdgeInsetsGeometry? padding;
+  final double? size;
+  final double? defaultIndicatorStrokeWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final reclaimTheme = ReclaimTheme.of(context);
+    final accentColor = reclaimTheme.secondaryColor;
+    final loadingTheme = reclaimTheme.loading;
+    final loadingAssetProvider = reclaimTheme.loading?.map(
+      onColor: (color) => null,
+      onAssetProvider: (provider) => provider,
+    );
+
+    final loadingIconColor =
+        loadingTheme?.map(onColor: (color) => color, onAssetProvider: (_) => null) ??
+        reclaimTheme.providerToAppLoader?.map(onColor: (color) => color, onAssetProvider: (_) => null) ??
+        accentColor;
+
+    late final circularProgressIndicator = CircularProgressIndicator(
+      valueColor: AlwaysStoppedAnimation<Color>(loadingIconColor),
+      strokeCap: StrokeCap.round,
+      strokeWidth: defaultIndicatorStrokeWidth,
+      value: null,
+    );
+
+    final loadingWidget = Padding(
+      padding: padding ?? EdgeInsets.zero,
+      child: SizedBox.square(
+        dimension: size,
+        child: loadingAssetProvider != null
+            ? ReclaimGraphicIcon(
+                placeholder: circularProgressIndicator,
+                provider: loadingAssetProvider,
+                fit: BoxFit.scaleDown,
+                size: size,
+              )
+            : circularProgressIndicator,
+      ),
+    );
+
+    return loadingWidget;
   }
 }

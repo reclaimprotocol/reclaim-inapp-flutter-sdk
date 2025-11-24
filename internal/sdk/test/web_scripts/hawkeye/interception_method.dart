@@ -32,44 +32,83 @@ void main() {
       expect(HawkeyeInterceptionMethod.DIRECT_REPLACEMENT.useGetterForFetch, isFalse);
       expect(HawkeyeInterceptionMethod.GETTER_SETTER.useGetterForFetch, isTrue);
     });
+  });
+
+  group('HawkeyeInterceptionOptions', () {
+    test('should have correct default values', () {
+      const options = HawkeyeInterceptionOptions();
+      expect(options.disableFormIntercept, isFalse);
+      expect(options.delayFormSubmitForFetch, isTrue);
+      expect(options.interceptionMethod, HawkeyeInterceptionMethod.PROXY);
+    });
 
     test('should apply options based on method in template', () {
-      expect(applyMethodInTemplate(HawkeyeInterceptionMethod.PROXY, r'\(useProxyForFetch)'), 'true');
-      expect(applyMethodInTemplate(HawkeyeInterceptionMethod.PROXY, r'\(useGetterForFetch)'), 'false');
-      expect(applyMethodInTemplate(HawkeyeInterceptionMethod.DIRECT_REPLACEMENT, r'\(useProxyForFetch)'), 'false');
-      expect(applyMethodInTemplate(HawkeyeInterceptionMethod.DIRECT_REPLACEMENT, r'\(useGetterForFetch)'), 'false');
-      expect(applyMethodInTemplate(HawkeyeInterceptionMethod.GETTER_SETTER, r'\(useProxyForFetch)'), 'false');
-      expect(applyMethodInTemplate(HawkeyeInterceptionMethod.GETTER_SETTER, r'\(useGetterForFetch)'), 'true');
+      const proxyOptions = HawkeyeInterceptionOptions(interceptionMethod: HawkeyeInterceptionMethod.PROXY);
+      const directOptions = HawkeyeInterceptionOptions(
+        interceptionMethod: HawkeyeInterceptionMethod.DIRECT_REPLACEMENT,
+      );
+      const getterOptions = HawkeyeInterceptionOptions(interceptionMethod: HawkeyeInterceptionMethod.GETTER_SETTER);
+
+      expect(applyInterceptorOptionsToTemplate(proxyOptions, r'\(useProxyForFetch)'), 'true');
+      expect(applyInterceptorOptionsToTemplate(proxyOptions, r'\(useGetterForFetch)'), 'false');
+      expect(applyInterceptorOptionsToTemplate(directOptions, r'\(useProxyForFetch)'), 'false');
+      expect(applyInterceptorOptionsToTemplate(directOptions, r'\(useGetterForFetch)'), 'false');
+      expect(applyInterceptorOptionsToTemplate(getterOptions, r'\(useProxyForFetch)'), 'false');
+      expect(applyInterceptorOptionsToTemplate(getterOptions, r'\(useGetterForFetch)'), 'true');
 
       const template = r'''
-const interceptor = new RequestInterceptor({
-  disableFetch: false, // Set to true to disable fetch interception
-  disableXHR: false, // Set to true to disable XHR interception
-  useProxyForFetch: \(useProxyForFetch), // Set to false to use direct replacement instead of Proxy (default: true)
-  useGetterForFetch: \(useGetterForFetch), // Set to true to use getter/setter approach (most robust)
-});''';
+    const interceptor = new RequestInterceptor({
+      disableFormIntercept: \(disableFormIntercept),
+      delayFormSubmitForFetch: \(delayFormSubmitForFetch),
+      useProxyForFetch: \(useProxyForFetch), // Set to false to use direct replacement instead of Proxy (default: true)
+      useGetterForFetch: \(useGetterForFetch), // Set to true to use getter/setter approach (most robust)
+    });''';
 
-      expect(applyMethodInTemplate(HawkeyeInterceptionMethod.PROXY, template), r'''
-const interceptor = new RequestInterceptor({
-  disableFetch: false, // Set to true to disable fetch interception
-  disableXHR: false, // Set to true to disable XHR interception
-  useProxyForFetch: true, // Set to false to use direct replacement instead of Proxy (default: true)
-  useGetterForFetch: false, // Set to true to use getter/setter approach (most robust)
-});''');
-      expect(applyMethodInTemplate(HawkeyeInterceptionMethod.DIRECT_REPLACEMENT, template), r'''
-const interceptor = new RequestInterceptor({
-  disableFetch: false, // Set to true to disable fetch interception
-  disableXHR: false, // Set to true to disable XHR interception
-  useProxyForFetch: false, // Set to false to use direct replacement instead of Proxy (default: true)
-  useGetterForFetch: false, // Set to true to use getter/setter approach (most robust)
-});''');
-      expect(applyMethodInTemplate(HawkeyeInterceptionMethod.GETTER_SETTER, template), r'''
-const interceptor = new RequestInterceptor({
-  disableFetch: false, // Set to true to disable fetch interception
-  disableXHR: false, // Set to true to disable XHR interception
-  useProxyForFetch: false, // Set to false to use direct replacement instead of Proxy (default: true)
-  useGetterForFetch: true, // Set to true to use getter/setter approach (most robust)
-});''');
+      expect(applyInterceptorOptionsToTemplate(proxyOptions, template), r'''
+    const interceptor = new RequestInterceptor({
+      disableFormIntercept: false,
+      delayFormSubmitForFetch: true,
+      useProxyForFetch: true, // Set to false to use direct replacement instead of Proxy (default: true)
+      useGetterForFetch: false, // Set to true to use getter/setter approach (most robust)
+    });''');
+      expect(applyInterceptorOptionsToTemplate(directOptions, template), r'''
+    const interceptor = new RequestInterceptor({
+      disableFormIntercept: false,
+      delayFormSubmitForFetch: true,
+      useProxyForFetch: false, // Set to false to use direct replacement instead of Proxy (default: true)
+      useGetterForFetch: false, // Set to true to use getter/setter approach (most robust)
+    });''');
+      expect(applyInterceptorOptionsToTemplate(getterOptions, template), r'''
+    const interceptor = new RequestInterceptor({
+      disableFormIntercept: false,
+      delayFormSubmitForFetch: true,
+      useProxyForFetch: false, // Set to false to use direct replacement instead of Proxy (default: true)
+      useGetterForFetch: true, // Set to true to use getter/setter approach (most robust)
+    });''');
+    });
+
+    test('should apply custom options in template', () {
+      const customOptions = HawkeyeInterceptionOptions(
+        disableFormIntercept: true,
+        delayFormSubmitForFetch: false,
+        interceptionMethod: HawkeyeInterceptionMethod.GETTER_SETTER,
+      );
+
+      const template = r'''
+    const interceptor = new RequestInterceptor({
+      disableFormIntercept: \(disableFormIntercept),
+      delayFormSubmitForFetch: \(delayFormSubmitForFetch),
+      useProxyForFetch: \(useProxyForFetch),
+      useGetterForFetch: \(useGetterForFetch),
+    });''';
+
+      expect(applyInterceptorOptionsToTemplate(customOptions, template), r'''
+    const interceptor = new RequestInterceptor({
+      disableFormIntercept: true,
+      delayFormSubmitForFetch: false,
+      useProxyForFetch: false,
+      useGetterForFetch: true,
+    });''');
     });
   });
 }

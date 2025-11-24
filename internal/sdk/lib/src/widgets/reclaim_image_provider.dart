@@ -4,6 +4,7 @@ import '../data/reclaim_app_theme.dart';
 
 typedef OnRasterAssetMapCallback<T> = T Function(ReclaimRasterGraphicAsset asset);
 typedef OnVectorAssetMapCallback<T> = T Function(ReclaimVectorGraphicAsset asset);
+typedef OnRiveAssetMapCallback<T> = T Function(ReclaimRiveGraphicAsset asset);
 typedef OnNoAssetMapCallback<T> = T Function();
 
 final class ReclaimGraphicProvider {
@@ -23,11 +24,14 @@ final class ReclaimGraphicProvider {
 
     final graphicOptions = ReclaimGraphicOptions.fromImageInfoOptions(options);
 
-    final isSvgAsset = uri.path.toLowerCase().endsWith('svg');
+    late final isSvgAsset = uri.path.toLowerCase().endsWith('svg');
+    late final isRiveAsset = uri.path.toLowerCase().endsWith('riv');
 
     final ReclaimGraphicAsset asset;
     if (isSvgAsset) {
       asset = ReclaimVectorGraphicAsset(uri: uri, options: graphicOptions);
+    } else if (isRiveAsset) {
+      asset = ReclaimRiveGraphicAsset(uri: uri, options: graphicOptions);
     } else {
       asset = ReclaimRasterGraphicAsset(uri: uri, options: graphicOptions);
     }
@@ -55,11 +59,12 @@ final class ReclaimGraphicProvider {
   T map<T>({
     required OnRasterAssetMapCallback<T> raster,
     required OnVectorAssetMapCallback<T> vector,
+    required OnRiveAssetMapCallback<T> rive,
     required OnNoAssetMapCallback<T> none,
   }) {
     final asset = this.asset;
     if (asset == null) return none();
-    return asset.map(raster: raster, vector: vector);
+    return asset.map(raster: raster, vector: vector, rive: rive);
   }
 }
 
@@ -105,14 +110,22 @@ sealed class ReclaimGraphicAsset {
 
   const ReclaimGraphicAsset({required this.uri, required this.options});
 
-  T map<T>({required OnRasterAssetMapCallback<T> raster, required OnVectorAssetMapCallback<T> vector});
+  T map<T>({
+    required OnRasterAssetMapCallback<T> raster,
+    required OnVectorAssetMapCallback<T> vector,
+    required OnRiveAssetMapCallback<T> rive,
+  });
 }
 
 final class ReclaimRasterGraphicAsset extends ReclaimGraphicAsset {
   const ReclaimRasterGraphicAsset({required super.uri, required super.options});
 
   @override
-  T map<T>({required OnRasterAssetMapCallback<T> raster, required OnVectorAssetMapCallback<T> vector}) {
+  T map<T>({
+    required OnRasterAssetMapCallback<T> raster,
+    required OnVectorAssetMapCallback<T> vector,
+    required OnRiveAssetMapCallback<T> rive,
+  }) {
     return raster(this);
   }
 }
@@ -121,7 +134,24 @@ final class ReclaimVectorGraphicAsset extends ReclaimGraphicAsset {
   const ReclaimVectorGraphicAsset({required super.uri, required super.options});
 
   @override
-  T map<T>({required OnRasterAssetMapCallback<T> raster, required OnVectorAssetMapCallback<T> vector}) {
+  T map<T>({
+    required OnRasterAssetMapCallback<T> raster,
+    required OnVectorAssetMapCallback<T> vector,
+    required OnRiveAssetMapCallback<T> rive,
+  }) {
     return vector(this);
+  }
+}
+
+final class ReclaimRiveGraphicAsset extends ReclaimGraphicAsset {
+  const ReclaimRiveGraphicAsset({required super.uri, required super.options});
+
+  @override
+  T map<T>({
+    required OnRasterAssetMapCallback<T> raster,
+    required OnVectorAssetMapCallback<T> vector,
+    required OnRiveAssetMapCallback<T> rive,
+  }) {
+    return rive(this);
   }
 }

@@ -8,7 +8,6 @@ import '../logging/logging.dart';
 import '../overrides/overrides.dart';
 import '../services/feature_flag.dart';
 import '../utils/restoration_identifier.dart';
-import '../web_scripts/hawkeye/interception_method.dart';
 
 typedef FeatureFlagSelector<T> = T? Function(ReclaimFeatureFlagData data);
 
@@ -42,10 +41,10 @@ class FeatureFlag<T> {
   );
 
   static final attestorBrowserRpcUrl = FeatureFlag<String>(
-    key: 'attestorBrowserRpcUrl',
+    key: 'attestor3BrowserRpcUrl',
     canFetchFromRemote: true,
     valueIfNull: ReclaimUrls.DEFAULT_ATTESTOR_WEB_URL,
-    selector: (data) => data.attestorBrowserRpcUrl,
+    selector: (data) => data.attestor3BrowserRpcUrl,
   );
 
   static final isSingleClaimRequest = FeatureFlag<bool>(
@@ -98,11 +97,11 @@ class FeatureFlag<T> {
     selector: (data) => data.canUseAiFlow,
   );
 
-  static final hawkeyeInterceptionMethod = FeatureFlag<String>(
-    key: 'hawkeyeInterceptionMethod',
+  static final interceptionOptions = FeatureFlag<String>(
+    key: 'interceptionOptions',
     canFetchFromRemote: true,
-    valueIfNull: HawkeyeInterceptionMethod.PROXY.name,
-    selector: (data) => data.hawkeyeInterceptionMethod?.name,
+    valueIfNull: '{}',
+    selector: (data) => data.interceptorOptions,
   );
 
   static final claimCreationTimeoutDurationInMins = FeatureFlag<int>(
@@ -117,6 +116,13 @@ class FeatureFlag<T> {
     canFetchFromRemote: true,
     valueIfNull: 2,
     selector: (data) => data.sessionNoActivityTimeoutDurationInMins,
+  );
+
+  static final aiProviderNoActivityTimeoutDurationInSecs = FeatureFlag<int>(
+    key: 'aiProviderNoActivityTimeoutDurationInSecs',
+    canFetchFromRemote: true,
+    valueIfNull: 60,
+    selector: (data) => data.aiProviderNoActivityTimeoutDurationInSecs,
   );
 
   static final pageLoadedCompletedDebounceTimeoutMs = FeatureFlag<int>(
@@ -206,6 +212,20 @@ class FeatureFlagRepository {
   static final _fetchFlagsLock = Lock();
 
   static final Set<String> _freshFlags = <String>{};
+  static DateTime? _freshFlagsExpiry;
+
+  void checkAndClearExpiredFlags() {
+    final now = DateTime.now();
+    if (_freshFlagsExpiry == null) {
+      _freshFlagsExpiry = now;
+      return;
+    }
+    final hasExpired = now.difference(_freshFlagsExpiry!).inHours > 1;
+    if (hasExpired) {
+      _freshFlags.clear();
+      _freshFlagsExpiry = now;
+    }
+  }
 
   @protected
   Future<Map<String, dynamic>> fetchFlags(SessionIdentity identity, FeatureFlag<dynamic> featureFlag) async {

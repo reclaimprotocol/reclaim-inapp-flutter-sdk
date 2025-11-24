@@ -24,7 +24,7 @@ final _verificationStartLock = Lock(reentrant: true);
 class _PendingVerifications {
   _PendingVerifications() {
     final log = logging.child('_PendingVerifications');
-    log.info('adding pending verifications. hashCode: $hashCode');
+    log.fine('adding pending verifications. hashCode: $hashCode');
     pending.add(this);
   }
 
@@ -38,7 +38,7 @@ class _PendingVerifications {
 
     pending.remove(this);
 
-    log.info('cancelling pending verifications');
+    log.fine('cancelling pending verifications');
 
     final ctrl = controller;
     if (ctrl == null) {
@@ -80,7 +80,7 @@ class ReclaimVerification {
   Future<bool> cancelPendingVerifications() async {
     final pending = [..._PendingVerifications.pending];
 
-    _log.info('cancelling pending verifications. count: ${pending.map((v) => v.hashCode).join(', ')}');
+    _log.fine('cancelling pending verifications. count: ${pending.map((v) => v.hashCode).join(', ')}');
 
     if (pending.isEmpty) return false;
 
@@ -97,7 +97,7 @@ class ReclaimVerification {
     // Only used to get access to the controller in finally block.
     VerificationController? controllerRef;
     try {
-      _log.info('starting verification');
+      _log.event(Level.INFO.withEvent(LogEventType.VERIFICATION_FLOW_STARTED), 'starting verification');
 
       late final _PendingVerifications attempt;
       late final VerificationController controller;
@@ -110,10 +110,15 @@ class ReclaimVerification {
 
         final isPlatformSupported = options.attestorZkOperator?.isPlatformSupported();
         if (isPlatformSupported != null && !(await isPlatformSupported)) {
+          _log.event(
+            Level.SEVERE.withEvent(LogEventType.RECLAIM_VERIFICATION_PLATFORM_NOT_SUPPORTED_EXCEPTION),
+            'SDK is not running with a 64 bit runtime environment',
+          );
           throw const ReclaimVerificationPlatformNotSupportedException();
         }
 
         if (request.providerId.trim().isEmpty) {
+          _log.event(Level.SEVERE.withEvent(LogEventType.INVALID_REQUEST_RECLAIM_EXCEPTION), 'Provider ID is required');
           throw const InvalidRequestReclaimException('Provider ID is required');
         }
 

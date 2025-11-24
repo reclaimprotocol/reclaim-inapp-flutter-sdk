@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:simple_shimmer/simple_shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -11,13 +13,15 @@ import '../../controller.dart';
 import '../../data/data.dart';
 import '../../data/web_context.dart';
 import '../../exception/exception.dart';
+import '../../l10n/provider.dart';
 import '../../logging/logging.dart';
 import '../../theme/theme.dart';
 import '../../ui/claim_creation_webview/view_model.dart';
+import '../../ui/claim_creation_webview/window/controller.dart';
+import '../../ui/claim_creation_webview/window/view.dart';
 import '../../usecase/login_detection.dart';
 import '../../utils/observable_notifier.dart';
 import '../../utils/url.dart';
-import '../ai/recommendation_text.dart';
 import '../ai_flow_coordinator_widget.dart';
 import '../animated_icon/check.dart';
 import '../claim_creation/claim_creation.dart';
@@ -67,10 +71,30 @@ class _VerificationReviewState extends State<VerificationReview> {
 
     final padding = MediaQuery.paddingOf(context);
 
+    PopupWindowController? popupController;
+    try {
+      popupController = PopupWindowController.of(context);
+    } catch (e) {
+      // PopupWindowController not in tree, which is fine for some contexts
+    }
+
+    final isPopupVisible = popupController?.value.isVisible ?? false;
+
     return Stack(
       fit: StackFit.passthrough,
       children: [
         widget.child,
+        // Render popup window if available and visible
+        if (popupController != null)
+          ValueListenableBuilder<PopupWindowState>(
+            valueListenable: popupController,
+            builder: (context, popupState, child) {
+              if (!popupState.isVisible || popupState.parameters == null) {
+                return const SizedBox.shrink();
+              }
+              return WebViewWindow(parameters: popupState.parameters!);
+            },
+          ),
         IgnorePointer(
           ignoring: !isEffectivelyVisible,
           child: AnimatedOpacity(
@@ -83,9 +107,23 @@ class _VerificationReviewState extends State<VerificationReview> {
             ),
           ),
         ),
+        // Show bottom bar when review is visible AND popup is visible
+        // (main window already has its own bottom bar)
+        if (isEffectivelyVisible && isPopupVisible)
+          IgnorePointer(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: padding.bottom),
+                child: const WebviewBottomBar(),
+              ),
+            ),
+          ),
         IgnorePointer(
           child: Padding(
-            padding: EdgeInsets.only(bottom: padding.bottom),
+            // Add WebviewBottomBar height to padding only when popup is visible
+            // (main window handles its own bottom bar padding)
+            padding: EdgeInsets.only(bottom: padding.bottom + (isPopupVisible ? WebviewBottomBar.estimateHeight : 0)),
             child: const ClaimCreationIndicatorOverlay(),
           ),
         ),
@@ -106,7 +144,7 @@ class VerificationReviewPageSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    late final liveBackground = LiveBackground(
+    late final background = VerificationReviewBackground(
       child: Padding(
         padding: const EdgeInsets.only(top: 10.0, left: 20.0, right: 20.0, bottom: 10.0),
         child: Row(
@@ -135,9 +173,9 @@ class VerificationReviewPageSurface extends StatelessWidget {
 
     switch (reclaimTheme.background) {
       case ColorDecorationProvider(color: final color):
-        return Material(color: color, child: liveBackground);
+        return Material(color: color, child: background);
       default:
-        return Material(color: scaffoldBackgroundColor, child: liveBackground);
+        return Material(color: scaffoldBackgroundColor, child: background);
     }
   }
 }
@@ -237,7 +275,10 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               if (!value.hasError)
-                                const Padding(padding: EdgeInsets.only(top: 32.0), child: _AppProgressIndicator()),
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 32.0),
+                                  child: ReclaimCircularProgressIndicator(size: 14),
+                                ),
                             ],
                           )
                         : FontsLoaded(
@@ -275,38 +316,6 @@ class _VerificationReviewPageState extends State<VerificationReviewPage> {
   }
 }
 
-class _AppProgressIndicator extends StatelessWidget {
-  const _AppProgressIndicator();
-
-  @override
-  Widget build(BuildContext context) {
-    return Builder(
-      builder: (context) {
-        final reclaimTheme = ReclaimTheme.of(context);
-        final accentColor = reclaimTheme.secondaryColor;
-
-        final loadingIconColor = reclaimTheme.loadingIconColor;
-
-        final circularProgressIndicator = CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(loadingIconColor ?? accentColor),
-          strokeCap: StrokeCap.round,
-          strokeWidth: 4.0,
-          value: null,
-        );
-
-        final loadingWidgetSize = 20.0 - 6;
-
-        final loadingWidget = Padding(
-          padding: const EdgeInsets.all(3.0),
-          child: SizedBox.square(dimension: loadingWidgetSize, child: circularProgressIndicator),
-        );
-
-        return loadingWidget;
-      },
-    );
-  }
-}
-
 class _VerificationStatusMessage extends StatefulWidget {
   const _VerificationStatusMessage({required this.itemAlignment, required this.appInfo});
 
@@ -326,18 +335,18 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
   Timer? _loadingTextsTimer;
 
   late final List<String Function()> _loadingTextsQueue = [
-    () => 'Looking for information to verify',
-    () => 'You are in complete control of your data',
-    () => 'You always control who you share your data with',
-    () => 'Waiting for verification',
-    () => 'This might take a few seconds',
+    () => context.l10n.lookingForInformationToVerify,
+    () => context.l10n.youAreInCompleteControlOfYourData,
+    () => context.l10n.youAlwaysControlWhoYouShareYourDataWith,
+    () => context.l10n.waitingForVerification,
+    () => context.l10n.thisMightTakeAFewSeconds,
     () {
       final webViewController = ClaimCreationWebClientViewModel.readOf(context);
-      return 'Verifying data from ${extractHost(webViewController.value.webAppBarValue.url)}';
+      return context.l10n.verifyingDataFrom(domain: extractHost(webViewController.value.webAppBarValue.url));
     },
-    () => 'This shouldn\'t take much longer',
-    () => 'Please hold on for just a little longer',
-    () => 'Almost there, just finalizing the details',
+    () => context.l10n.thisShouldntTakeMuchLonger,
+    () => context.l10n.pleaseHoldOnForJustALittleLonger,
+    () => context.l10n.almostThereJustFinalizingTheDetails,
   ];
 
   String get currentLoadingText => _loadingTextsQueue.first();
@@ -438,13 +447,8 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
   }
 
   void _onInfoTextUpdate(String infoText) {
-    final isAiFlowDone = webContext.aiFlowDone;
     log.info('updating info text in review screen: $infoText');
-    if (isAiFlowDone) {
-      setState(() {
-        _aiInfoText = '';
-      });
-    } else if (infoText.isNotEmpty && infoText != _aiInfoText) {
+    if (infoText.isNotEmpty && infoText != _aiInfoText) {
       setState(() {
         _aiInfoText = infoText;
       });
@@ -455,7 +459,7 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
     final t = _loadingTextsTimer;
     if (t != null && t.isActive) return;
 
-    _loadingTextsTimer = Timer.periodic(const Duration(seconds: 3), _onTimerTick);
+    _loadingTextsTimer = Timer.periodic(const Duration(seconds: 5), _onTimerTick);
   }
 
   void _stopLoadingTextsTimer() {
@@ -500,11 +504,12 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
     FontWeight fontWeight,
     double fontSize,
     double lineHeight,
+    Color textColor,
   ) {
     return theme.textTheme.titleMedium?.merge(
           TextStyle(
             fontWeight: value.hasError ? FontWeight.bold : fontWeight,
-            color: value.hasError ? theme.colorScheme.error : Colors.black,
+            color: textColor,
             fontSize: fontSize,
             height: lineHeight,
             fontVariations: value.hasError ? [const FontVariation.weight(700)] : [const FontVariation.weight(500)],
@@ -534,28 +539,25 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
       } else if (clientErrorMessage != null && clientErrorMessage.isNotEmpty) {
         subtitle = TextSpan(text: clientErrorMessage);
       } else {
-        subtitle = const TextSpan(text: 'Something went wrong');
+        subtitle = TextSpan(text: context.l10n.somethingWentWrong);
       }
     } else if (value.isFinished) {
       subtitle = TextSpan(
-        text: 'Sharing with ',
-        children: [
-          TextSpan(
-            text: widget.appInfo?.appName ?? 'App',
-            style: TextStyle(
-              color: primaryColor,
-              fontWeight: FontWeight.w700,
-              fontVariations: [const FontVariation.weight(700)],
-            ),
+        children: buildTextSpanWithHighlights(
+          context.l10n.sharingWith(appName: widget.appInfo?.appName ?? 'App'),
+          highlightedStyle: TextStyle(
+            color: primaryColor,
+            fontWeight: FontWeight.w700,
+            fontVariations: [const FontVariation.weight(700)],
           ),
-        ],
+        ),
       );
     } else if (_aiInfoText.isNotEmpty) {
       subtitle = TextSpan(text: _aiInfoText);
     } else if (!canStartWebClient) {
-      subtitle = const TextSpan(text: 'Getting ready..');
+      subtitle = TextSpan(text: context.l10n.gettingReady);
     } else if (_maybeRequiresLogin && value.isIdle) {
-      subtitle = const TextSpan(text: 'Getting ready to verify');
+      subtitle = TextSpan(text: context.l10n.gettingReadyToVerify);
     } else {
       isShowingLoadingText = true;
 
@@ -575,6 +577,13 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
 
     const fontSize = 20.0;
     const lineHeight = 1.2;
+
+    final brightness = Theme.brightnessOf(context);
+
+    final textColor = switch (brightness) {
+      Brightness.dark => Colors.white,
+      Brightness.light => Colors.black,
+    };
 
     return SizedBox(
       height: fontSize * lineHeight * lines,
@@ -603,10 +612,17 @@ class _VerificationStatusMessageState extends State<_VerificationStatusMessage> 
                         secondaryColor: secondaryColor,
                         child: Text.rich(
                           TextSpan(
-                            children: parseHighlightedText(
+                            children: buildTextSpanWithHighlightsForAI(
                               subtitle.toPlainText(),
-                              _buildTextStyle(theme, value, FontWeight.w400, fontSize, lineHeight),
-                              _buildTextStyle(theme, value, FontWeight.w900, fontSize, lineHeight),
+                              style: _buildTextStyle(theme, value, FontWeight.w400, fontSize, lineHeight, textColor),
+                              highlightedStyle: _buildTextStyle(
+                                theme,
+                                value,
+                                FontWeight.w900,
+                                fontSize,
+                                lineHeight,
+                                textColor,
+                              ),
                             ),
                           ),
                           textAlign: widget.itemAlignment.isStarting ? TextAlign.start : TextAlign.center,
@@ -635,56 +651,81 @@ enum TermsType {
 }
 
 class _TermsOfUseNotice extends StatelessWidget {
-  const _TermsOfUseNotice({super.key, this.isVisible = true});
+  const _TermsOfUseNotice({super.key, this.isVisible = true, this.isAutoSubmitEnabled = false});
 
   final bool isVisible;
+  final bool isAutoSubmitEnabled;
 
   void _onTermsOfUsePressed(BuildContext context, TermsType type) async {
+    final log = logging.child('TermsOfUseNotice');
     final messenger = ScaffoldMessenger.of(context);
+    final reclaimTheme = ReclaimTheme.of(context);
+
     try {
+      final Uri uri =
+          switch (type) {
+            TermsType.privacyPolicy => reclaimTheme.privacyPolicyUri,
+            TermsType.termsOfService => reclaimTheme.termsAndConditionsUri,
+          } ??
+          Uri.parse(type.url);
+      log.info('Launching terms type url: $uri');
+
       final stopwatch = Stopwatch()..start();
-      final didLaunch = await launchUrl(Uri.parse(type.url), mode: LaunchMode.inAppBrowserView);
+      final didLaunch = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
       stopwatch.stop();
 
       if (didLaunch || stopwatch.elapsed > const Duration(seconds: 2)) {
         return;
       }
     } catch (e, s) {
-      logging.child('TermsOfUseNotice').severe('Failed to launch terms of use', e, s);
+      log.severe('Failed to launch terms of use', e, s);
     }
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Find our terms of service & privacy policy at reclaimprotocol.org')),
-    );
+
+    if (!context.mounted) return;
+
+    messenger.showSnackBar(SnackBar(content: Text(context.l10n.findOurTermsOfServicePrivacyPolicyAt)));
   }
 
   @override
   Widget build(BuildContext context) {
     final isLargeScreen = MediaQuery.sizeOf(context).width > VerificationReviewPageSurface.smallScreenWidthExtent;
+    final reclaimTheme = ReclaimTheme.of(context);
+
+    final highlightColor =
+        reclaimTheme.hyperlinkColor ?? (Theme.brightnessOf(context) == Brightness.light ? Colors.indigo : Colors.amber);
+
+    final textAlign = (isLargeScreen || isAutoSubmitEnabled) ? TextAlign.center : TextAlign.start;
+
     return AnimatedOpacity(
       duration: Durations.short3,
       curve: Curves.easeIn,
       opacity: isVisible ? 1 : 0,
       child: FontsLoaded(
-        child: Text.rich(
-          TextSpan(
-            children: [
-              const TextSpan(text: 'By continuing, you agree to these '),
-              TextSpan(
-                text: 'Terms of Service',
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () => _onTermsOfUsePressed(context, TermsType.termsOfService),
-                style: const TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
+        child: Padding(
+          padding: textAlign == TextAlign.center ? const EdgeInsets.symmetric(horizontal: 25.0) : EdgeInsets.zero,
+          child: Text.rich(
+            TextSpan(
+              children: buildTextSpanWithHighlights(
+                context.l10n.byContinuingYouAgreeToThese,
+                highlightedStyle: TextStyle(color: highlightColor, decoration: TextDecoration.underline),
+                builder: ({text, style}) {
+                  final termsType = text?.contains('@1') == true
+                      ? TermsType.termsOfService
+                      : (text?.contains('@2') == true ? TermsType.privacyPolicy : null);
+
+                  return TextSpan(
+                    text: text?.replaceFirst('@1', '').replaceFirst('@2', ''),
+                    style: style,
+                    recognizer: termsType == null
+                        ? null
+                        : (TapGestureRecognizer()..onTap = () => _onTermsOfUsePressed(context, termsType)),
+                  );
+                },
               ),
-              const TextSpan(text: ' and '),
-              TextSpan(
-                text: 'Privacy Policy',
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () => _onTermsOfUsePressed(context, TermsType.privacyPolicy),
-                style: const TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
-              ),
-            ],
+            ),
+            style: TextStyle(color: reclaimTheme.termsNoticeColor),
+            textAlign: textAlign,
           ),
-          textAlign: isLargeScreen ? TextAlign.center : TextAlign.start,
         ),
       ),
     );
@@ -809,6 +850,7 @@ class _ActionViewState extends State<_ActionView> {
           child: _TermsOfUseNotice(
             key: const ValueKey('key-terms-of-use-notice'),
             isVisible: !_isSubmitted && !widget.hasError,
+            isAutoSubmitEnabled: isAutoSubmitEnabled,
           ),
         ),
       ],
@@ -882,7 +924,7 @@ class _SubmitWidget extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          const Text('Submit'),
+          Text(context.l10n.submit),
           Row(
             mainAxisSize: MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.end,
@@ -924,6 +966,10 @@ class _ErrorWidget extends StatelessWidget {
                   backgroundColor: colorScheme.error,
                   foregroundColor: colorScheme.onError,
                   onPressed: () {
+                    if (kDebugMode) {
+                      Clipboard.setData(ClipboardData(text: clientError.toString()));
+                      return;
+                    }
                     // extend timer
                     onExtendNoActivity();
                     // clear the error and let the user continue
@@ -934,7 +980,7 @@ class _ErrorWidget extends StatelessWidget {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      const Text('Try again'),
+                      Text(context.l10n.tryAgain),
                       Row(
                         mainAxisSize: MainAxisSize.max,
                         mainAxisAlignment: MainAxisAlignment.end,

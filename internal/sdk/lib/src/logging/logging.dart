@@ -6,21 +6,36 @@ import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+
 import '../../attestor.dart';
 import '../build_env.dart';
 import '../data/identity.dart';
 import '../overrides/overrides.dart';
 import '../services/logging.dart';
 import '../services/preferences/preference.dart';
-
 import 'data/log.dart';
+import 'event_type.dart';
 
 export 'package:logging/logging.dart';
+export 'event_type.dart';
 
 /// This is the logger we use in the sdk
 final Logger logging = _createSdkLogger();
 
 typedef ThrowErrorCallback = Exception Function();
+
+class LevelWithEvent extends Level {
+  final LogEventType eventType;
+  final Level level;
+
+  LevelWithEvent(this.level, this.eventType) : super(level.name, level.value);
+}
+
+extension LevelExtension on Level {
+  LevelWithEvent withEvent(LogEventType eventType) {
+    return LevelWithEvent(this, eventType);
+  }
+}
 
 extension LoggerExtension on Logger {
   /// Create a new child [Logging] instance with a [name].
@@ -32,8 +47,16 @@ extension LoggerExtension on Logger {
 
   void debug(Object? message, [Level? level]) {
     final canUseInfo = kDebugMode || (!kIsWeb && BuildEnv.IS_FLUTTER_TEST);
-    log(canUseInfo ? Level.INFO : (level ?? Level.FINE), message);
+    log(canUseInfo ? Level.INFO : (level ?? Level.FINEST), message);
   }
+
+  /// Log with an event type
+  ///
+  /// ```dart
+  /// log.event(Level.INFO.withEvent(LogEventType.pass), 'message');
+  /// ```
+  void event(LevelWithEvent levelEvent, Object? message, [Object? error, StackTrace? stackTrace]) =>
+      log(levelEvent, message, error, stackTrace);
 
   bool get isDebugging => level < Level.INFO || kDebugMode;
 }

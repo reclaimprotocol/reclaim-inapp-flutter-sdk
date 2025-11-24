@@ -216,7 +216,7 @@ data class ReclaimApiVerificationException (
 data class ReclaimApiVerificationResponse (
   val sessionId: String,
   val didSubmitManualVerification: Boolean,
-  val proofs: List<Map<String, dynamic>>,
+  val proofs: List<Map<String, Any?>>,
   val exception: ReclaimApiVerificationException? = null
 )
  {
@@ -224,7 +224,7 @@ data class ReclaimApiVerificationResponse (
     fun fromList(pigeonVar_list: List<Any?>): ReclaimApiVerificationResponse {
       val sessionId = pigeonVar_list[0] as String
       val didSubmitManualVerification = pigeonVar_list[1] as Boolean
-      val proofs = pigeonVar_list[2] as List<Map<String, dynamic>>
+      val proofs = pigeonVar_list[2] as List<Map<String, Any?>>
       val exception = pigeonVar_list[3] as ReclaimApiVerificationException?
       return ReclaimApiVerificationResponse(sessionId, didSubmitManualVerification, proofs, exception)
     }
@@ -843,7 +843,7 @@ class ReclaimModuleApi(private val binaryMessenger: BinaryMessenger, private val
       } 
     }
   }
-  fun startVerificationFromJson(templateArg: Map<dynamic, dynamic>, callback: (Result<ReclaimApiVerificationResponse>) -> Unit)
+  fun startVerificationFromJson(templateArg: Map<Any?, Any?>, callback: (Result<ReclaimApiVerificationResponse>) -> Unit)
 {
     val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
     val channelName = "dev.flutter.pigeon.reclaim_verifier_module.ReclaimModuleApi.startVerificationFromJson$separatedMessageChannelSuffix"
@@ -934,6 +934,23 @@ class ReclaimModuleApi(private val binaryMessenger: BinaryMessenger, private val
       } 
     }
   }
+  fun setConsoleLogging(enabledArg: Boolean, callback: (Result<Unit>) -> Unit)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    val channelName = "dev.flutter.pigeon.reclaim_verifier_module.ReclaimModuleApi.setConsoleLogging$separatedMessageChannelSuffix"
+    val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+    channel.send(listOf(enabledArg)) {
+      if (it is List<*>) {
+        if (it.size > 1) {
+          callback(Result.failure(FlutterError(it[0] as String, it[1] as String, it[2] as String?)))
+        } else {
+          callback(Result.success(Unit))
+        }
+      } else {
+        callback(Result.failure(MessagesPigeonUtils.createConnectionError(channelName)))
+      } 
+    }
+  }
   fun ping(callback: (Result<Boolean>) -> Unit)
 {
     val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
@@ -964,7 +981,7 @@ interface ReclaimHostOverridesApi {
   fun onLogs(logJsonString: String, callback: (Result<Unit>) -> Unit)
   fun createSession(appId: String, providerId: String, timestamp: String, signature: String, providerVersion: String, callback: (Result<SessionInitResponseApi>) -> Unit)
   fun updateSession(sessionId: String, status: ReclaimSessionStatus, metadata: Map<String, Any?>?, callback: (Result<Boolean>) -> Unit)
-  fun logSession(appId: String, providerId: String, sessionId: String, logType: String, metadata: Map<String, dynamic>?, callback: (Result<Unit>) -> Unit)
+  fun logSession(appId: String, providerId: String, sessionId: String, logType: String, metadata: Map<String, Any?>?, callback: (Result<Unit>) -> Unit)
   fun onSessionIdentityUpdate(update: ReclaimSessionIdentityUpdate?, callback: (Result<Unit>) -> Unit)
   fun fetchProviderInformation(appId: String, providerId: String, sessionId: String, signature: String, timestamp: String, resolvedVersion: String, callback: (Result<String>) -> Unit)
 
@@ -1051,7 +1068,7 @@ interface ReclaimHostOverridesApi {
             val providerIdArg = args[1] as String
             val sessionIdArg = args[2] as String
             val logTypeArg = args[3] as String
-            val metadataArg = args[4] as Map<String, dynamic>?
+            val metadataArg = args[4] as Map<String, Any?>?
             api.logSession(appIdArg, providerIdArg, sessionIdArg, logTypeArg, metadataArg) { result: Result<Unit> ->
               val error = result.exceptionOrNull()
               if (error != null) {
@@ -1114,7 +1131,7 @@ interface ReclaimHostOverridesApi {
 }
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface ReclaimHostVerificationApi {
-  fun fetchAttestorAuthenticationRequest(reclaimHttpProvider: Map<dynamic, dynamic>, callback: (Result<String>) -> Unit)
+  fun fetchAttestorAuthenticationRequest(reclaimHttpProvider: Map<Any?, Any?>, callback: (Result<String>) -> Unit)
 
   companion object {
     /** The codec used by ReclaimHostVerificationApi. */
@@ -1130,7 +1147,7 @@ interface ReclaimHostVerificationApi {
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
-            val reclaimHttpProviderArg = args[0] as Map<dynamic, dynamic>
+            val reclaimHttpProviderArg = args[0] as Map<Any?, Any?>
             api.fetchAttestorAuthenticationRequest(reclaimHttpProviderArg) { result: Result<String> ->
               val error = result.exceptionOrNull()
               if (error != null) {

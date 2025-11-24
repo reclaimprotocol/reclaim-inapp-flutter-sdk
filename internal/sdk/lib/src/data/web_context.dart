@@ -14,7 +14,6 @@ class WebContext {
   bool _markedLoggedInByAI = false;
   String _infoText = '';
   DateTime? _lastAiResponseTime;
-  bool _signedOutByAi = false;
   VoidCallback? _hideReviewSheet;
   final int _potentialLoginTimeoutS;
 
@@ -31,7 +30,6 @@ class WebContext {
   bool get isLoggedIn => _isLoggedIn;
   bool get markedLoggedInByAI => _markedLoggedInByAI;
   String get infoText => _infoText;
-  bool get signedOutByAi => _signedOutByAi;
   int get potentialLoginTimeoutS => _potentialLoginTimeoutS;
   void setHideReviewSheetCallback(VoidCallback? cb) {
     _hideReviewSheet = cb;
@@ -94,12 +92,6 @@ class WebContext {
     _lastAiResponseTime = DateTime.now();
     // Notify listener if registered
     _onInfoTextChanged?.call(infoText);
-  }
-
-  void setSignedOutByAi() {
-    _signedOutByAi = true;
-    _markedLoggedInByAI = false;
-    _isLoggedIn = false;
   }
 
   void waitForAILoginResponse() {

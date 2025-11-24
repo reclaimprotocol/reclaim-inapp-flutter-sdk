@@ -5,9 +5,9 @@ import '../logging/logging.dart';
 import '../webview_utils.dart';
 
 class RequestMatcher {
-  final Iterable<InjectionRequest> injectionRequests;
+  final Iterable<InjectionRequest> devtoolProviderRequests;
 
-  const RequestMatcher({required this.injectionRequests});
+  const RequestMatcher({required this.devtoolProviderRequests});
 
   static final _logger = logging.child('RequestMatcher');
 
@@ -45,12 +45,18 @@ class RequestMatcher {
   }
 
   Iterable<InjectionRequest> findMatch(Map request) sync* {
-    for (final injectedRequest in injectionRequests) {
+    for (final injectedRequest in devtoolProviderRequests) {
       final bodySniffRegex = injectedRequest.bodySniffRegex;
       if (isRegexMatch(request, 'url', injectedRequest.urlRegex) &&
           isRequestMethodMatch(request, 'method', injectedRequest.dataRequest.method) &&
           (bodySniffRegex == null || isRegexMatch(request, 'requestBody', bodySniffRegex))) {
-        _logger.finest(() => ({'request': json.encode(request), 'injectedRequest': json.encode(injectedRequest)}));
+        _logger.finest(
+          () => ({
+            'message': 'An intercepted http request matched with a devtool provider request',
+            'request': json.encode(request),
+            'injectedRequest': json.encode(injectedRequest),
+          }),
+        );
         yield injectedRequest;
       }
     }

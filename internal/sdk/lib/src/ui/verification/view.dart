@@ -20,6 +20,7 @@ import '../../widgets/verification_review/controller.dart';
 import '../../widgets/webview_bottom.dart';
 import '../claim_creation_webview/view.dart';
 import '../claim_creation_webview/view_model.dart';
+import '../claim_creation_webview/window/controller.dart';
 import '../dev/dev.dart';
 import 'route.dart';
 
@@ -38,6 +39,7 @@ class _VerificationViewState extends State<VerificationView> {
   late final StreamSubscription _webViewModelSubscription;
   late final ClaimCreationController _claimCreationController = ClaimCreationController();
   late final VerificationReviewController _reviewController;
+  late final PopupWindowController _popupWindowController;
 
   late final _log = logging.child('VerificationViewState.$hashCode');
 
@@ -45,8 +47,8 @@ class _VerificationViewState extends State<VerificationView> {
   void initState() {
     super.initState();
     DevController.shared.clearAll();
-    _log.info('Initializing verification view');
     _reviewController = VerificationReviewController();
+    _popupWindowController = PopupWindowController();
     final controller = VerificationController.readOf(context);
     final initialWebAppBarValue = WebAppBarValue(url: '', progress: controller.value.initializationProgress);
     appBarController = ReclaimAppBarController(initialWebAppBarValue);
@@ -58,12 +60,14 @@ class _VerificationViewState extends State<VerificationView> {
   }
 
   bool _didPop = false;
+  bool _disposing = false;
 
-  void _onCompleted() {
-    _log.config('onCompleted, mounted: $mounted, _didPop: $_didPop');
+  void _onCompleted() async {
+    _log.config('onCompleted, mounted: $mounted, _didPop: $_didPop, _disposing: $_disposing');
     if (!mounted) {
       return;
     }
+    if (_disposing) return;
     if (_didPop) return;
     _didPop = true;
     final navigatorState = Navigator.of(context);
@@ -150,29 +154,32 @@ class _VerificationViewState extends State<VerificationView> {
 
   @override
   void dispose() {
-    _log.info('Disposing verification view');
+    _disposing = true;
+    _log.info('Disposing verification view, _disposing: $_disposing');
     _webViewModelSubscription.cancel();
     _clientViewModel.dispose();
     _controllerSubscription.cancel();
     appBarController.dispose();
     _claimCreationController.dispose();
     _reviewController.dispose();
+    _popupWindowController.dispose();
     super.dispose();
   }
 
   final verificationViewKey = GlobalKey();
 
   void _showDebugMenu() {
+    final ctrl = VerificationController.readOf(context);
     DebugBottomSheet.show(
       context: context,
       refreshPage: () {
         _clientViewModel.refresh();
       },
       copySessionId: () {
-        final ctrl = VerificationController.readOf(context);
         Clipboard.setData(ClipboardData(text: ctrl.sessionInformation.sessionId));
         Fluttertoast.showToast(msg: "Copied to your clipboard");
       },
+      sessionId: ctrl.sessionInformation.sessionId,
     );
   }
 
@@ -181,52 +188,95 @@ class _VerificationViewState extends State<VerificationView> {
 
   @override
   Widget build(BuildContext context) {
-    return _claimCreationController.wrap(
-      child: PopScope(
-        onPopInvokedWithResult: (didPop, result) {
-          if (didPop) {
-            _didPop = true;
-          }
-        },
-        child: _clientViewModel.wrap(
-          child: _reviewController.wrap(
-            child: ClaimCreationUIScope(
-              uiDelegateOptions: ClaimCreationUIDelegateOptions(
-                autoSubmit: _isAutoSubmitEnabled,
-                appId: _applicationId,
-                onSubmitProofs: (proofs) {
-                  VerificationController.readOf(context).onSubmitProofs(proofs);
-                },
-                onContinue: (nextLocation) {
-                  final webContext = AIFlowCoordinatorWidget.of(context).webContext;
-                  final loginDetection = LoginDetection.readOf(context);
-                  final isAIProvider = VerificationController.readOf(context).value.provider?.isAIProvider == true;
-                  return _clientViewModel.onContinue(webContext, loginDetection, nextLocation, isAIProvider);
-                },
-                onException: (e) {
-                  VerificationController.readOf(context).updateException(e);
-                },
-              ),
-              child: Builder(
-                builder: (context) {
-                  final isReviewVisible = VerificationReviewController.of(context).value.isVisible;
-                  return Scaffold(
-                    key: verificationViewKey,
-                    appBar: ReclaimAppBar(controller: appBarController, onPressed: _showDebugMenu),
-                    extendBodyBehindAppBar: isReviewVisible,
-                    extendBody: isReviewVisible,
-                    body: const ClaimCreationWebClient(),
-                    bottomNavigationBar: Builder(
-                      builder: (context) {
-                        final padding = MediaQuery.paddingOf(context);
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: padding.bottom + WebviewBottomBar.estimateHeight),
-                          child: const WebviewBottomBar(),
-                        );
-                      },
-                    ),
-                  );
-                },
+    return _popupWindowController.wrap(
+      child: _claimCreationController.wrap(
+        child: PopScope(
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) {
+              _didPop = true;
+            }
+          },
+          child: _clientViewModel.wrap(
+            child: _reviewController.wrap(
+              child: ClaimCreationUIScope(
+                uiDelegateOptions: ClaimCreationUIDelegateOptions(
+                  autoSubmit: _isAutoSubmitEnabled,
+                  appId: _applicationId,
+                  onSubmitProofs: (proofs) {
+                    VerificationController.readOf(context).onSubmitProofs(proofs);
+                  },
+                  onContinue: (nextLocation) {
+                    final webContext = AIFlowCoordinatorWidget.of(context).webContext;
+                    final loginDetection = LoginDetection.readOf(context);
+                    final isAIProvider = VerificationController.readOf(context).value.provider?.isAIProvider == true;
+                    return _clientViewModel.onContinue(webContext, loginDetection, nextLocation, isAIProvider);
+                  },
+                  onException: (e) {
+                    VerificationController.readOf(context).updateException(e);
+                  },
+                ),
+                child: Builder(
+                  builder: (context) {
+                    final isReviewVisible = VerificationReviewController.of(context).value.isVisible;
+
+                    PopupWindowController? popupController;
+                    try {
+                      popupController = PopupWindowController.of(context);
+                    } catch (e) {
+                      // PopupWindowController not available
+                    }
+
+                    if (popupController != null) {
+                      return ValueListenableBuilder<PopupWindowState>(
+                        valueListenable: popupController,
+                        builder: (context, popupState, child) {
+                          final isPopupVisible = popupState.isVisible;
+
+                          return Scaffold(
+                            key: verificationViewKey,
+                            appBar: isPopupVisible
+                                ? null
+                                : ReclaimAppBar(controller: appBarController, onPressed: _showDebugMenu),
+                            extendBodyBehindAppBar: isReviewVisible,
+                            extendBody: isReviewVisible,
+                            body: const ClaimCreationWebClient(),
+                            bottomNavigationBar: isPopupVisible
+                                ? null
+                                : Builder(
+                                    builder: (context) {
+                                      final padding = MediaQuery.paddingOf(context);
+                                      return Padding(
+                                        padding: EdgeInsets.only(
+                                          bottom: padding.bottom + WebviewBottomBar.estimateHeight,
+                                        ),
+                                        child: const WebviewBottomBar(),
+                                      );
+                                    },
+                                  ),
+                          );
+                        },
+                      );
+                    }
+
+                    // Fallback when PopupWindowController is not available
+                    return Scaffold(
+                      key: verificationViewKey,
+                      appBar: ReclaimAppBar(controller: appBarController, onPressed: _showDebugMenu),
+                      extendBodyBehindAppBar: isReviewVisible,
+                      extendBody: isReviewVisible,
+                      body: const ClaimCreationWebClient(),
+                      bottomNavigationBar: Builder(
+                        builder: (context) {
+                          final padding = MediaQuery.paddingOf(context);
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: padding.bottom + WebviewBottomBar.estimateHeight),
+                            child: const WebviewBottomBar(),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ),

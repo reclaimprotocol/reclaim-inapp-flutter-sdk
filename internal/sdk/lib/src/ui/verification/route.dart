@@ -32,6 +32,7 @@ class VerificationViewPageRoute extends PageRoute<dynamic> with CupertinoRouteTr
   Widget buildContent(BuildContext context) {
     return ReclaimThemeProvider(
       applicationId: verificationController.request.applicationId,
+      locale: verificationController.options.locale,
       builder: (context) {
         return verificationController.wrap(
           child: AIFlowCoordinatorWidget(
@@ -44,7 +45,11 @@ class VerificationViewPageRoute extends PageRoute<dynamic> with CupertinoRouteTr
                     ? 0.32
                     // Androids always provide bottom padding as 0.
                     : 1,
-                child: const VerificationView(),
+                child: Builder(
+                  builder: (context) {
+                    return VerificationView(key: ValueKey(verificationController));
+                  },
+                ),
               ),
             ),
           ),

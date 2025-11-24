@@ -18,6 +18,9 @@ else
     git clone https://$PACKAGE_CLONE_USER:$PACKAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim-inapp-android-sdk.git $ANDROID_CLONE_DIR;
 fi
 
+rm $ANDROID_CLONE_DIR/library/src/main/java/org/reclaimprotocol/inapp_sdk/Messages.kt
+cp ../generated/android/src/main/java/org/reclaimprotocol/inapp_sdk/Messages.kt $ANDROID_CLONE_DIR/library/src/main/java/org/reclaimprotocol/inapp_sdk/Messages.kt
+
 cd $ANDROID_CLONE_DIR;
 
 DEFAULT_CHANGELOG="## $VERSION

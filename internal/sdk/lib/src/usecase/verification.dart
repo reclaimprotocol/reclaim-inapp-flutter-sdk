@@ -69,8 +69,13 @@ class VerificationFlowManager {
     final logger = log.child('fetchAttestorAuthenticationRequest');
     try {
       return await callback(provider);
-    } catch (e) {
-      logger.severe('Error fetching attestor authentication request', e);
+    } catch (e, s) {
+      logger.event(
+        Level.SEVERE.withEvent(LogEventType.RECLAIM_ATTESTOR_AUTH_EXCEPTION),
+        'Error fetching attestor authentication request',
+        e,
+        s,
+      );
       // We want to show the error to the developer.
       throw const ReclaimAttestorException('Error fetching attestor authentication request');
     }
@@ -146,7 +151,7 @@ class VerificationFlowManager {
   Future<UnmodifiableListView<UserScript>> loadUserScripts({
     required HttpProvider provider,
     required Map<String, String> parameters,
-    required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
+    required HawkeyeInterceptionOptions options,
     required int pageLoadedCompletedDebounceTimeoutMs,
   }) async {
     try {
@@ -154,7 +159,7 @@ class VerificationFlowManager {
         providerData: provider,
         parameters: parameters,
         idleTimeThreshold: 10,
-        hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
+        options: options,
         debounceTimeoutMs: pageLoadedCompletedDebounceTimeoutMs,
       );
     } catch (e, s) {

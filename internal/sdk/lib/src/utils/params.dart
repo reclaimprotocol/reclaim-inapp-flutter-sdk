@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import '../data/create_claim.dart';
 import '../data/providers.dart';
 
 Set<String> paramNamesFromRequestData(List<DataProviderRequest>? requestData) {
@@ -33,4 +36,17 @@ Map<String, double> attachProgressToParams(Set<String> paramNames, double progre
       .fold(<String, double>{}, (prev, next) {
         return {...prev, ...next};
       });
+}
+
+bool areParamsFromAIProofs(List<CreateClaimOutput> outputs) {
+  if (outputs.isEmpty) return false;
+
+  return outputs.every((output) {
+    try {
+      final contextJson = jsonDecode(output.claimData.context);
+      return contextJson['isAiProof'] == true;
+    } catch (_) {
+      return false;
+    }
+  });
 }

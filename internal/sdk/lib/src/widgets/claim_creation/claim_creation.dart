@@ -21,6 +21,7 @@ import '../../utils/result.dart';
 import '../../utils/single_work.dart';
 import '../../webview_utils.dart';
 import '../action_bar.dart';
+import '../ai_flow_coordinator_widget.dart';
 import '../verification_review/controller.dart';
 import 'request.dart';
 import 'state.dart';
@@ -140,12 +141,6 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
   }
 
   void setProviderError(Map<String, dynamic> error) {
-    // Try to show AI proofs instead of error (AI flow only)
-    if (tryShowAIProofsInsteadOfError()) {
-      return;
-    }
-
-    // Default behavior: set the provider error
     value = value.copyWith(
       providerError: ReclaimVerificationProviderScriptException(error['message'] ?? 'Verification failed', error),
     );
@@ -195,7 +190,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
 
     final claimStatus = value
         .maybeGet(proofRequest.requestData.requestIdentifier)
-        ?.createNext(proofs: generatedProof, performanceReports: performanceReports, error: null);
+        ?.createNext(proofs: generatedProof, performanceReports: performanceReports, error: const Optional.value(null));
 
     if (claimStatus != null) {
       value = value.copyWithStatus(claimStatus);
@@ -207,6 +202,16 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
       if (kDebugMode) {
         logger.info({'proofs': json.encode(value.claims.map((e) => e.proofs).toList())});
       }
+
+      if (AIFlowCoordinatorWidget.isAiProviderEnabled) {
+        final aiClient = AIFlowCoordinatorWidget.aiClient;
+        if (aiClient != null) {
+          aiClient.createTimelineEvent.proofGeneratedSuccess(
+            'Proof generated successfully for provider: $httpProviderId',
+          );
+        }
+      }
+
       unawaitedSequence([
         ReclaimSession.sendLogs(
           appId: proofRequest.appId,
@@ -229,6 +234,15 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     final sessionId = proofRequest.sessionId;
     final httpProviderId = proofRequest.httpProviderId;
 
+    if (AIFlowCoordinatorWidget.isAiProviderEnabled) {
+      final aiClient = AIFlowCoordinatorWidget.aiClient;
+      if (aiClient != null) {
+        aiClient.createTimelineEvent.proofGenerationFailed(
+          'Proof generation failed for provider: $httpProviderId - ${e.toString()}',
+        );
+      }
+    }
+
     unawaitedSequence([
       ReclaimSession.sendLogs(
         appId: proofRequest.appId,
@@ -246,7 +260,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     final claimStatus = value
         .maybeGet(proofRequest.requestData.requestIdentifier)
         ?.createNext(
-          error: ClaimCreationErrorDetails(error: e, stackTrace: s),
+          error: Optional.value(ClaimCreationErrorDetails(error: e, stackTrace: s)),
         );
     value = value.copyWith(
       // need to notify session as retry when proof generation fails
@@ -265,10 +279,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     // AIFlowCoordinatorWidget.pushEvent(claimCreationFailedEvent);
   }
 
-  Future<ClaimCreationRequest> createRequestWithUpdatedProviderParams(
-    String response,
-    ClaimCreationRequest request,
-  ) async {
+  Future<ClaimCreationRequest> validateClaim(String response, ClaimCreationRequest request) async {
     // final responseSelections = request.providerData.responseSelections;
     // a copy of witnessParams to avoid mutating the original
     final params = {...request.witnessParams};
@@ -280,7 +291,9 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     final List<ResponseRedaction> responseRedactions = [...request.requestData.responseRedactions];
     final args = <String, String>{...request.initialWitnessParams, ...request.witnessParams};
 
-    log.info('starting request creation with provider params. redactions: ${responseRedactions.length}');
+    log.info(
+      'starting request validation and parameter extraction from request. These parameters will be used in claim creation provider request that is sent to attestor.',
+    );
 
     final selectionLength = math.max(responseRedactions.length, responseMatches.length);
 
@@ -296,92 +309,118 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
       }
     }
 
+    log.info('Trying to extract parameters from a part of response body using $selectionLength selections');
     await Future.wait(
       List.generate(selectionLength, (index) async {
-        final logger = log.child('responseRedaction.$index');
-        logger.info('start');
+        final logger = log.child('selection.$index');
+        logger.info('Selecting a part of response body as element using xpath/jsonpath');
+
         final responseRedactionI = maybeGetAtIndex(responseRedactions, index);
         final responseMatchI = maybeGetAtIndex(responseMatches, index);
         final isFieldOptional = responseMatchI?.isOptional == true;
         String element = response;
         final responseSelectionXPath = responseRedactionI?.xPath;
         if (responseSelectionXPath != null && responseSelectionXPath.isNotEmpty) {
-          logger.info('extracting html element with xpath: $responseSelectionXPath');
+          logger.info('evaluating xml to get element for selection using xpath: $responseSelectionXPath');
           try {
             element = await Attestor.instance.extractHtmlElement(
               element,
               interpolateTemplateWithValues(responseSelectionXPath, args),
             );
-            logger.info('did extract html element: ${element.isNotEmpty}');
-          } catch (e) {
-            logger.info('Coult not extract xpath for $responseSelectionXPath');
+            logger.info('did extract xml element: ${element.isNotEmpty ? "YES" : "<EMPTY STRING RECEIVED>"}');
+          } catch (e, s) {
+            logger.event(
+              Level.SEVERE.withEvent(LogEventType.X_PATH_MATCH_REQUIREMENT_FAILED),
+              'Could not extract xpath for $responseSelectionXPath',
+              e,
+              s,
+            );
             if (e.toString().contains('Failed to find') || e.toString().contains('not found')) {
               if (isFieldOptional) {
                 logger.info('skipping optional response match because xpath not found: $responseMatchI');
                 markForRemoval(responseRedactionI, responseMatchI);
                 return;
               }
-              if (value.httpProvider?.verificationType == 'AI' &&
-                  value.aiProofs != null &&
-                  value.aiProofs!.isNotEmpty) {
-                logger.info('AI verification with proofs available, will show AI proofs instead of throwing exception');
-                tryShowAIProofsInsteadOfError();
-                return;
-              }
+              logger.event(
+                Level.SEVERE.withEvent(LogEventType.CLAIM_PARAMETER_VALIDATION_FAILED_EXCEPTION),
+                'Verification requirement failed',
+              );
               throw const ReclaimVerificationRequirementException();
             } else {
               rethrow;
             }
           }
         } else {
-          logger.info('response selection xpath is empty');
+          logger.info('xpath was not provided for selecting element from a part of response body, skipping');
         }
         final responseSelectionJsonPath = responseRedactionI?.jsonPath;
         if (responseSelectionJsonPath != null && responseSelectionJsonPath.isNotEmpty) {
-          logger.info('extracting json value with json path: $responseSelectionJsonPath');
+          logger.info('evaluating json to get element for selection using jsonpath: $responseSelectionJsonPath');
           try {
             element = await Attestor.instance.extractJSONValueIndex(
               element,
               interpolateTemplateWithValues(responseSelectionJsonPath, args),
             );
-            logger.info('did extract json value: ${element.isNotEmpty}');
-          } catch (e) {
-            logger.info('Coult not extract jsonpath for $responseSelectionJsonPath');
+            logger.info('did extract json value: ${element.isNotEmpty ? "YES" : "<EMPTY STRING RECEIVED>"}');
+          } catch (e, s) {
+            logger.event(
+              Level.SEVERE.withEvent(LogEventType.JSON_PATH_MATCH_REQUIREMENT_FAILED),
+              'Could not extract jsonpath for $responseSelectionJsonPath',
+              e,
+              s,
+            );
+
             if (e.toString().contains('Failed to find') || e.toString().contains('not found')) {
               if (isFieldOptional) {
                 logger.info('skipping optional response match because xpath not found: $responseMatchI');
                 markForRemoval(responseRedactionI, responseMatchI);
                 return;
               }
-              if (value.httpProvider?.verificationType == 'AI' &&
-                  value.aiProofs != null &&
-                  value.aiProofs!.isNotEmpty) {
-                logger.info('AI verification with proofs available, will show AI proofs instead of throwing exception');
-                tryShowAIProofsInsteadOfError();
-                return;
-              }
+              logger.event(
+                Level.SEVERE.withEvent(LogEventType.CLAIM_PARAMETER_VALIDATION_FAILED_EXCEPTION),
+                'Verification requirement failed',
+              );
               throw const ReclaimVerificationRequirementException();
             } else {
               rethrow;
             }
           }
         } else {
-          logger.info('response selection json path is empty');
+          logger.info('jsonpath was not provided for selecting element from a part of response body, skipping');
         }
-        logger.info('value extraction completed');
+
+        if ((responseSelectionXPath == null || responseSelectionXPath.isEmpty) &&
+            (responseSelectionJsonPath == null || responseSelectionJsonPath.isEmpty)) {
+          logger.info(
+            'No xpath or jsonpath was provided for selecting element from a part of response body, using the whole response body as selected element',
+          );
+        }
+
+        logger.info('starting parameter extraction from selected element');
 
         final isRegexResponseMatch = responseMatchI?.type == ResponseMatchType.regex;
+
+        logger.info('response match type: ${responseMatchI?.type?.name}');
 
         final responseMatchParamKeys = isRegexResponseMatch
             ? getRegexTemplateVariables(responseMatchI?.value ?? '')
             : getTemplateVariables(responseMatchI?.value ?? '');
-        logger.info('response match param keys (${responseMatchParamKeys.length}): $responseMatchParamKeys');
+        logger.info(
+          'Found following parameter names from response match: (${responseMatchParamKeys.length}) $responseMatchParamKeys',
+        );
+        logger.info('Will use regex expression as selection regex to find values of these parameters');
+
         String? paramSelectionRegex = responseRedactionI?.regex;
         if (paramSelectionRegex == null) {
-          logger.info('response match regex is null, converting template to regex template');
+          logger.info('No regex provided in response redaction, trying to get it from response match');
           if (isRegexResponseMatch) {
+            logger.info('response match is of type regex, will use responseMatch.value as regex expression');
             paramSelectionRegex = responseMatchI?.value ?? '';
           } else {
+            logger.info(
+              'response match is not of type regex, will try to convert responseMatch.value, that has template variable placeholder with parameter names, to regex expression',
+            );
+
             // if regex is not provided, we need to fallback by converting template to regex template
             // This may not be needed if all providers have regex in responseMatch post migration
             final (regex, _, _) = convertTemplateToRegex(
@@ -393,53 +432,70 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
           }
         }
 
-        logger.info('evaluating response match regex with element: $paramSelectionRegex');
+        logger.info(
+          'evaluating the element that was obtained after xpath/json path evaluation with selection regex: $paramSelectionRegex',
+        );
 
         final responseSelectionParamRegexMatch = RegExp(paramSelectionRegex, dotAll: true).firstMatch(element);
-        logger.info('responseSelectionParamRegexMatches groupCount ${responseSelectionParamRegexMatch?.groupCount}');
+        logger.info(
+          'Count of groups found by finding first match of element with selection regex: ${responseSelectionParamRegexMatch?.groupCount}',
+        );
         final List<String?>? responseSelectionParamValue = responseSelectionParamRegexMatch?.groups(
           // generate list of indices from 1 to length of responseMatchParamKeys
           List<int>.generate(responseMatchParamKeys.length, (i) => i + 1),
         );
-        logger.info('selection count: ${responseSelectionParamValue?.length}');
+        logger.info(
+          'count of parameter values that can be obtained from matched groups: ${responseSelectionParamValue?.length}',
+        );
         if (responseSelectionParamValue == null || responseSelectionParamValue.isEmpty) {
           if (responseSelectionParamRegexMatch == null || responseSelectionParamRegexMatch.groupCount == 0) {
             // This cannot be ignored even if the case is regex. Because attestor needs regex in response match to have params.
-            logger.info('No regex matches for `$paramSelectionRegex`');
+
+            logger.event(
+              Level.WARNING.withEvent(LogEventType.REGEX_MATCH_REQUIREMENT_FAILED),
+              'No regex matches in element for `$paramSelectionRegex`',
+            );
+            logger.debug({'reason': 'element', 'element': json.encode(element)});
           }
           if (responseSelectionParamValue == null || responseSelectionParamValue.isEmpty) {
-            logger.info('No selections found for $responseMatchParamKeys in $paramSelectionRegex');
+            logger.event(
+              Level.WARNING.withEvent(LogEventType.NO_PARAMETERS_FOUND),
+              'No parameter values found for parameter names $responseMatchParamKeys from the first regex match of element by regex $paramSelectionRegex',
+            );
           }
-          logger.fine({
-            'responseMatchRegex': paramSelectionRegex,
+          logger.finer({
+            'Regex used for finding parameter values in element': paramSelectionRegex,
             'element': element,
-            'responseMatchParamKeys': responseMatchParamKeys,
+            'parameter names': responseMatchParamKeys,
           });
           if (isFieldOptional) {
-            logger.info('skipping because optional response match');
+            logger.info(
+              'skipping because no parameter values found this selection and this selection was marked optional. It will not be included claim creation provider request.',
+            );
             markForRemoval(responseRedactionI, responseMatchI);
             return;
           }
-          if (value.httpProvider?.verificationType == 'AI' && value.aiProofs != null && value.aiProofs!.isNotEmpty) {
-            logger.info('AI verification with proofs available, will show AI proofs instead of throwing exception');
-            tryShowAIProofsInsteadOfError();
-            return;
-          }
+          logger.event(
+            Level.SEVERE.withEvent(LogEventType.CLAIM_PARAMETER_VALIDATION_FAILED_EXCEPTION),
+            'Verification requirement failed',
+          );
           throw const ReclaimVerificationRequirementException();
         }
-        logger.info('setting params from responseMatch param keys and its values from selections');
+        logger.info('Assigning expected values to parameters from matched selection');
         for (var i = 0; i < responseMatchParamKeys.length; i++) {
-          final value = responseMatchParamKeys.elementAt(i);
+          final paramName = responseMatchParamKeys.elementAt(i);
           final paramValue = maybeGetAtIndex(responseSelectionParamValue, i);
           if (paramValue == null) {
-            logger.info('No param value for `$value`');
+            logger.info('No parameter value available for `$paramName`');
             continue;
           }
           // For non regex response matches, we can directly set the param value
           // For regex response matches, the values may differ when the request is actually made by the attestor
-          params[value] = paramValue;
+          params[paramName] = paramValue;
         }
-        logger.info('updating response redaction with regex: $paramSelectionRegex');
+        if (responseRedactionI?.regex != paramSelectionRegex) {
+          logger.info('Updating response redaction\'s regex expression to $paramSelectionRegex');
+        }
         if (responseRedactionI != null) {
           responseRedactions[index] = ResponseRedaction(
             xPath: responseRedactionI.xPath,
@@ -461,14 +517,17 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     }
 
     log.info({
-      'responseMatches.pre': request.requestData.responseMatches.map((e) => e.toJson()).toList(),
-      'responseRedactions.pre': request.requestData.responseRedactions.map((e) => e.toJson()).toList(),
-      'responseMatches': responseMatches.map((e) => e.toJson()).toList(),
-      'responseRedactions': responseRedactions.map((e) => e.toJson()).toList(),
+      'old response matches': request.requestData.responseMatches.map((e) => e.toJson()).toList(),
+      'old response redactions': request.requestData.responseRedactions.map((e) => e.toJson()).toList(),
+      'new response matches': responseMatches.map((e) => e.toJson()).toList(),
+      'new response redactions': responseRedactions.map((e) => e.toJson()).toList(),
     });
 
     if (responseMatches.isEmpty) {
-      log.warning('Atleast one response match is required for claim creation. Verification will likely fail.');
+      log.event(
+        Level.WARNING.withEvent(LogEventType.NO_RESPONSE_MATCH_WARNING),
+        'Atleast one response match is required for claim creation. Because none is going to be used in claim creation for this request, claim creation will likely fail.',
+      );
     }
 
     return request.copyWith(
@@ -498,7 +557,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
       );
     }
 
-    final updatedClaimCreationRequest = await createRequestWithUpdatedProviderParams(response, claimStatus.request);
+    final updatedClaimCreationRequest = await validateClaim(response, claimStatus.request);
 
     value = value.copyWithStatus(claimStatus.copyWith(request: updatedClaimCreationRequest));
 
@@ -507,7 +566,10 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
 
   final Map<String, ClaimRequestIdentifier> _requestHashByAttestorRequestId = {};
 
-  Future<List<CreateClaimOutput>> _onCreateClaim(ClaimCreationRequest proofRequest) async {
+  Future<List<CreateClaimOutput>> _onCreateClaim(
+    ClaimCreationRequest proofRequest, {
+    required Map<String, Object?> Function(Map<String, Object?>) updateAdditionalClientOptions,
+  }) async {
     final requestIdentifier = proofRequest.requestData.requestIdentifier;
     final log = logging.child('ClaimCreationController._onCreateClaim.$requestIdentifier');
 
@@ -519,12 +581,13 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     await _onProofGenerationStarted(sessionId);
 
     try {
-      log.info(
+      log.event(
+        Level.INFO.withEvent(LogEventType.CLAIM_CREATION_STARTED),
         'Starting claim proof generation for providerId: $httpProviderId updateProviderParams: $useSingleRequest',
       );
       final Map<String, dynamic> createClaimInput = {
         "name": 'http',
-        "params": proofRequest.httpParams,
+        "params": proofRequest.getHttpParams(updateAdditionalClientOptions),
         "secretParams": proofRequest.secretParams,
         "sessionId": sessionId,
         "context": proofRequest.claimContext,
@@ -567,7 +630,8 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
 
       const responseWaitDuration = Duration(seconds: 10);
       Timer? responseWaitTimer = Timer(responseWaitDuration, () {
-        log.warning(
+        log.event(
+          Level.WARNING.withEvent(LogEventType.ATTESTOR_NOT_RESPONDING),
           'No response received from attestor for id ${attestorRequest.id} in $responseWaitDuration since claim creation started',
         );
       });
@@ -603,7 +667,10 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
       log.info('attestor proof generation completed');
 
       if (isDisposed) {
-        log.info('Proof generated but result will be ignored because ClaimCreationController is disposed');
+        log.event(
+          Level.WARNING.withEvent(LogEventType.CLAIM_CREATION_CANCELLED_EXCEPTION),
+          'Proof generated but result will be ignored because ClaimCreationController is disposed',
+        );
         return throw const ClaimCreationCancelledException();
       }
 
@@ -616,7 +683,10 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
         ),
       );
 
-      log.info({'reason': 'Proof Generated for providerId: $httpProviderId', 'proofs': json.encode(proofs)});
+      log.event(Level.INFO.withEvent(LogEventType.PROOF_GENERATED), {
+        'reason': 'Proof Generated for providerId: $httpProviderId',
+        'proofs': json.encode(proofs),
+      });
 
       // The proof generated is for only single claim request.
       // All proofs are stored in the [controller.value.claims[].proof]
@@ -629,7 +699,12 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
       // Sometimes user may have mistakenly started the same claim creation again.
       rethrow;
     } catch (e, s) {
-      log.severe('Failed to start claim creation, providerData.httpProviderId: $httpProviderId', e, s);
+      log.event(
+        Level.SEVERE.withEvent(LogEventType.PROOF_GENERATION_FAILED_EXCEPTION),
+        'Failed to start claim creation, providerData.httpProviderId: $httpProviderId',
+        e,
+        s,
+      );
       await _onProofGenerationFailed(e, s, proofRequest);
       rethrow;
     }
@@ -667,6 +742,59 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     return scope;
   }
 
+  Future<List<CreateClaimOutput>> _onCreateClaimWithRetries(ClaimCreationRequest proofRequest) async {
+    final requestIdentifier = proofRequest.requestData.requestIdentifier;
+    final log = logging.child(
+      'ClaimCreationController.startClaimCreation.$requestIdentifier._onCreateClaimWithRetries',
+    );
+    final originalClientOptions = proofRequest.additionalClientOptions;
+    try {
+      return await _onCreateClaim(proofRequest, updateAdditionalClientOptions: (options) => options);
+    } catch (e, s) {
+      final bool canRetry = () {
+        if (originalClientOptions.isNotEmpty) {
+          final supportedProtocolVersions = originalClientOptions['supportedProtocolVersions'];
+          if (supportedProtocolVersions != null &&
+              supportedProtocolVersions is List &&
+              supportedProtocolVersions.length == 1 &&
+              supportedProtocolVersions.contains('TLS1_2')) {
+            return false;
+          }
+        }
+        return true;
+      }();
+      if (canRetry) {
+        log.severe('Failed creating claim', e, s);
+        await Future.microtask(() => null);
+        log.warning('Using tls 1.2 as fallback and retrying claim');
+        try {
+          final claimStatus = value
+              .maybeGet(proofRequest.requestData.requestIdentifier)
+              ?.createNext(error: const Optional.value(null));
+
+          if (claimStatus != null) {
+            value = value.copyWithStatus(claimStatus);
+          }
+
+          return await _onCreateClaim(
+            proofRequest,
+            updateAdditionalClientOptions: (options) {
+              return {
+                ...options,
+                "supportedProtocolVersions": ["TLS1_2"],
+              };
+            },
+          );
+        } catch (newE, newS) {
+          log.severe('Failed creating claim', newE, newS);
+          // relogging e, s so that the reason for original logs isn't lost by log viewers
+          log.severe('Failed creating claim before this attempt', e, s);
+        }
+      }
+      rethrow;
+    }
+  }
+
   Future<List<CreateClaimOutput>> startClaimCreation(ClaimCreationRequest proofRequest) async {
     if (isDisposed) throw StateError('ClaimCreationController is disposed');
 
@@ -677,8 +805,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
       log.info('Request id $requestIdentifier is already completed. Sharing same proof.');
       return completedRequestProofs;
     }
-
-    log.info('starting claim creation inside controller');
+    log.event(Level.INFO.withEvent(LogEventType.STARTING_CLAIM_CREATION), 'starting claim creation inside controller');
 
     value = value.copyWithStatus(ClaimStatus.create(proofRequest));
 
@@ -688,7 +815,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     try {
       final scope = _getSingleWorkScope(proofRequest.requestData);
 
-      return scope.runGuarded(() => _onCreateClaim(proofRequest));
+      return scope.runGuarded(() => _onCreateClaimWithRetries(proofRequest));
     } on WorkCanceledException catch (e, s) {
       log.severe('work cancelled', e, s);
       log.info({
@@ -791,7 +918,11 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     }
 
     // Update the controller state with the AI proofs
-    value = value.copyWith(claimsByRequest: claimsByRequest, status: ClaimCreationStatus.ready);
+    value = value.copyWith(
+      claimsByRequest: claimsByRequest,
+      status: ClaimCreationStatus.ready,
+      clientError: const Optional.value(null),
+    );
 
     logger.info('AI proofs set for verification review: ${aiProofs.length} proofs');
   }

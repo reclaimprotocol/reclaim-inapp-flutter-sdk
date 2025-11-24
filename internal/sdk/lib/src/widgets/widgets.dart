@@ -10,6 +10,7 @@ export 'icon.dart';
 export 'item_alignment.dart';
 export 'params/params_text.dart';
 export 'potential_failure_reasons.dart';
+export 'progress_indicator.dart';
 export 'reclaim_image_provider.dart';
 export 'reclaim_theme_provider.dart';
 export 'session_id_chip.dart';

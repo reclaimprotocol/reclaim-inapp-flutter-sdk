@@ -112,12 +112,15 @@ const String HAWKEYE =
         let requestUrl = request.url;
         if (typeof requestUrl !== 'string') {
           console.log({reason: 'request.url is not a string', url: requestUrl, request: request, type: typeof requestUrl});
-          if (typeof requestUrl === 'object' && 'url' in requestUrl) {
+          if ('href' in requestUrl) {
+           requestUrl = requestUrl.href;
+          }  else if (typeof requestUrl === 'object' && 'url' in requestUrl) {
             requestUrl = requestUrl.url;
           } else {
             requestUrl = requestUrl || '/';
           }
         }
+        
         const url = requestUrl.startsWith('/') ? window.location.origin + requestUrl : requestUrl;
         let requestMethod = request.method || (request.options.method ? request.options.method : 'GET');
         let parsedHeaders = {}
@@ -152,8 +155,15 @@ if(!window.reclaimFetchInjected){
 
 const requestWithoutReplayInjection =
     """
-window._On_ResponseOnDocumentContentLoaded = (url, responseText) => {
-  let headers = {};
+window._On_ResponseOnDocumentContentLoaded = (url, contentType, responseText) => {
+  let headers = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    // Following Sec-* headers can't be set from fetch.
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-User": "?1",
+    "Sec-Fetch-Dest": "document"
+  };
   let requestMethod = 'GET';
   let requestBody = '';
 
@@ -167,8 +177,7 @@ const userInteractionInjection = """
   const attachedElements = new WeakSet();
 
   function sendEvent(eventType, details) {
-    const message = {eventType, details};
-    window.ReclaimMessenger.send('userInteraction', message);
+    window.flutter_inappwebview.callHandler('userInteraction', JSON.stringify({eventType, details}));
   }
 
   function findElementsInShadowDOM(selector, root = document) {
@@ -202,6 +211,7 @@ const userInteractionInjection = """
             const value = el.value;
             const tag = el.tagName;
             const url = window.location.href;
+            console.log('url', url);
             sendEvent('input', {
               tag: tag,
               id: el.id,
@@ -279,23 +289,22 @@ class InjectionRequest {
 const _sendRequestLogs =
     r"window.flutter_inappwebview.callHandler('requestLogs', JSON.stringify({ requestBody: typeof requestBody === 'string' ? requestBody : ((requestBody !== null && typeof requestBody === 'object') ? JSON.stringify(requestBody) : ''), url: url || '', responseBody: responseText || '', method: requestMethod || '', currentPageUrl: window.location.href || '', contentType: headers['content-type'] || headers['Content-Type'] || '', metadata: { loadEventStart: new Date((window.performance.timeOrigin + (window.performance.getEntriesByType('navigation')[0].loadEventStart))).toISOString(),  receivedAt: new Date().toISOString() }}));";
 
-String applyMethodInTemplate(HawkeyeInterceptionMethod hawkeyeInterceptionMethod, String template) {
-  _log.info('[INJECTION] Hawkeye interception method set to $hawkeyeInterceptionMethod');
+String applyInterceptorOptionsToTemplate(HawkeyeInterceptionOptions options, String template) {
+  _log.info('[INJECTION] Hawkeye interception options set to $options');
   return template
-      .replaceFirst(r'\(useProxyForFetch)', hawkeyeInterceptionMethod.useProxyForFetch.toString())
-      .replaceFirst(r'\(useGetterForFetch)', hawkeyeInterceptionMethod.useGetterForFetch.toString());
+      .replaceFirst(r'\(disableFormIntercept)', options.disableFormIntercept.toString())
+      .replaceFirst(r'\(delayFormSubmitForFetch)', options.delayFormSubmitForFetch.toString())
+      .replaceFirst(r'\(useProxyForFetch)', options.interceptionMethod.useProxyForFetch.toString())
+      .replaceFirst(r'\(useGetterForFetch)', options.interceptionMethod.useGetterForFetch.toString());
 }
 
 final _log = logging.child('webview_utils');
 
-String injectInterceptorScript(
-  InjectionType injectionType, {
-  required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
-}) {
-  _log.info('[INJECTION] Using $injectionType');
+String injectInterceptorScript(InjectionType injectionType, {required HawkeyeInterceptionOptions options}) {
+  _log.config('[INJECTION] Using $injectionType');
   switch (injectionType) {
     case InjectionType.HAWKEYE:
-      return applyMethodInTemplate(hawkeyeInterceptionMethod, HAWKEYE);
+      return applyInterceptorOptionsToTemplate(options, HAWKEYE);
     case InjectionType.MSWJS:
       return MSWJS;
     case InjectionType.XHOOK:
@@ -315,12 +324,12 @@ const String _notifyRequestInterceptorListeners =
 String createInjection(
   bool disableRequestReplay,
   InjectionType injectionType, {
-  required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
+  required HawkeyeInterceptionOptions options,
 }) {
   logging.child('createInjection').config('disableRequestReplay: $disableRequestReplay');
   return """
     window.ReclaimInjected = true;
-    ${injectInterceptorScript(injectionType, hawkeyeInterceptionMethod: hawkeyeInterceptionMethod)}
+    ${injectInterceptorScript(injectionType, options: options)}
         
         $_notifyRequestInterceptorListeners
       } catch (e){
@@ -335,12 +344,12 @@ String createInjection(
 String createManualVerificationInjections(
   bool disableRequestReplay,
   InjectionType injectionType, {
-  required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
+  required HawkeyeInterceptionOptions options,
 }) {
   final s =
       """
     window.ReclaimInjected = true;
-    ${injectInterceptorScript(injectionType, hawkeyeInterceptionMethod: hawkeyeInterceptionMethod)}
+    ${injectInterceptorScript(injectionType, options: options)}
         $_sendRequestLogs
         // add param matching logic
       }

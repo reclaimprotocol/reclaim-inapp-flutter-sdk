@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../theme/theme.dart';
+import '../icon.dart';
+
 // Custom Curve Implementation from above
 class SplitCubicCurve extends Curve {
   const SplitCubicCurve();
@@ -71,14 +74,31 @@ class _SpinningHourglassState extends State<SpinningHourglass> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
+    final reclaimTheme = ReclaimTheme.of(context);
+    final fieldVerifyingIconProvider = reclaimTheme.fieldVerifyingIconProvider;
+
+    late final placeholder = Icon(
+      Icons.hourglass_empty_rounded,
+      color: widget.color ?? Theme.of(context).colorScheme.secondary,
+      size: widget.size,
+    );
+
+    final Widget child;
+    if (fieldVerifyingIconProvider != null) {
+      child = ReclaimGraphicIcon(
+        provider: fieldVerifyingIconProvider,
+        placeholder: placeholder,
+        size: widget.size,
+        fit: BoxFit.scaleDown,
+      );
+    } else {
+      child = placeholder;
+    }
+
     return RotationTransition(
       // The animation controller with the specified curve now drives the rotation.
       turns: _animation,
-      child: Icon(
-        Icons.hourglass_empty_rounded,
-        color: widget.color ?? Theme.of(context).colorScheme.secondary,
-        size: widget.size,
-      ),
+      child: child,
     );
   }
 }

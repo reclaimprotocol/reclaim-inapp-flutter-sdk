@@ -26,5 +26,5 @@ BUILD_OUTPUT_DIR="${BUILD_DIR}/${GOARCH}_${SDK}"
 mkdir -p "$BUILD_OUTPUT_DIR"
 
 go build -C "$GO_GNARKPROVER_DIR" -trimpath ${GOX_TAGS} -buildmode=c-archive \
-  -ldflags="-s -w" \
+  -ldflags="${LDFLAGS:-"-s -w"}" \
   -o "${BUILD_OUTPUT_DIR}/${LIB_NAME}.a" "$GO_TARGET_LIB"

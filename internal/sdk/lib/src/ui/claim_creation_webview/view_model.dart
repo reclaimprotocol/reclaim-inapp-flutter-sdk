@@ -88,7 +88,7 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
     } else {
       _onUpdateWebView = () async {
         final oldController = value._controller;
-        log.info('Older controller was: $oldController');
+        log.fine('Older controller was: $oldController');
         try {
           await cb();
         } catch (e, s) {
@@ -120,7 +120,7 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
       throw const ReclaimVerificationProviderLoadException('No initial URL found for provider');
     }
 
-    log.info('load with provider and user scripts');
+    log.fine('load with provider and user scripts');
     log.debug('waiting for webview to initialize');
     final initializationTimeout = const Duration(seconds: 5);
     try {
@@ -128,13 +128,13 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
       await Future.delayed(const Duration(seconds: 2));
     } catch (e, s) {
       final progress = (await value._controller?.getProgress() ?? 0) / 100;
-      log.info('progress: $progress');
+      log.fine('progress: $progress');
       if (progress > 0.3 && followCount < 3) {
-        log.info('progress is greater than 0.3, skipping update webview');
+        log.fine('progress is greater than 0.3, skipping update webview');
         return load(provider: provider, userScripts: userScripts, followCount: followCount + 1);
       }
       log.severe('Failed to initialize webview with controller: ${value._controller}', e, s);
-      log.info('Trying to update webview with $_onUpdateWebView');
+      log.fine('Trying to update webview with $_onUpdateWebView');
       await _onUpdateWebView?.call();
       await Future.delayed(const Duration(seconds: 2));
       try {
@@ -168,18 +168,18 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
       // Adding a delay to ensure the webview is ready to load the url
       await Future.delayed(const Duration(milliseconds: 100));
       log.info('loading url $initialUrl');
-      log.info({'hasLoadedRequestedUrl': value.hasLoadedRequestedUrl, 'lastLoadStopTime': value.lastLoadStopTime});
+      log.fine({'hasLoadedRequestedUrl': value.hasLoadedRequestedUrl, 'lastLoadStopTime': value.lastLoadStopTime});
       await controller.loadUrl(urlRequest: URLRequest(url: WebUri(initialUrl))).timeout(loadUrlTimeout);
       log.info('loaded url $initialUrl');
       await Future.delayed(initializationTimeout);
-      log.info({'hasLoadedRequestedUrl': value.hasLoadedRequestedUrl, 'lastLoadStopTime': value.lastLoadStopTime});
+      log.fine({'hasLoadedRequestedUrl': value.hasLoadedRequestedUrl, 'lastLoadStopTime': value.lastLoadStopTime});
       if (!value.hasLoadedRequestedUrl) {
         log.warning({
           'reason': "Request url hasn't loaded in the webview",
           'isLoading': value.isLoading,
           'progress': value.webAppBarValue.progress,
         });
-        log.info({'isControllerLoading': await controller.isLoading()});
+        log.fine({'isControllerLoading': await controller.isLoading()});
       }
     } catch (e, s) {
       log.severe('Failed to load url $initialUrl', e, s);
@@ -212,7 +212,13 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
 
   void onLoadStart() {
     value = value.copyWith(isLoading: true, hasLoadedRequestedUrl: true);
+    if (!_isWebPageReady && value.requestedUrl?.isNotEmpty == true) {
+      _isWebPageReady = true;
+      log.event(Level.INFO.withEvent(LogEventType.WEB_PAGE_READY), 'web page loaded and ready');
+    }
   }
+
+  bool _isWebPageReady = false;
 
   void onLoadStop() {
     value = value.copyWith(isLoading: false, lastLoadStopTime: DateTime.now());

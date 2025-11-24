@@ -1,3 +1,27 @@
+## 0.24.0
+
+* Fix use of capability access token
+* Add OS & inapp sdk version to feature flag query
+* Add interception options from feature flags
+* Re-add rive compatibility for graphic in themes
+* Add i18n support and initial en/es l10n
+* Update theme to support hiding values shown for data shared
+* Update theme to customize text on Verifier App's success screen
+* Remove red color for status message on errors
+* Update message shown on ReclaimVerificationNoActivityDetectedException
+* Add version update notification
+* Update settings UI in verifications web page
+* Update cronet play services api version
+* Fix claim indicator UI update after state changes from error
+* Update the request that's sent when disableRequestReplay is true (when document request replay is disabled)
+* Fix [internal] [severe] claim creation on retries by clearing error on retry
+* Update [internal] gnark circuits and library
+* Add events to critical log for better logs summary on devtools
+* Update themeing to support blurred background, terms notice color and parameters display style, verifying icon, provider to app loading icon
+* Add log level to Log entry that's sent to logging service
+* Add [WIP] dark theme support for app
+* Update theme data to provide return to app text, terms & privacy policy urls
+
 ## 0.16.0
 
 * Add support for custom verification flow theme for any reclaim devtool app

@@ -252,6 +252,8 @@ abstract class ReclaimModuleApi {
   @async
   bool sendLog(LogEntryApi entry);
   @async
+  void setConsoleLogging(bool enabled);
+  @async
   bool ping();
 }
 

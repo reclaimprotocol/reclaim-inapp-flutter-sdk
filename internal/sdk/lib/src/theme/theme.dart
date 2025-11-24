@@ -1,24 +1,57 @@
 import 'package:flutter/material.dart';
 
+import '../data/reclaim_app_theme.dart';
 import '../widgets/color_or_image.dart';
 import '../widgets/reclaim_image_provider.dart';
+
+export '../data/reclaim_app_theme.dart';
+
+class BackgroundDecoration {
+  final ColorOrImageDecorationProvider? background;
+  final double blurStrength;
+  final Color? blurColor;
+
+  const BackgroundDecoration({required this.background, this.blurStrength = 0, this.blurColor});
+}
+
+class ParametersTheme {
+  final ParametersDisplayStyle parameterListStyle;
+  final Color? dividerColor;
+  final bool isValueShown;
+
+  const ParametersTheme({
+    this.parameterListStyle = ParametersDisplayStyle.compact,
+    this.dividerColor,
+    this.isValueShown = true,
+  });
+}
 
 class ReclaimTheme extends ThemeExtension<ReclaimTheme> {
   final Color primary;
   final Color secondaryColor;
   final Color surfaceColor;
   final Color green;
-  final Color? providerToAppLoaderColor;
-  final Color? loadingIconColor;
+  final ColorOrImageDecorationProvider? providerToAppLoader;
+  final ColorOrImageDecorationProvider? loading;
+  final double? cardElevation;
   final Color? cardColor;
   final Color? onCardColor;
-  final ColorOrImageDecorationProvider? background;
+  final Color? termsNoticeColor;
+  final Color? hyperlinkColor;
+  final Color? sessionChipSurfaceColor;
+  final Color? sessionChipOnSurfaceColor;
+  final BackgroundDecoration? background;
   final ReclaimGraphicProvider? doneIconProvider;
   final ReclaimGraphicProvider? fieldVerifiedIconProvider;
   final ReclaimGraphicProvider? fieldVerifyingIconProvider;
   final ReclaimGraphicProvider? verificationCompleteIconProvider;
   final ReclaimGraphicProvider? verifyScreenAppIconProvider;
   final ReclaimGraphicOptions? appIconGraphicOptions;
+  final ReturnToAppMessage? returnToAppMessage;
+  final DataSharedMessage? dataSharedMessage;
+  final Uri? termsAndConditionsUri;
+  final Uri? privacyPolicyUri;
+  final ParametersTheme parametersTheme;
 
   const ReclaimTheme({
     this.primary = const Color(0xFF332FED),
@@ -26,16 +59,26 @@ class ReclaimTheme extends ThemeExtension<ReclaimTheme> {
     this.surfaceColor = const Color(0xFFF7F7F8),
     this.green = const Color(0xFF16A34A),
     this.background,
-    this.providerToAppLoaderColor,
+    this.providerToAppLoader,
     this.doneIconProvider,
-    this.loadingIconColor,
+    this.loading,
     this.cardColor = const Color(0xFFF2F2F7),
     this.onCardColor = const Color(0xFF23221f),
+    this.sessionChipSurfaceColor,
+    this.sessionChipOnSurfaceColor,
     this.fieldVerifiedIconProvider,
     this.fieldVerifyingIconProvider,
     this.verificationCompleteIconProvider,
     this.verifyScreenAppIconProvider,
     this.appIconGraphicOptions,
+    this.cardElevation,
+    this.termsNoticeColor,
+    this.hyperlinkColor,
+    this.returnToAppMessage,
+    this.dataSharedMessage,
+    this.termsAndConditionsUri,
+    this.privacyPolicyUri,
+    this.parametersTheme = const ParametersTheme(),
   });
 
   factory ReclaimTheme.of(BuildContext context) {

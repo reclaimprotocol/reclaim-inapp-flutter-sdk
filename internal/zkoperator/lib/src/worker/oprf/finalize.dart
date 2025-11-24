@@ -35,10 +35,6 @@ class TOPRFFinalizeRunnable extends Runnable<Uint8List, String> {
       throw Exception('Invalid proof: $proofStr');
     }
 
-    if (kDebugMode) {
-      print('TOPRF finalize: $proofStr');
-    }
-
     // returning the json string response
     return proofStr;
   }

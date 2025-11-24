@@ -122,9 +122,20 @@ class HybridScreenshotService {
 
           // Check if the render object is valid and attached
           if (renderObject != null && renderObject.attached) {
-            final RenderRepaintBoundary? boundary = renderObject as RenderRepaintBoundary?;
+            // First check if it's actually a RenderRepaintBoundary
+            if (renderObject is! RenderRepaintBoundary) {
+              _logger.warning('Render object is not a RenderRepaintBoundary, it is: ${renderObject.runtimeType}');
+              _logger.fine('Render object not a valid boundary for screenshot');
+              return;
+            }
 
-            if (boundary != null && !boundary.debugNeedsPaint) {
+            final RenderRepaintBoundary boundary = renderObject;
+
+            // In release mode, debugNeedsPaint is always false, so we shouldn't check it
+            // Add a small delay to ensure the boundary is ready
+            await Future.delayed(const Duration(milliseconds: 50));
+
+            try {
               final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
               final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
@@ -144,15 +155,25 @@ class HybridScreenshotService {
                 } else {
                   _logger.fine('App UI screenshot too small');
                 }
+              } else {
+                _logger.warning('Failed to convert image to byte data');
               }
-            } else {
-              _logger.fine('Boundary not ready for capture');
+
+              // Dispose the image to free memory
+              image.dispose();
+            } catch (imageError, imageStack) {
+              _logger.severe('Error during image capture/conversion', imageError, imageStack);
+              // Check if it's the late initialization error
+              if (imageError.toString().contains('LateInitializationError')) {
+                _logger.warning('Late initialization error detected - boundary may not be ready');
+              }
             }
           } else {
-            _logger.fine('Render object not attached');
+            _logger.fine('Render object not attached or is null');
           }
-        } catch (e) {
+        } catch (e, stackTrace) {
           _logger.warning('Failed to capture app UI: $e');
+          _logger.fine('Stack trace: $stackTrace');
         }
       } else {
         _logger.fine('App key context is null');

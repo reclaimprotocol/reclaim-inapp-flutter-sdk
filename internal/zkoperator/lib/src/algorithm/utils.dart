@@ -11,7 +11,7 @@ final _logger = Logger('reclaim_flutter_sdk.reclaim_gnark_zkoperator.algorithm.u
 final _nameToBytes = <ProverAlgorithmType, Uint8List>{};
 final _keyToBytes = <ProverAlgorithmType, Uint8List>{};
 
-extension _IdBytes on ProverAlgorithmType {
+extension IdBytes on ProverAlgorithmType {
   Uint8List nameToJsonStringBytes() {
     return _nameToBytes[this] ??= utf8.encode('"$name"');
   }

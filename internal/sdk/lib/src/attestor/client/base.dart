@@ -156,7 +156,7 @@ abstract class AttestorClient {
     required FutureOr<RESPONSE> Function(dynamic value) transformResponse,
   }) {
     final log = logger.child('sendRequest');
-    log.info({'tag': 'sendRequest', 'type': type, 'request': request});
+    log.fine({'tag': 'sendRequest', 'type': type, 'request': request});
 
     final manager = AttestorRpcProcessManager<REQUEST, RESPONSE>.create(
       requestType: type,
@@ -164,15 +164,15 @@ abstract class AttestorClient {
       transformer: transformResponse,
     );
 
-    log.info({'tag': 'manager', 'manager': manager});
+    log.fine({'tag': 'manager', 'manager': manager});
 
     final process = manager.process;
 
-    log.info({'tag': 'process', 'process': process, 'process.id': process.id});
+    log.fine({'tag': 'process', 'process': process, 'process.id': process.id});
 
     _processManagers[process.id] = manager;
 
-    log.info({
+    log.fine({
       'tag': 'process.id',
       'process.id': process.id,
       'event': 'sending message',
@@ -182,7 +182,7 @@ abstract class AttestorClient {
     () async {
       try {
         await postMessage(process.createRequest(channel: hostMessengerChannelName));
-        log.info({'tag': 'response'});
+        log.fine({'tag': 'response'});
       } catch (e, s) {
         log.severe('Error sending request', e, s);
         final completer = manager.completer;
@@ -191,7 +191,7 @@ abstract class AttestorClient {
       }
     }();
 
-    log.info({'tag': 'process.id', 'process.id': process.id, 'event': 'message sent'});
+    log.fine({'tag': 'process.id', 'process.id': process.id, 'event': 'message sent'});
 
     return process;
   }
@@ -223,7 +223,7 @@ abstract class AttestorClient {
 
   @mustCallSuper
   Future<void> dispose() async {
-    logger.info('disposing with following managers: ${_processManagers.values.map((e) => e.process.id).toList()}');
+    logger.fine('disposing with following managers: ${_processManagers.values.map((e) => e.process.id).toList()}');
     for (final controller in _processManagers.values) {
       controller.onCancel();
     }

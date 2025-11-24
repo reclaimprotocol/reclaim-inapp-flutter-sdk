@@ -23,9 +23,9 @@ class AIFlowCoordinatorWidget extends StatefulWidget {
 
   /// Returns the [AIFlowCoordinator] instance from the nearest [AIFlowCoordinatorWidget].
   static AIFlowCoordinator of(BuildContext context) {
-    final provider = context.dependOnInheritedWidgetOfExactType<_AIFlowCoordinatorProvider>();
-    assert(provider != null, 'No AIFlowCoordinatorWidget found in context');
-    return provider!.coordinator;
+    final coordinator = maybeOf(context);
+    assert(coordinator != null, 'No AIFlowCoordinatorWidget found in context');
+    return coordinator!;
   }
 
   static AIFlowCoordinator? maybeOf(BuildContext context) {
@@ -61,6 +61,13 @@ class AIFlowCoordinatorWidget extends StatefulWidget {
     final coordinator = maybeOf(context);
     return coordinator?.webContext;
   }
+
+  /// Returns the AiServiceClient from the static coordinator instance, or null if not available.
+  /// This is useful for logging timeline events without requiring a BuildContext.
+  static AiServiceClient? get aiClient => _coordinator?.aiClient;
+
+  /// Returns whether the current provider is an AI provider.
+  static bool get isAiProviderEnabled => _isAiProvider;
 
   /// Returns the WebContext from the nearest AIFlowCoordinatorWidget, or null if not found.
   /// This is a safe alternative to directly accessing the webContext when the widget might not be available.
@@ -150,15 +157,12 @@ class _AIFlowCoordinatorWidgetState extends State<AIFlowCoordinatorWidget> {
   @override
   Widget build(BuildContext context) {
     // Changing positions of widget in tree can cause recreation of descendant widgets and listeners to miss events.
-    if (_coordinator == null) {
-      return SizedBox(child: widget.child);
-    }
-    return _AIFlowCoordinatorProvider(coordinator: _coordinator!, child: widget.child);
+    return _AIFlowCoordinatorProvider(coordinator: _coordinator, child: widget.child);
   }
 }
 
 class _AIFlowCoordinatorProvider extends InheritedWidget {
-  final AIFlowCoordinator coordinator;
+  final AIFlowCoordinator? coordinator;
 
   const _AIFlowCoordinatorProvider({required this.coordinator, required super.child});
 

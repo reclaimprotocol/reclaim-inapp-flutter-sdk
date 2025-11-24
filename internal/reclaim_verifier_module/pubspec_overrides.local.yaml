@@ -1,0 +1,7 @@
+dependency_overrides:
+  reclaim_inapp_sdk:
+    path: ../sdk
+  reclaim_gnark_zkoperator:
+    path: ../zkoperator
+  reclaim_verifier_module:
+    path: ../reclaim_verifier_module

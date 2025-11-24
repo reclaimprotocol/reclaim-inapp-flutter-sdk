@@ -35,10 +35,6 @@ class GenerateOPRFRequestDataRunnable extends Runnable<Uint8List, String> {
       throw Exception('Invalid proof: $proofStr');
     }
 
-    if (kDebugMode) {
-      print('generated OPRF request data: $proofStr');
-    }
-
     // returning the json string response
     return proofStr;
   }

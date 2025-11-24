@@ -18,6 +18,9 @@ else
     git clone https://$PACKAGE_CLONE_USER:$PACKAGE_CLONE_PASSWD@github.com/reclaimprotocol/reclaim-inapp-ios-sdk.git $IOS_CLONE_DIR;
 fi
 
+rm $IOS_CLONE_DIR/Sources/ReclaimInAppSdk/Messages.swift;
+cp ../generated/ios/Sources/ReclaimInAppSdk/Messages.swift $IOS_CLONE_DIR/Sources/ReclaimInAppSdk/Messages.swift;
+
 cd $IOS_CLONE_DIR;
 
 DEFAULT_CHANGELOG="## $VERSION

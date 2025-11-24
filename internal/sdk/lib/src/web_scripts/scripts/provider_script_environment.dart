@@ -27,7 +27,7 @@ addEventListener("DOMContentLoaded", (event) => {
     window._ResponseOnDocumentContentLoaded = document.documentElement.innerHTML;
   }
   if (typeof window._On_ResponseOnDocumentContentLoaded === 'function') {
-    window._On_ResponseOnDocumentContentLoaded(location.href, window._ResponseOnDocumentContentLoaded);
+    window._On_ResponseOnDocumentContentLoaded(location.href, document.contentType, window._ResponseOnDocumentContentLoaded);
   }
 }, {once: true});
 
@@ -84,6 +84,10 @@ window.Reclaim = {
             error = { message: error };
         }
         window.ReclaimMessenger.send('reportProviderError', error);
+    },
+    // log(logType: 'error' | 'info', message: object)
+    log: (logType, message) => {
+        window.ReclaimMessenger.log(logType, message);
     },
 }
 

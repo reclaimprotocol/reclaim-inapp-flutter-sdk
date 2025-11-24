@@ -1,0 +1,9 @@
+arb-dir: lib/src/l10n/translations
+template-arb-file: app_en.arb
+output-dir: lib/src/l10n/generated
+output-localization-file: app_localizations.dart
+synthetic-package: false
+nullable-getter: true
+untranslated-messages-file: build/untranslated_messages.json
+output-class: ReclaimAppLocalizations
+use-named-parameters: true

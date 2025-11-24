@@ -48,7 +48,11 @@ class ClaimCreationRequest {
     return providerData.additionalClientOptions ?? const {};
   }
 
-  Map<String, dynamic> get httpParams => _getHttpParams(extractedData, additionalClientOptions);
+  Map<String, dynamic> getHttpParams(
+    Map<String, Object?> Function(Map<String, Object?> options) updateAdditionalClientOptions,
+  ) {
+    return _getHttpParams(extractedData, updateAdditionalClientOptions(additionalClientOptions));
+  }
 
   Map<String, dynamic> get secretParams => _getSecretParams(extractedData);
 
@@ -187,6 +191,9 @@ class ClaimCreationRequest {
     }
     final List<String?> urlParamValues =
         urlMatch?.groups(List<int>.generate(urlParamKeys.length, (i) => i + 1)).toList() ?? [];
+
+    logger.finer(json.encode({'urlParamKeys': urlParamKeys, 'urlParamValues': urlParamValues, 'urlRegex': urlRegex}));
+
     urlParamKeys.asMap().forEach((key, value) {
       params[value] = urlParamValues[key]!;
     });

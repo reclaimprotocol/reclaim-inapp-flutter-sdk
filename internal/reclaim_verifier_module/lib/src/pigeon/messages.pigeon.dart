@@ -935,6 +935,8 @@ abstract class ReclaimModuleApi {
 
   Future<bool> sendLog(LogEntryApi entry);
 
+  Future<void> setConsoleLogging(bool enabled);
+
   Future<bool> ping();
 
   static void setUp(ReclaimModuleApi? api, {BinaryMessenger? binaryMessenger, String messageChannelSuffix = '',}) {
@@ -1101,6 +1103,31 @@ abstract class ReclaimModuleApi {
           try {
             final bool output = await api.sendLog(arg_entry!);
             return wrapResponse(result: output);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          }          catch (e) {
+            return wrapResponse(error: PlatformException(code: 'error', message: e.toString()));
+          }
+        });
+      }
+    }
+    {
+      final BasicMessageChannel<Object?> pigeonVar_channel = BasicMessageChannel<Object?>(
+          'dev.flutter.pigeon.reclaim_verifier_module.ReclaimModuleApi.setConsoleLogging$messageChannelSuffix', pigeonChannelCodec,
+          binaryMessenger: binaryMessenger);
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          assert(message != null,
+          'Argument for dev.flutter.pigeon.reclaim_verifier_module.ReclaimModuleApi.setConsoleLogging was null.');
+          final List<Object?> args = (message as List<Object?>?)!;
+          final bool? arg_enabled = (args[0] as bool?);
+          assert(arg_enabled != null,
+              'Argument for dev.flutter.pigeon.reclaim_verifier_module.ReclaimModuleApi.setConsoleLogging was null, expected non-null bool.');
+          try {
+            await api.setConsoleLogging(arg_enabled!);
+            return wrapResponse(empty: true);
           } on PlatformException catch (e) {
             return wrapResponse(error: e);
           }          catch (e) {

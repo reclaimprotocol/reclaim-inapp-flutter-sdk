@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:reclaim_inapp_sdk/overrides.dart';
 import 'package:reclaim_inapp_sdk/src/services/capability/access_token.dart';
 import 'package:reclaim_inapp_sdk/src/utils/crypto/signature.dart';
 import 'package:reclaim_inapp_sdk/src/utils/crypto/url_safe_codec.dart';
@@ -81,7 +82,8 @@ void verify(List<String> params) {
   }
   final [publicKeyString, accessTokenString] = params;
   try {
-    final jws = CapabilityAccessToken.import(accessTokenString, publicKeyString);
+    ReclaimEnv.CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY = publicKeyString;
+    final jws = CapabilityAccessToken.import(accessTokenString);
     print('Valid Signature');
     print(jws.capabilities);
   } on ArgumentError {

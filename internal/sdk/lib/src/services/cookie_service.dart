@@ -15,7 +15,7 @@ class CookieService {
     final cookieManager = CookieManager.instance();
     final urlHost = url.host;
     final cookies = await cookieManager.getCookies(url: url);
-    _log.info('Getting cookies (${cookies.length}) for ($urlHost) $url with credentials $credentials');
+    _log.finer('Getting cookies (${cookies.length}) for ($urlHost) $url with credentials $credentials');
     final String cookieString = cookies
         .where((e) {
           _log.finest('cookie: $e');

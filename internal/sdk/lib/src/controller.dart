@@ -15,10 +15,10 @@ import 'data/verification/result.dart';
 import 'exception/exception.dart';
 import 'logging/logging.dart';
 import 'repository/feature_flags.dart';
-import 'services/cookie_service.dart';
 import 'ui/claim_creation_webview/view_model.dart';
 import 'usecase/session_manager.dart';
 import 'usecase/verification.dart';
+import 'usecase/version_information.dart';
 import 'usecase/zkoperator.dart';
 import 'utils/observable_notifier.dart';
 import 'web_scripts/hawkeye/interception_method.dart';
@@ -35,7 +35,7 @@ class VerificationState with EquatableMixin {
     this.userScripts,
     this.result,
     this.providerVersion,
-    this.injectionRequests,
+    this.matchableDevtoolProviderRequests,
   });
 
   /// The provider that was initial requested when verification flow started
@@ -46,7 +46,7 @@ class VerificationState with EquatableMixin {
   final AttestorAuthenticationRequest? attestorAuthenticationRequest;
   final UnmodifiableListView<UserScript>? userScripts;
   final ReclaimVerificationResult? result;
-  final Iterable<InjectionRequest>? injectionRequests;
+  final Iterable<InjectionRequest>? matchableDevtoolProviderRequests;
 
   // note: keep progress between 0.0 and 0.1
   double get initializationProgress {
@@ -68,7 +68,7 @@ class VerificationState with EquatableMixin {
     UnmodifiableListView<UserScript>? userScripts,
     ReclaimVerificationResult? result,
     ProviderVersionExact? providerVersion,
-    Iterable<InjectionRequest>? injectionRequests,
+    Iterable<InjectionRequest>? matchableDevtoolProviderRequests,
   }) {
     return VerificationState(
       // requestedProvider cannot be changed once assigned
@@ -79,7 +79,7 @@ class VerificationState with EquatableMixin {
       userScripts: userScripts ?? this.userScripts,
       result: result ?? this.result,
       providerVersion: providerVersion ?? this.providerVersion,
-      injectionRequests: injectionRequests ?? this.injectionRequests,
+      matchableDevtoolProviderRequests: matchableDevtoolProviderRequests ?? this.matchableDevtoolProviderRequests,
     );
   }
 
@@ -179,6 +179,8 @@ class VerificationController extends ObservableNotifier<VerificationState> {
 
       _log.info('Session started: ${sessionInformation.sessionId}');
 
+      await SDKVersionInformation().verifyUpdateRequirement();
+
       await ZkOperatorManager().setupZkOperator(identity, options.attestorZkOperator);
 
       final verificationFlowManager = VerificationFlowManager();
@@ -208,7 +210,10 @@ class VerificationController extends ObservableNotifier<VerificationState> {
           final canContinue = await canContinueVerificationCallback(provider, sessionInformation);
           if (!canContinue) {
             // Verification must be cancelled
-            _log.info('canContinueVerificationCallback returned false, cancelling verification');
+            _log.event(
+              Level.INFO.withEvent(LogEventType.RECLAIM_VERIFICATION_SKIPPED),
+              'canContinueVerificationCallback returned false, cancelling verification',
+            );
             updateException(const ReclaimVerificationSkippedException());
             return;
           }
@@ -236,16 +241,22 @@ class VerificationController extends ObservableNotifier<VerificationState> {
     } on ReclaimException catch (e, s) {
       updateException(e, s);
     } catch (e, s) {
-      _log.severe('Error fetching provider', e, s);
+      _log.event(
+        Level.SEVERE.withEvent(LogEventType.RECLAIM_VERIFICATION_PROVIDER_LOAD_EXCEPTION),
+        'Error fetching provider',
+        e,
+        s,
+      );
       updateException(const ReclaimVerificationProviderLoadException('Error loading provider'));
     }
   }
 
   Future<void> _loadUserScripts(HttpProvider provider, SessionIdentity identity) async {
     final featureFlagsProvider = FeatureFlagsProvider(identity);
-    final hawkeyeInterceptionMethod = await featureFlagsProvider
-        .get(FeatureFlag.hawkeyeInterceptionMethod)
-        .then(HawkeyeInterceptionMethod.fromString);
+
+    final HawkeyeInterceptionOptions interceptorOptions = await featureFlagsProvider
+        .get(FeatureFlag.interceptionOptions)
+        .then(HawkeyeInterceptionOptions.fromString);
     final pageLoadedCompletedDebounceTimeoutMs = await featureFlagsProvider
         .get(FeatureFlag.pageLoadedCompletedDebounceTimeoutMs)
         .then((value) => value.toInt());
@@ -253,11 +264,11 @@ class VerificationController extends ObservableNotifier<VerificationState> {
     final userScripts = await VerificationFlowManager().loadUserScripts(
       provider: provider,
       parameters: request.parameters,
-      hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
+      options: interceptorOptions,
       pageLoadedCompletedDebounceTimeoutMs: pageLoadedCompletedDebounceTimeoutMs,
     );
     final injectionRequests = InjectionRequest.fromDataRequests(provider.requestData, request.parameters);
-    value = value.copyWith(userScripts: userScripts, injectionRequests: injectionRequests);
+    value = value.copyWith(userScripts: userScripts, matchableDevtoolProviderRequests: injectionRequests);
   }
 
   Future<void> _onFetchAttestorAuthenticationRequest(HttpProvider requestedProvider) async {
@@ -272,6 +283,10 @@ class VerificationController extends ObservableNotifier<VerificationState> {
   }
 
   void cancelVerification(String message) {
+    logging.event(
+      Level.INFO.withEvent(LogEventType.RECLAIM_VERIFICATION_CANCELLED_EXCEPTION),
+      'Verification cancelled because: $message',
+    );
     updateException(ReclaimVerificationCancelledException(message));
   }
 
@@ -280,6 +295,7 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       logging.config("don't dismiss verification after it is completed");
       return;
     }
+    logging.event(Level.INFO.withEvent(LogEventType.RECLAIM_VERIFICATION_DISMISSED), 'Verification dismissed by user');
     updateException(const ReclaimVerificationDismissedException());
   }
 
@@ -297,9 +313,10 @@ class VerificationController extends ObservableNotifier<VerificationState> {
     final finalProvider = provider.copyWithLoginUrl(currentUrl ?? provider.loginUrl);
 
     final featureFlagsProvider = FeatureFlagsProvider(identity);
-    final hawkeyeInterceptionMethod = await featureFlagsProvider
-        .get(FeatureFlag.hawkeyeInterceptionMethod)
-        .then(HawkeyeInterceptionMethod.fromString);
+
+    final HawkeyeInterceptionOptions interceptorOptions = await featureFlagsProvider
+        .get(FeatureFlag.interceptionOptions)
+        .then(HawkeyeInterceptionOptions.fromString);
 
     final pageLoadedCompletedDebounceTimeoutMs = await featureFlagsProvider
         .get(FeatureFlag.pageLoadedCompletedDebounceTimeoutMs)
@@ -308,12 +325,16 @@ class VerificationController extends ObservableNotifier<VerificationState> {
     final userScripts = await VerificationFlowManager().loadUserScripts(
       provider: finalProvider,
       parameters: request.parameters,
-      hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
+      options: interceptorOptions,
       pageLoadedCompletedDebounceTimeoutMs: pageLoadedCompletedDebounceTimeoutMs,
     );
 
     final injectionRequests = InjectionRequest.fromDataRequests(provider.requestData, request.parameters);
-    value = value.copyWith(provider: finalProvider, userScripts: userScripts, injectionRequests: injectionRequests);
+    value = value.copyWith(
+      provider: finalProvider,
+      userScripts: userScripts,
+      matchableDevtoolProviderRequests: injectionRequests,
+    );
   }
 
   Future<void> onManualVerificationRequestSubmitted() async {
@@ -323,15 +344,6 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       providerId: request.providerId,
     );
     updateException(const ReclaimVerificationManualReviewException());
-  }
-
-  Future<void> signUserOut(InAppWebViewController controller) async {
-    final cs = CookieService();
-    await cs.clearCookies();
-    final loginUrl = value.provider?.loginUrl;
-    if (loginUrl != null) {
-      await controller.loadUrl(urlRequest: URLRequest(url: WebUri(loginUrl)));
-    }
   }
 
   void onSubmitProofs(Iterable<CreateClaimOutput> proofs) {
@@ -347,6 +359,7 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       proofs: proofs.toList(),
     );
     value = value.copyWith(result: result);
+    logging.event(Level.INFO.withEvent(LogEventType.RESULT_RECEIVED), 'Sending result');
   }
 
   ReclaimException? _lastReportedException;

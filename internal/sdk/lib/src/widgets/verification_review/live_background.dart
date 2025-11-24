@@ -9,10 +9,38 @@ import '../claim_creation/claim_creation.dart';
 import '../reclaim_appbar.dart';
 import '../webview_bottom.dart';
 
+class VerificationReviewBackground extends StatelessWidget {
+  const VerificationReviewBackground({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = MediaQuery.paddingOf(context);
+
+    return BackgroundCover(
+      key: const ValueKey('VerificationReviewBackground'),
+      graphicKeyValue: 'verification_review_background',
+      builder: (context, backgroundGraphic) {
+        return Stack(
+          children: [
+            if (backgroundGraphic != null) backgroundGraphic else const LiveBackground(),
+            Padding(
+              padding: EdgeInsets.only(
+                top: padding.top + ReclaimAppBar.preferredAppBarSize.height,
+                bottom: padding.bottom + WebviewBottomBar.estimateHeight,
+              ),
+              child: child,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 /// A background that has an animating mesh gradient that changes based on the claim creation state.
 class LiveBackground extends StatefulWidget {
-  const LiveBackground({super.key, required this.child});
-  final Widget child;
+  const LiveBackground({super.key});
 
   @override
   State<LiveBackground> createState() => _LiveBackgroundState();
@@ -178,31 +206,11 @@ class _LiveBackgroundState extends State<LiveBackground> with SingleTickerProvid
       },
     );
 
-    final padding = MediaQuery.paddingOf(context);
-
-    return BackgroundCover(
-      builder: (context, backgroundGraphic) {
-        return Stack(
-          children: [
-            if (backgroundGraphic != null)
-              backgroundGraphic
-            else
-              AnimatedSwitcher(
-                duration: Durations.extralong3,
-                switchInCurve: Curves.easeIn,
-                switchOutCurve: Curves.easeOut,
-                child: !_canStartAnimating ? const SizedBox.expand() : meshAnimationBuilder,
-              ),
-            Padding(
-              padding: EdgeInsets.only(
-                top: padding.top + ReclaimAppBar.preferredAppBarSize.height,
-                bottom: padding.bottom + WebviewBottomBar.estimateHeight,
-              ),
-              child: widget.child,
-            ),
-          ],
-        );
-      },
+    return AnimatedSwitcher(
+      duration: Durations.extralong3,
+      switchInCurve: Curves.easeIn,
+      switchOutCurve: Curves.easeOut,
+      child: !_canStartAnimating ? const SizedBox.expand() : meshAnimationBuilder,
     );
   }
 }

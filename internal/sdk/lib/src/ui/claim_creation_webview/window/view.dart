@@ -1,21 +1,38 @@
+import 'dart:collection';
+
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-import '../../../controller.dart';
 import '../../../logging/logging.dart';
+import '../../../services/hybrid_screenshot_service.dart';
 import '../../../utils/webview_state_mixin.dart';
-import '../../../webview_utils.dart';
 import '../../../widgets/reclaim_appbar.dart';
-import '../../../widgets/reclaim_theme_provider.dart';
-import '../../../widgets/verification_review/controller.dart';
 import '../../../widgets/webview_bottom.dart';
-import '../user_interaction_handler.dart';
+import '../view_model.dart';
+import '../webview_handler_manager.dart';
 
 class WebViewWindowParameters {
   final InAppWebViewSettings webViewSettings;
   final CreateWindowAction action;
+  final HybridScreenshotService? screenshotService;
+  final InAppWebViewController? mainWebViewController;
+  final WebViewJSHandlerManager handlerManager;
+  final ClaimCreationWebClientViewModel viewModel;
+  final UnmodifiableListView<UserScript> userScripts;
+  final VoidCallback? onClose;
 
-  const WebViewWindowParameters({required this.webViewSettings, required this.action});
+  const WebViewWindowParameters({
+    required this.webViewSettings,
+    required this.action,
+    required this.handlerManager,
+    required this.viewModel,
+    required this.userScripts,
+    this.screenshotService,
+    this.mainWebViewController,
+    this.onClose,
+  });
 }
 
 class WebViewWindow extends StatefulWidget {
@@ -23,32 +40,21 @@ class WebViewWindow extends StatefulWidget {
 
   final WebViewWindowParameters parameters;
 
-  static Future<void> open({required BuildContext context, required WebViewWindowParameters parameters}) async {
-    final verificationController = VerificationController.readOf(context);
-    final verificationReviewController = VerificationReviewController.readOf(context);
-
-    return Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (context) {
-          return ReclaimThemeProvider(
-            applicationId: verificationController.request.applicationId,
-            builder: (context) {
-              return verificationController.wrap(
-                child: verificationReviewController.wrap(child: WebViewWindow(parameters: parameters)),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
   @override
   State<WebViewWindow> createState() => _WebViewWindowState();
 }
 
 class _WebViewWindowState extends State<WebViewWindow> with WebViewCompanionMixin<WebViewWindow> {
   final appBarController = ReclaimAppBarController();
+
+  @override
+  WebViewJSHandlerManager get handlerManager => widget.parameters.handlerManager;
+
+  @override
+  ClaimCreationWebClientViewModel get viewModel => widget.parameters.viewModel;
+
+  @override
+  UnmodifiableListView<UserScript> get userScripts => widget.parameters.userScripts;
 
   @override
   void dispose() {
@@ -62,55 +68,73 @@ class _WebViewWindowState extends State<WebViewWindow> with WebViewCompanionMixi
 
   final logger = logging.child('WebViewWindow');
 
-  void _addUserInteractionScript(InAppWebViewController controller) {
-    controller.addUserScript(
-      userScript: UserScript(
-        source: userInteractionInjection,
-        injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
-      ),
-    );
-  }
-
-  void _setJSHandlers(InAppWebViewController controller) {
-    controller.addJavaScriptHandler(
-      handlerName: 'userInteraction',
-      callback: (args) async => await handleUserInteraction(args, controller),
-    );
+  List<UserScript> _buildInitialUserScripts() {
+    logger.info('Preparing ${widget.parameters.userScripts.length} user scripts for popup webview');
+    return widget.parameters.userScripts.toList();
   }
 
   void _onWebViewCreated(InAppWebViewController controller) {
     try {
-      _addUserInteractionScript(controller);
-      _setJSHandlers(controller);
+      logger.info('Registering full JS handlers on popup webview');
+      widget.parameters.handlerManager.registerHandlers(controller);
+
+      logger.info('Switching view model controller to popup webview');
+      widget.parameters.viewModel.setController(controller);
+
+      if (widget.parameters.screenshotService != null) {
+        logger.info('Switching screenshot service to popup webview controller');
+        widget.parameters.screenshotService!.updateWebViewController(controller);
+      }
     } catch (e, s) {
-      logger.severe('Error adding user interaction script', e, s);
+      logger.severe('Error setting up popup webview', e, s);
     }
+  }
+
+  void _closeWindow() {
+    if (_didWindowClose) return;
+
+    _didWindowClose = true;
+
+    try {
+      _controller?.evaluateJavascript(source: 'window.close()');
+    } catch (e, s) {
+      logger.severe('Error closing window', e, s);
+    }
+
+    if (widget.parameters.mainWebViewController != null) {
+      logger.info('Restoring view model controller to main webview');
+      widget.parameters.viewModel.setController(widget.parameters.mainWebViewController!);
+    }
+
+    if (widget.parameters.screenshotService != null && widget.parameters.mainWebViewController != null) {
+      logger.info('Restoring screenshot service to main webview controller');
+      widget.parameters.screenshotService!.updateWebViewController(widget.parameters.mainWebViewController);
+    }
+
+    widget.parameters.onClose?.call();
   }
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      onPopInvokedWithResult: (didPop, result) async {
-        if (!_didWindowClose) {
-          _didWindowClose = true;
-          try {
-            await _controller?.evaluateJavascript(source: 'window.close()');
-          } catch (e, s) {
-            logging.severe('Error closing window', e, s);
-          }
-        }
-      },
+    return HeroControllerScope(
+      controller: MaterialApp.createMaterialHeroController(),
       child: Scaffold(
-        appBar: ReclaimAppBar(controller: appBarController, onPressed: null, isCloseButtonVisible: true),
+        appBar: ReclaimAppBar(controller: appBarController, onPressed: _closeWindow, isCloseButtonVisible: true),
         body: InAppWebView(
           gestureRecognizers: gestureRecognizers,
           onGeolocationPermissionsShowPrompt: onGeolocationPermissionsShowPrompt,
           onPermissionRequest: onPermissionRequestedFromWeb,
           initialSettings: widget.parameters.webViewSettings,
+          initialUserScripts: UnmodifiableListView(_buildInitialUserScripts()),
           windowId: widget.parameters.action.windowId,
           onWebViewCreated: (controller) {
             _controller = controller;
             _onWebViewCreated(controller);
+          },
+          onUpdateVisitedHistory: (controller, url, isReloaded) {
+            if (url != null) {
+              appBarController.updateUrl(url.toString());
+            }
           },
           onLoadStart: (controller, url) {
             appBarController.updateUrl(url.toString());
@@ -122,15 +146,31 @@ class _WebViewWindowState extends State<WebViewWindow> with WebViewCompanionMixi
           onLoadStop: (controller, url) {
             appBarController.updateProgress(1);
           },
+          onRenderProcessGone: (controller, details) async {
+            logger.severe('Popup webview render process gone', details);
+            // Close the popup window if render process dies
+            if (mounted) {
+              _closeWindow();
+            }
+          },
           onCloseWindow: (controller) {
-            _didWindowClose = true;
-            // handle manual pop
-            Navigator.of(context).pop();
+            final log = logger.child('_WebViewWindowState.onCloseWindow');
+            log.info('closing window for url: ${widget.parameters.action.request.url}');
+            _closeWindow();
+            log.finest(() => {'type': 'onCloseWindow', 'data': json.encode(widget.parameters.action.toJson())});
           },
           onCreateWindow: onCreateWindowAction,
           shouldOverrideUrlLoading: shouldOverrideUrlLoading,
         ),
-        bottomNavigationBar: const WebviewBottomBar(),
+        bottomNavigationBar: Builder(
+          builder: (context) {
+            final padding = MediaQuery.paddingOf(context);
+            return Padding(
+              padding: EdgeInsets.only(bottom: padding.bottom),
+              child: const WebviewBottomBar(),
+            );
+          },
+        ),
       ),
     );
   }

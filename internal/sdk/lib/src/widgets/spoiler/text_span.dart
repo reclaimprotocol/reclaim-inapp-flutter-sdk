@@ -12,6 +12,7 @@ class SpoilerTextSpan extends WidgetSpan {
     super.baseline,
     List<InlineSpan>? children,
     bool Function()? canAllowGesture,
+    Color? color,
   }) : super(
          child: _SpoilerTextSpanWidget(
            text: text,
@@ -19,6 +20,7 @@ class SpoilerTextSpan extends WidgetSpan {
            selection: selection,
            style: style,
            canAllowGesture: canAllowGesture,
+           color: color,
          ),
        );
 }
@@ -30,6 +32,7 @@ class _SpoilerTextSpanWidget extends StatelessWidget {
     required this.selection,
     required this.style,
     required this.canAllowGesture,
+    required this.color,
   });
 
   final String text;
@@ -37,6 +40,7 @@ class _SpoilerTextSpanWidget extends StatelessWidget {
   final TextSelection? selection;
   final TextStyle? style;
   final bool Function()? canAllowGesture;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +55,7 @@ class _SpoilerTextSpanWidget extends StatelessWidget {
         selection: effectiveTextSelection,
         canAllowGesture: canAllowGesture,
         style: style,
+        particleColor: color ?? const Color(0xFF2563EB),
         enableGesture: true,
       ),
     );
