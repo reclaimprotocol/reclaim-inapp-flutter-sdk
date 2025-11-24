@@ -1,22 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../data/create_claim.dart';
 import '../../data/providers.dart';
 import '../../theme/theme.dart';
-import '../../utils/cache_manager.dart';
 import '../../utils/data.dart';
+import '../../utils/params.dart';
 import '../claim_creation/claim_creation.dart';
 import '../icon/icons.dart';
 import '../icon/spinning_hour_glass.dart';
 import '../loading/param_value.dart';
-import '../reclaim_image_provider.dart';
 import '../spoiler/widget.dart';
 import '../svg_icon.dart';
+import '../widgets.dart';
 import 'string.dart';
 
 class ProvingParameter implements Comparable<ProvingParameter> {
@@ -28,6 +26,7 @@ class ProvingParameter implements Comparable<ProvingParameter> {
   final bool isPublic;
   final bool markedForHashing;
   final bool isPending;
+  final bool isAiProof;
   final double progress;
 
   const ProvingParameter({
@@ -39,6 +38,7 @@ class ProvingParameter implements Comparable<ProvingParameter> {
     required this.isPublic,
     required this.markedForHashing,
     required this.isPending,
+    required this.isAiProof,
     required this.progress,
   });
 
@@ -119,6 +119,7 @@ class ParamInfo {
             isPublic: false,
             markedForHashing: markedForHashing,
             isPending: true,
+            isAiProof: false,
             progress: 0.0,
           ),
         );
@@ -145,6 +146,7 @@ class ParamInfo {
             isPublic: false,
             markedForHashing: markedForHashing,
             isPending: claim.progress != 1.0,
+            isAiProof: false,
             progress: claim.progress,
           ),
         );
@@ -158,6 +160,8 @@ class ParamInfo {
       if (map is! Map) continue;
       final extractedParameters = map['extractedParameters'];
       if (extractedParameters is! Map) continue;
+
+      final isAiProof = areParamsFromAIProofs(proofs ?? []);
 
       for (final entry in extractedParameters.entries) {
         final key = entry.key;
@@ -178,6 +182,7 @@ class ParamInfo {
             isPublic: false,
             markedForHashing: markedForHashing,
             isPending: false,
+            isAiProof: isAiProof,
             progress: 1.0,
           ),
         );
@@ -198,6 +203,7 @@ class ParamInfo {
             isPublic: true,
             markedForHashing: false,
             isPending: false,
+            isAiProof: false,
             progress: 1.0,
           ),
         );
@@ -245,6 +251,7 @@ class ParamInfo {
       isPublic: param.isPublic,
       markedForHashing: param.markedForHashing,
       isPending: param.isPending,
+      isAiProof: param.isAiProof,
       progress: param.progress,
     );
 
@@ -263,6 +270,8 @@ class ParamInfo {
       if (map is! Map) continue;
       final extractedParameters = map['extractedParameters'];
       if (extractedParameters is! Map) continue;
+
+      final isAiProof = areParamsFromAIProofs(proofs);
 
       for (final entry in extractedParameters.entries) {
         final key = entry.key;
@@ -283,6 +292,7 @@ class ParamInfo {
             isPublic: false,
             markedForHashing: markedForHashing,
             isPending: false,
+            isAiProof: isAiProof,
             progress: 1.0,
           ),
         );
@@ -303,6 +313,7 @@ class ParamInfo {
             isPublic: true,
             markedForHashing: false,
             isPending: false,
+            isAiProof: false,
             progress: 1.0,
           ),
         );
@@ -402,6 +413,11 @@ class _ParamsTextState extends State<ParamsText> {
 
     final isScrollbarVisible = _isScrollbarVisible && tiles.length > 1;
 
+    final reclaimTheme = ReclaimTheme.of(context);
+    final parametersTheme = reclaimTheme.parametersTheme;
+    final isDividerSeparated = parametersTheme.parameterListStyle == ParametersDisplayStyle.dividerSeparated;
+    final dividerColor = parametersTheme.dividerColor;
+
     return Scrollbar(
       controller: _controller,
       thumbVisibility: isScrollbarVisible,
@@ -432,16 +448,39 @@ class _ParamsTextState extends State<ParamsText> {
                       final index = e.$1;
                       final isLast = index == tiles.length - 1;
                       final double bottomPadding;
+                      double topPadding = 0;
+
+                      Widget child = e.$2;
+
+                      if (isDividerSeparated && tiles.length != 1) {
+                        topPadding = 16.0;
+                        child = Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16.0),
+                              child: Divider(color: dividerColor, height: 1, indent: 0, endIndent: 0),
+                            ),
+                            Flexible(child: child),
+                          ],
+                        );
+                      }
+
+                      if (index == 0) {
+                        topPadding = 0;
+                      }
+
                       if (tiles.length == 1) {
                         bottomPadding = 0;
                       } else if (isLast) {
                         bottomPadding = 20;
                       } else {
-                        bottomPadding = 8.0;
+                        bottomPadding = isDividerSeparated ? 0.0 : 8.0;
                       }
                       return Padding(
-                        padding: EdgeInsets.only(bottom: bottomPadding),
-                        child: e.$2,
+                        padding: EdgeInsets.only(bottom: bottomPadding, top: topPadding),
+                        child: child,
                       );
                     }).toList()
                   : const [
@@ -493,12 +532,13 @@ class _ParamsTileState extends State<ParamsTile> {
     final isHashedParam = widget.param.markedForHashing;
     final isPublic = widget.param.isPublic;
     final isPending = widget.param.isPending;
+    final isAiParam = widget.param.isAiProof;
     final progress = widget.param.progress;
 
     final reclaimTheme = ReclaimTheme.of(context);
     final accentColor = reclaimTheme.secondaryColor;
 
-    final loadingIconColor = reclaimTheme.loadingIconColor;
+    final loadingIconColor = reclaimTheme.loading?.map(onColor: (color) => color, onAssetProvider: (_) => null);
     final fieldVerifiedIconProvider = reclaimTheme.fieldVerifiedIconProvider;
 
     final circularProgressIndicator = CircularProgressIndicator(
@@ -515,11 +555,24 @@ class _ParamsTileState extends State<ParamsTile> {
       child: SizedBox.square(dimension: loadingWidgetSize, child: circularProgressIndicator),
     );
 
+    final brightness = Theme.brightnessOf(context);
+
+    final paramTitleColor = switch (brightness) {
+      Brightness.dark => Colors.white,
+      Brightness.light => Colors.black,
+    };
+
+    final isDividerSeparated =
+        reclaimTheme.parametersTheme.parameterListStyle == ParametersDisplayStyle.dividerSeparated;
+    final isValueShown = reclaimTheme.parametersTheme.isValueShown;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 4,
+          ).add(isDividerSeparated ? const EdgeInsetsDirectional.only(end: 12.0) : EdgeInsets.zero),
           child: AnimatedSwitcher(
             key: _key,
             duration: Durations.medium1,
@@ -533,6 +586,14 @@ class _ParamsTileState extends State<ParamsTile> {
                   return SvgImageIcon(key: Key('$keyPrefix-encrypted'), AppSvgIcons.encrypted, size: widget.size);
                 }
               }
+              if (isAiParam) {
+                return Icon(
+                  key: Key('$keyPrefix-ai-generated'),
+                  Icons.auto_awesome,
+                  color: const Color(0xFF7C3AED),
+                  size: widget.size,
+                );
+              }
               if (isPending) {
                 if (loadingIconColor != null) {
                   return loadingWidget;
@@ -542,36 +603,14 @@ class _ParamsTileState extends State<ParamsTile> {
               if (!isPublic) {
                 if (fieldVerifiedIconProvider != null) {
                   final placeholder = Icon(Icons.verified, color: Colors.green, size: widget.size);
-                  switch (fieldVerifiedIconProvider.asset) {
-                    case ReclaimVectorGraphicAsset(uri: final uri, options: final options):
-                      return SvgPicture.network(
-                        uri.toString(),
-                        key: Key('$keyPrefix-verified'),
-                        fit: BoxFit.scaleDown,
-                        height: widget.size,
-                        width: widget.size,
-                        placeholderBuilder: (context) => placeholder,
-                        alignment: options.alignment,
-                        errorBuilder: (BuildContext context, Object error, stacktrace) {
-                          return const SizedBox();
-                        },
-                      );
-                    case ReclaimRasterGraphicAsset(uri: final uri, options: final options):
-                      return CachedNetworkImage(
-                        key: Key('$keyPrefix-verified'),
-                        imageUrl: uri.toString(),
-                        cacheManager: ReclaimCacheManager(),
-                        fit: BoxFit.scaleDown,
-                        height: widget.size,
-                        width: widget.size,
-                        alignment: options.alignment,
-                        placeholder: (context, url) => placeholder,
-                        errorWidget: (BuildContext context, String url, Object error) {
-                          return const SizedBox();
-                        },
-                      );
-                    default:
-                      break;
+                  if (fieldVerifiedIconProvider.asset != null) {
+                    return ReclaimGraphicIcon(
+                      key: Key('$keyPrefix-verified'),
+                      provider: fieldVerifiedIconProvider,
+                      size: widget.size,
+                      placeholder: placeholder,
+                      fit: BoxFit.scaleDown,
+                    );
                   }
                 }
                 return Icon(key: Key('$keyPrefix-verified'), Icons.verified, color: Colors.green, size: widget.size);
@@ -583,6 +622,7 @@ class _ParamsTileState extends State<ParamsTile> {
             }(),
           ),
         ),
+
         Expanded(
           child: Row(
             children: [
@@ -601,7 +641,7 @@ class _ParamsTileState extends State<ParamsTile> {
                         ).add(const EdgeInsetsDirectional.only(end: 8)),
                         child: Text(
                           label,
-                          style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.normal),
+                          style: TextStyle(color: paramTitleColor, fontSize: 14, fontWeight: FontWeight.normal),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -610,82 +650,84 @@ class _ParamsTileState extends State<ParamsTile> {
                   },
                 ),
               ),
-              Flexible(
-                child: AnimatedSwitcher(
-                  key: _valueKey,
-                  duration: Durations.medium1,
-                  switchInCurve: Curves.easeIn,
-                  switchOutCurve: Curves.easeOut,
-                  child: () {
-                    if (value == null) {
-                      return LoadingParamValue(color: accentColor.withValues(alpha: 0.4));
-                    } else if (isHashedParam) {
-                      return HashedValueTextSpanWidget(
-                        value: value,
-                        realValue: unhashedValue,
-                        style: TextStyle(
+              if (isValueShown)
+                Flexible(
+                  child: AnimatedSwitcher(
+                    key: _valueKey,
+                    duration: Durations.medium1,
+                    switchInCurve: Curves.easeIn,
+                    switchOutCurve: Curves.easeOut,
+                    child: () {
+                      if (value == null) {
+                        return LoadingParamValue(color: accentColor.withValues(alpha: 0.4));
+                      } else if (isHashedParam) {
+                        return HashedValueTextSpanWidget(
+                          value: value,
+                          realValue: unhashedValue,
                           color: accentColor,
-                          fontSize: 14,
-                          overflow: TextOverflow.ellipsis,
-                          fontWeight: FontWeight.w400,
-                          fontVariations: [const FontVariation.weight(400)],
-                        ),
-                      );
-                    } else {
-                      Widget child = Text(
-                        value,
-                        style: TextStyle(
-                          color: accentColor,
-                          fontSize: 14,
-                          overflow: TextOverflow.ellipsis,
-                          fontWeight: FontWeight.w500,
-                          fontVariations: [const FontVariation.weight(500)],
-                        ),
-                        maxLines: 1,
-                      );
-                      if (isCollection) {
-                        final borderRadius = BorderRadius.circular(10);
-
-                        if (_canShowHumanizedValue) {
-                          child = Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.attach_file_rounded, size: 14),
-                                const SizedBox(width: 4),
-                                Padding(padding: const EdgeInsetsDirectional.only(end: 4.0), child: child),
-                              ],
-                            ),
-                          );
-                        }
-
-                        child = InkWell(
-                          onTap: () {
-                            setState(() {
-                              _canShowHumanizedValue = !_canShowHumanizedValue;
-                            });
-                          },
-                          borderRadius: borderRadius,
-                          child: child,
+                          style: TextStyle(
+                            color: accentColor,
+                            fontSize: 14,
+                            overflow: TextOverflow.ellipsis,
+                            fontWeight: FontWeight.w400,
+                            fontVariations: [const FontVariation.weight(400)],
+                          ),
                         );
+                      } else {
+                        Widget child = Text(
+                          value,
+                          style: TextStyle(
+                            color: accentColor,
+                            fontSize: 14,
+                            overflow: TextOverflow.ellipsis,
+                            fontWeight: FontWeight.w500,
+                            fontVariations: [const FontVariation.weight(500)],
+                          ),
+                          maxLines: 1,
+                        );
+                        if (isCollection) {
+                          final borderRadius = BorderRadius.circular(10);
 
-                        if (_canShowHumanizedValue) {
-                          child = Material(
-                            color: Colors.white30,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: borderRadius,
-                              side: const BorderSide(color: Color(0xFFccd6df)),
-                            ),
+                          if (_canShowHumanizedValue) {
+                            child = Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.attach_file_rounded, size: 14),
+                                  const SizedBox(width: 4),
+                                  Padding(padding: const EdgeInsetsDirectional.only(end: 4.0), child: child),
+                                ],
+                              ),
+                            );
+                          }
+
+                          child = InkWell(
+                            onTap: () {
+                              setState(() {
+                                _canShowHumanizedValue = !_canShowHumanizedValue;
+                              });
+                            },
+                            borderRadius: borderRadius,
                             child: child,
                           );
+
+                          if (_canShowHumanizedValue) {
+                            child = Material(
+                              color: Colors.white30,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: borderRadius,
+                                side: const BorderSide(color: Color(0xFFccd6df)),
+                              ),
+                              child: child,
+                            );
+                          }
                         }
+                        return child;
                       }
-                      return child;
-                    }
-                  }(),
+                    }(),
+                  ),
                 ),
-              ),
             ],
           ),
         ),

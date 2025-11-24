@@ -1,18 +1,23 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:rive/rive.dart';
 import 'package:simple_shimmer/simple_shimmer.dart';
 
+import '../logging/logging.dart';
 import '../theme/theme.dart';
 import '../utils/cache_manager.dart';
 import 'color_or_image.dart';
 import 'reclaim_image_provider.dart';
 
 class BackgroundCover extends StatelessWidget {
-  const BackgroundCover({super.key, required this.builder});
+  const BackgroundCover({super.key, required this.builder, this.graphicKeyValue});
 
   final Widget Function(BuildContext context, Widget? cover) builder;
+  final String? graphicKeyValue;
 
   @override
   Widget build(BuildContext context) {
@@ -22,11 +27,14 @@ class BackgroundCover extends StatelessWidget {
 
     Widget? backgroundGraphic;
 
-    switch (reclaimTheme.background) {
+    final Key graphicKey = ValueKey(graphicKeyValue ?? 'background-cover-default');
+
+    switch (reclaimTheme.background?.background) {
       case ImageDecorationProvider(assetProvider: final assetProvider):
         switch (assetProvider.asset) {
           case ReclaimVectorGraphicAsset(uri: final uri, options: final options):
             backgroundGraphic = SvgPicture.network(
+              key: graphicKey,
               uri.toString(),
               fit: BoxFit.cover,
               height: mediaQuerySize.height,
@@ -50,7 +58,16 @@ class BackgroundCover extends StatelessWidget {
                 return const SizedBox();
               },
             );
-          default:
+          case ReclaimRiveGraphicAsset(uri: final uri, options: final options):
+            backgroundGraphic = _RiveBackgroundCover(
+              graphicKey: graphicKey,
+              uri: uri,
+              placeholder: placeholder,
+              mediaQuerySize: mediaQuerySize,
+              graphicKeyValue: graphicKeyValue,
+              options: options,
+            );
+          case null:
             break;
         }
         final options = assetProvider.asset?.options;
@@ -74,6 +91,81 @@ class BackgroundCover extends StatelessWidget {
         break;
     }
 
+    final background = reclaimTheme.background;
+    final double blurStrength = background?.blurStrength ?? 0;
+    if (blurStrength != 0) {
+      backgroundGraphic = Stack(
+        children: [
+          if (backgroundGraphic != null) backgroundGraphic,
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: blurStrength, sigmaY: blurStrength),
+              child: Container(color: background?.blurColor),
+            ),
+          ),
+        ],
+      );
+    }
+
     return builder(context, backgroundGraphic);
+  }
+}
+
+class _RiveBackgroundCover extends StatefulWidget {
+  const _RiveBackgroundCover({
+    required this.graphicKey,
+    required this.uri,
+    required this.placeholder,
+    required this.mediaQuerySize,
+    required this.graphicKeyValue,
+    required this.options,
+  });
+
+  final Key graphicKey;
+  final Uri uri;
+  final SimpleShimmer placeholder;
+  final Size mediaQuerySize;
+  final String? graphicKeyValue;
+  final ReclaimGraphicOptions options;
+
+  @override
+  State<_RiveBackgroundCover> createState() => _RiveBackgroundCoverState();
+}
+
+class _RiveBackgroundCoverState extends State<_RiveBackgroundCover> {
+  late final fileLoader = FileLoader.fromUrl(widget.uri.toString(), riveFactory: Factory.rive);
+
+  @override
+  void dispose() {
+    fileLoader.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RiveWidgetBuilder(
+      key: widget.graphicKey,
+      fileLoader: fileLoader,
+      builder: (context, state) {
+        switch (state) {
+          case RiveLoading():
+            return widget.placeholder;
+          case RiveFailed():
+            logging.child('BackgroundCover').severe('Failed to load rive asset', state.error, state.stackTrace);
+            return const SizedBox();
+          case RiveLoaded():
+            return SizedBox(
+              height: widget.mediaQuerySize.height,
+              width: widget.mediaQuerySize.width,
+              child: RiveWidget(
+                key: widget.graphicKeyValue != null ? ValueKey('rive-${widget.graphicKeyValue}') : null,
+                controller: state.controller,
+                fit: Fit.cover,
+                alignment: widget.options.alignment,
+              ),
+            );
+        }
+      },
+    );
   }
 }

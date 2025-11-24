@@ -6,14 +6,21 @@ if [ -z "$GO_GNARKPROVER_DIR" ]
 then
     GO_GNARKPROVER_REPO_URL="https://github.com/reclaimprotocol/zk-symmetric-crypto";
     mkdir -p vendor;
-    git clone $GO_GNARKPROVER_REPO_URL vendor/zk-symmetric-crypto;
+
+    if [ -d "vendor/zk-symmetric-crypto/.git" ]; then
+        echo "Repository exists, updating...";
+        cd vendor/zk-symmetric-crypto;
+        git checkout main;
+        git pull;
+        cd ../..;
+    else
+        git clone $GO_GNARKPROVER_REPO_URL vendor/zk-symmetric-crypto;
+    fi
+
     export GO_GNARKPROVER_DIR="$(pwd)/vendor/zk-symmetric-crypto/gnark";
 fi
 
 ./scripts/build_lib.sh
-
-# cleanup
-rm -rf $GO_GNARKPROVER_DIR;
 
 echo "Updating repository with new native libraries";
 

@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:logging/logging.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../build_env.dart';
 import '../../overrides/override.dart';
 import '../../utils/crypto/jws.dart';
 import '../../utils/crypto/url_safe_codec.dart';
@@ -149,9 +150,29 @@ class CapabilityAccessToken extends ReclaimOverride<CapabilityAccessToken> {
     return CapabilityAccessToken(accessToken: jws);
   }
 
-  factory CapabilityAccessToken.import(String accessTokenString, String publicKeyString) {
+  factory CapabilityAccessToken.import(String accessTokenString) {
+    final publicKeyString = ReclaimEnv.CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY;
+
+    final Map<String, Object?> publicKey;
+    String? publicKeyUtf8String;
     try {
-      final publicKey = json.decode(utf8.decode(urlSafeDecode(publicKeyString))) as Map<String, dynamic>;
+      final urlSafePublicKeyBytes = urlSafeDecode(publicKeyString);
+      publicKeyUtf8String = utf8.decode(urlSafePublicKeyBytes);
+      publicKey = json.decode(publicKeyUtf8String) as Map<String, Object?>;
+    } catch (e, s) {
+      _logger.severe(
+        {
+          'reason': 'Invalid Public Key for Capability Access Token import',
+          'publicKeyString': publicKeyString,
+          'publicKeyUtf8String': publicKeyUtf8String,
+        },
+        e,
+        s,
+      );
+      throw const CapabilityAccessTokenException('Failed to import Capability Access Token');
+    }
+
+    try {
       final jws = ES256Jws.import(accessTokenString, publicKey);
       return CapabilityAccessToken(accessToken: jws);
     } on CapabilityAccessTokenException {

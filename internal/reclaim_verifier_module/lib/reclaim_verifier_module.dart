@@ -22,21 +22,6 @@ export 'package:reclaim_inapp_sdk/reclaim_inapp_sdk.dart';
 export 'package:reclaim_inapp_sdk/ui.dart';
 export 'src/pigeon/messages.pigeon.dart';
 
-// ignore: non_constant_identifier_names
-String? _CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY;
-
-// ignore: non_constant_identifier_names
-String get CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY {
-  final key = _CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY;
-  if (key != null) return key;
-  return String.fromEnvironment('org.reclaimprotocol.inapp_sdk.CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY');
-}
-
-// ignore: non_constant_identifier_names
-set CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY(String key) {
-  _CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY = key;
-}
-
 final logger = Logger('reclaim_flutter_sdk.reclaim_verifier_module');
 
 extension ReclaimSessionStatusExtension on ReclaimSessionStatus {
@@ -407,6 +392,19 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
   }
 
   @override
+  Future<void> setConsoleLogging(bool enabled) async {
+    final old = ReclaimOverride.get<LogConsumerOverride>();
+    ReclaimOverride.set(
+      LogConsumerOverride(
+        // Setting this to true will print logs from reclaim_flutter_sdk to the console.
+        canPrintLogs: enabled,
+        onRecord: old?.onRecord,
+        levelChangeHandler: old?.levelChangeHandler,
+      ),
+    );
+  }
+
+  @override
   Future<void> setOverrides(
     ClientProviderInformationOverride? provider,
     ClientFeatureOverrides? feature,
@@ -419,9 +417,7 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
     final overridesHandler = overridesHandlerApi ?? hostOverridesApi;
     if (capabilityAccessToken != null) {
       try {
-        ReclaimOverride.set(
-          CapabilityAccessToken.import(capabilityAccessToken, CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY),
-        );
+        ReclaimOverride.set(CapabilityAccessToken.import(capabilityAccessToken));
       } on CapabilityAccessTokenException catch (e, s) {
         logger.severe('Failed to set capability access token', e, s);
         throw ReclaimVerificationCancelledException(e.message);
@@ -448,12 +444,20 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
         ReclaimFeatureFlagData(
           cookiePersist: feature.cookiePersist,
           singleReclaimRequest: feature.singleReclaimRequest,
-          attestorBrowserRpcUrl: feature.attestorBrowserRpcUrl,
+          attestor3BrowserRpcUrl: feature.attestorBrowserRpcUrl,
           idleTimeThresholdForManualVerificationTrigger: feature.idleTimeThresholdForManualVerificationTrigger,
           sessionTimeoutForManualVerificationTrigger: feature.sessionTimeoutForManualVerificationTrigger,
           canUseAiFlow: feature.isAIFlowEnabled ?? false,
           manualReviewMessage: feature.manualReviewMessage,
           loginPromptMessage: feature.loginPromptMessage,
+          // TODO: UNIMPLEMENTED
+          interceptorOptions: null,
+          claimCreationTimeoutDurationInMins: null,
+          sessionNoActivityTimeoutDurationInMins: null,
+          aiProviderNoActivityTimeoutDurationInSecs: null,
+          pageLoadedCompletedDebounceTimeoutMs: null,
+          potentialLoginTimeoutS: null,
+          screenshotCaptureIntervalSeconds: null,
         ),
       if (provider != null)
         ReclaimProviderOverride(

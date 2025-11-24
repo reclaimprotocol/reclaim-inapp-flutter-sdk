@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:meta/meta.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants.dart';
@@ -11,6 +13,7 @@ import '../utils/dio.dart';
 import '../utils/keys.dart';
 import '../utils/restoration_identifier.dart';
 import '../utils/storage.dart';
+import 'source/source.dart';
 
 typedef IsSessionIndependentCallback = bool Function(String key);
 
@@ -19,9 +22,13 @@ class FeatureFlagService {
 
   static final log = logging.child('FeatureFlagService');
 
+  @visibleForTesting
+  // Can be overridden in tests
+  static Future<SharedPreferences> storageAsync = SharedPreferences.getInstance();
+
   // for keeping track of feature flag cache
   static void _updateRestorableFeatureFlagIdentifier(String identifier) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await storageAsync;
     const key = 'feature-flags-identifiers';
     final list = <String>{...?prefs.getStringList(key), identifier};
     await prefs.setStringList(key, list.toList()..sort());
@@ -42,7 +49,7 @@ class FeatureFlagService {
 
   static Future<Map<String, dynamic>> getFeatureFlagsFromLocal(SessionIdentity identity) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await storageAsync;
       final identifier = _getRestorableFeatureFlagIdentifier(identity);
 
       final String? cached = prefs.getString(identifier);
@@ -58,7 +65,7 @@ class FeatureFlagService {
 
   static Future<Map<String, dynamic>> getSessionIndependentFeatureFlagsFromLocal() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await storageAsync;
 
       final String? cached = prefs.getString(_getRestorableSessionIndependentFeatureFlagIdentifier());
 
@@ -79,7 +86,7 @@ class FeatureFlagService {
     try {
       final identifier = _getRestorableFeatureFlagIdentifier(identity);
 
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await storageAsync;
       await prefs.setString(identifier, json.encode(flags));
       final sessionIndependentEntries = Map.fromEntries(flags.entries.where((e) => isSessionIndependent(e.key)));
       if (sessionIndependentEntries.isNotEmpty) {
@@ -130,6 +137,8 @@ class FeatureFlagService {
       if (appId != null) 'appId': appId,
       if (providerId != null) 'providerId': providerId,
       if (sessionId != null) 'sessionId': sessionId,
+      'operatingSystem': Platform.operatingSystem,
+      'inappSdkVersion': await getReclaimMainSdkVersionRaw() ?? '',
     };
 
     try {

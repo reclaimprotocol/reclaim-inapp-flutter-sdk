@@ -263,6 +263,7 @@ NSObject<FlutterMessageCodec> *nullGetMessagesCodec(void);
 - (void)clearAllOverridesWithCompletion:(void (^)(FlutterError *_Nullable))completion;
 - (void)setVerificationOptionsOptions:(nullable ReclaimApiVerificationOptions *)options completion:(void (^)(FlutterError *_Nullable))completion;
 - (void)sendLogEntry:(LogEntryApi *)entry completion:(void (^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
+- (void)setConsoleLoggingEnabled:(BOOL)enabled completion:(void (^)(FlutterError *_Nullable))completion;
 - (void)pingWithCompletion:(void (^)(NSNumber *_Nullable, FlutterError *_Nullable))completion;
 @end
 

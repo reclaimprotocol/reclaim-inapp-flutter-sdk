@@ -23,7 +23,7 @@ class ClaimCreationErrorDetails {
 
 class ClaimStatus {
   final ClaimCreationRequest request;
-  final ClaimCreationErrorDetails? error;
+  final ClaimCreationErrorDetails? internalError;
   final Map? stepInformation;
   final List<CreateClaimOutput>? proofs;
   final ProviderRequestPerformanceReport? performanceReports;
@@ -33,17 +33,17 @@ class ClaimStatus {
 
   const ClaimStatus({
     required this.request,
-    required this.error,
+    required ClaimCreationErrorDetails? error,
     required this.stepInformation,
     required this.proofs,
     required this.performanceReports,
     required this.previousStatus,
     required this.creationDate,
     required this.attestorLoadingProgress,
-  });
+  }) : internalError = error;
 
   ClaimStatus.create(this.request)
-    : error = null,
+    : internalError = null,
       stepInformation = null,
       proofs = null,
       performanceReports = null,
@@ -52,7 +52,7 @@ class ClaimStatus {
       attestorLoadingProgress = 0.0;
 
   ClaimStatus createNext({
-    ClaimCreationErrorDetails? error,
+    Optional<ClaimCreationErrorDetails> error = const Optional.none(),
     Map? stepInformation,
     List<CreateClaimOutput>? proofs,
     ProviderRequestPerformanceReport? performanceReports,
@@ -62,7 +62,7 @@ class ClaimStatus {
       request: request,
       creationDate: creationDate,
       previousStatus: this,
-      error: error ?? this.error,
+      error: error.map(value: (it) => it, none: () => this.error),
       stepInformation: stepInformation ?? this.stepInformation,
       proofs: proofs ?? this.proofs,
       performanceReports: performanceReports ?? this.performanceReports,
@@ -73,6 +73,11 @@ class ClaimStatus {
   }
 
   ClaimRequestIdentifier get requestIdentifier => request.requestData.requestIdentifier;
+
+  ClaimCreationErrorDetails? get error {
+    if (proofs?.isNotEmpty == true) return null;
+    return internalError;
+  }
 
   bool get isComputingProofs {
     if (proofs != null) return false;
@@ -134,7 +139,7 @@ class ClaimStatus {
 
   ClaimStatus copyWith({
     ClaimCreationRequest? request,
-    ClaimCreationErrorDetails? error,
+    Optional<ClaimCreationErrorDetails> error = const Optional.none(),
     Map<dynamic, dynamic>? stepInformation,
     List<CreateClaimOutput>? proofs,
     ClaimStatus? previousStatus,
@@ -143,7 +148,7 @@ class ClaimStatus {
   }) {
     return ClaimStatus(
       request: request ?? this.request,
-      error: error ?? this.error,
+      error: error.map(value: (it) => it, none: () => this.error),
       stepInformation: stepInformation ?? this.stepInformation,
       proofs: proofs ?? this.proofs,
       previousStatus: previousStatus ?? this.previousStatus,

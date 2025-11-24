@@ -33,20 +33,23 @@ class ObservableNotifier<T> implements ValueListenable<T> {
   late final _controller = StreamController<T>.broadcast();
 
   @protected
-  set value(T newValue) {
+  void setValueSilently(T newValue) {
     if (isDisposed) {
       final error = StateError('ObservableNotifier is disposed');
       logging.child('ObservableNotifier').warning(error.message, error, StackTrace.current);
       return;
     }
-
     if (identical(_value, newValue)) return;
     if (_value == newValue) {
       return;
     }
-
     _oldValue = value;
     _value = newValue;
+  }
+
+  @protected
+  set value(T newValue) {
+    setValueSilently(newValue);
 
     didChangeValues(_oldValue, _value);
   }

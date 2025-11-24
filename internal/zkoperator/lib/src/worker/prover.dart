@@ -39,10 +39,6 @@ class ProveRunnable extends Runnable<Uint8List, ProofResult> {
       throw Exception('Invalid proof: $proofStr');
     }
 
-    if (kDebugMode) {
-      print('proof: $proofStr');
-    }
-
     // returning the json string response
     return (proofStr, measure.getReport());
   }

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../../theme/theme.dart';
 import '../icon.dart';
-import '../reclaim_image_provider.dart';
 
 class DataSharedCheckAnimatedIcon extends StatefulWidget {
   final double? height;
@@ -75,23 +74,15 @@ class DataSharedCheckAnimatedIconState extends State<DataSharedCheckAnimatedIcon
 
     final placeholder = TransparentPlaceholder(size: dimension);
 
-    final Widget? iconWidget = switch (iconProvider?.asset) {
-      ReclaimRasterGraphicAsset(uri: final uri) => LogoIcon(
-        logoUrl: uri.toString(),
-        size: dimension,
-        fit: BoxFit.scaleDown,
-        borderRadius: BorderRadius.zero,
-        placeholder: placeholder,
-      ),
-      ReclaimVectorGraphicAsset(uri: final uri) => LogoSvgIcon(
-        logoUrl: uri.toString(),
-        size: dimension,
-        fit: BoxFit.scaleDown,
-        borderRadius: BorderRadius.zero,
-        placeholder: placeholder,
-      ),
-      null => null,
-    };
+    final Widget? iconWidget = iconProvider?.asset != null
+        ? ReclaimGraphicIcon(
+            provider: iconProvider,
+            size: dimension,
+            fit: BoxFit.scaleDown,
+            borderRadius: BorderRadius.zero,
+            placeholder: placeholder,
+          )
+        : null;
 
     if (iconWidget != null) {
       final opacityAnim = CurvedAnimation(parent: _icon1Animation, curve: Curves.easeInOut);

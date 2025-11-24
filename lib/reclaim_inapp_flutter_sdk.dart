@@ -30,8 +30,10 @@ Future<T> _useFlow<T>(
   BuildContext context,
   Future<T> Function(ReclaimModuleExternalApi api) cb,
 ) async {
-  CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY =
+  ReclaimEnv.IS_VERIFIER_INAPP_MODULE = true;
+  ReclaimEnv.CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY =
       _CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY;
+
   final key = GlobalKey<ReclaimModuleAppState>();
   final completer = Completer<ReclaimModuleExternalApi>();
   Navigator.of(context).push(
@@ -159,6 +161,12 @@ class ReclaimInAppSdk {
         capabilityAccessToken,
         overridesHandlerApi: overridesHandlerApi,
       );
+    });
+  }
+
+  Future<void> setConsoleLogging(bool enabled) async {
+    return _useFlow(context, (api) {
+      return api.setConsoleLogging(enabled);
     });
   }
 }

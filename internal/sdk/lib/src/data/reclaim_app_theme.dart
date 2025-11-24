@@ -120,6 +120,7 @@ class ReclaimVerificationReviewScreenTheme {
 
   /// Color for provider to app loader as integer
   final int? providerToAppLoaderColor;
+  final ColorOrImage? providerToAppLoader;
 
   /// URL of the verification complete icon
   final ReclaimImageInfo? verificationCompleteIcon;
@@ -130,6 +131,7 @@ class ReclaimVerificationReviewScreenTheme {
     required this.fieldVerifyingIcon,
     required this.fieldVerifiedIcon,
     required this.providerToAppLoaderColor,
+    required this.providerToAppLoader,
     required this.verificationCompleteIcon,
     required this.verifyScreenAppIcon,
   });
@@ -141,9 +143,27 @@ class ReclaimVerificationReviewScreenTheme {
 }
 
 @JsonSerializable()
+class ParameterStyle {
+  final ParametersDisplayStyle? displayStyle;
+  final int? dividerColor;
+  @JsonKey(defaultValue: true)
+  final bool? isValueShown;
+
+  const ParameterStyle({this.displayStyle, this.dividerColor, this.isValueShown});
+
+  factory ParameterStyle.fromJson(Map<String, dynamic> json) => _$ParameterStyleFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ParameterStyleToJson(this);
+}
+
+@JsonSerializable()
 class ReclaimAppTheme {
   /// Background configuration (can be a color or image)
   final ColorOrImage? background;
+
+  final double? backgroundBlurStrength;
+  final int? backgroundBlurColor;
+  final ParameterStyle? parameterStyle;
 
   final ReclaimAppColorScheme? colorScheme;
 
@@ -153,30 +173,76 @@ class ReclaimAppTheme {
   final ReclaimImageInfoOptions? appImageOptions;
 
   /// Icon shown wherever circular loading progress indicator is used.
-  final int? loadingIconColor;
+  final ColorOrImage? loading;
+
+  final double? cardElevation;
 
   final int? cardColor;
-
   final int? onCardColor;
+
+  final int? sessionChipSurfaceColor;
+  final int? sessionChipOnSurfaceColor;
+
+  final int? termsNoticeColor;
+  final int? hyperlinkColor;
+  @Deprecated('Replaced by hyperlinkColor')
+  final int? hyperlinkColorInt;
 
   /// Theme information used on the verification review screen
   final ReclaimVerificationReviewScreenTheme? verificationReviewScreenTheme;
 
   const ReclaimAppTheme({
     this.background,
+    this.backgroundBlurStrength,
+    this.backgroundBlurColor,
     this.colorScheme,
-    this.loadingIconColor,
+    this.loading,
     this.doneIcon,
     this.cardColor,
     this.onCardColor,
+    this.sessionChipSurfaceColor,
+    this.sessionChipOnSurfaceColor,
     this.appImageOptions,
     this.verificationReviewScreenTheme,
+    this.cardElevation,
+    this.termsNoticeColor,
+    this.hyperlinkColor,
+    // ignore: deprecated_consistency
+    this.hyperlinkColorInt,
+    this.parameterStyle,
   });
 
   factory ReclaimAppTheme.fromJson(Map<String, dynamic> json) => _$ReclaimAppThemeFromJson(json);
 
   Map<String, dynamic> toJson() => _$ReclaimAppThemeToJson(this);
 }
+
+@JsonSerializable()
+class ReturnToAppMessage {
+  final String? success;
+  final String? failure;
+
+  const ReturnToAppMessage({required this.success, required this.failure});
+
+  factory ReturnToAppMessage.fromJson(Map<String, dynamic> json) => _$ReturnToAppMessageFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ReturnToAppMessageToJson(this);
+}
+
+@JsonSerializable()
+class DataSharedMessage {
+  final String? savedAndShared;
+  final String? shared;
+  final String? whatWasShared;
+
+  const DataSharedMessage({required this.savedAndShared, required this.shared, required this.whatWasShared});
+
+  factory DataSharedMessage.fromJson(Map<String, dynamic> json) => _$DataSharedMessageFromJson(json);
+
+  Map<String, dynamic> toJson() => _$DataSharedMessageToJson(this);
+}
+
+enum ParametersDisplayStyle { compact, dividerSeparated }
 
 @JsonSerializable()
 class ReclaimAppThemeInfo {
@@ -187,8 +253,23 @@ class ReclaimAppThemeInfo {
   final ReclaimAppTheme? theme;
   final ReclaimAppTheme? darkTheme;
   final String? appName;
+  final ReturnToAppMessage? returnToAppMessage;
+  final DataSharedMessage? dataSharedMessage;
+  final String? termsAndConditionLink;
+  final String? privacyPolicyLink;
+  final String? preferredLocale;
 
-  const ReclaimAppThemeInfo({this.appName, this.themeMode = ReclaimAppThemeMode.light, this.theme, this.darkTheme});
+  const ReclaimAppThemeInfo({
+    this.appName,
+    this.themeMode = ReclaimAppThemeMode.light,
+    this.theme,
+    this.darkTheme,
+    this.returnToAppMessage,
+    this.dataSharedMessage,
+    this.termsAndConditionLink,
+    this.privacyPolicyLink,
+    this.preferredLocale,
+  });
 
   factory ReclaimAppThemeInfo.fromJson(Map<String, dynamic> json) => _$ReclaimAppThemeInfoFromJson(json);
 
@@ -200,6 +281,10 @@ class ReclaimAppThemeInfo {
       themeMode: themeMode,
       theme: theme,
       darkTheme: darkTheme,
+      returnToAppMessage: returnToAppMessage,
+      dataSharedMessage: dataSharedMessage,
+      termsAndConditionLink: termsAndConditionLink,
+      privacyPolicyLink: privacyPolicyLink,
     );
   }
 }

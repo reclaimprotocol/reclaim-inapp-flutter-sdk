@@ -95,12 +95,13 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
       final response = await _sessionHttpClient
           .post<String>(ReclaimUrls.SESSION_INIT, data: data)
           .logWhenResponseErrors();
-      logger.info('Session created successfully response :$response');
+      logger.info('Session created successfully response: $response');
       final sessionData = json.decode(response.data ?? '');
       return SessionInitResponse.fromJson({...sessionData as Map});
     } catch (error, stackTrace) {
       if (error is DioException && error.response != null) {
-        logger.severe(
+        logger.event(
+          Level.SEVERE.withEvent(LogEventType.RECLAIM_INIT_SESSION_EXCEPTION),
           'Error creating session. Status code: ${error.response?.statusCode}. Response: ${error.response?.data}',
           error,
           stackTrace,
@@ -109,10 +110,21 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
         final statusCode = error.response?.statusCode;
         final isInvalidStatus = statusCode != null && statusCode >= 400 && statusCode < 500;
         if (data is String && data.toLowerCase().contains('session already exists') || isInvalidStatus) {
+          logger.event(
+            Level.SEVERE.withEvent(LogEventType.RECLAIM_EXPIRED_SESSION_EXCEPTION),
+            'Error creating session. Status code: ${error.response?.statusCode}. Response: ${error.response?.data}',
+            error,
+            stackTrace,
+          );
           throw const ReclaimExpiredSessionException();
         }
       } else {
-        logger.severe('Error creating session', error, stackTrace);
+        logger.event(
+          Level.SEVERE.withEvent(LogEventType.RECLAIM_INIT_SESSION_EXCEPTION),
+          'Error creating session',
+          error,
+          stackTrace,
+        );
       }
       throw const ReclaimInitSessionException();
     }
@@ -171,7 +183,7 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
       final statusCode = response.statusCode;
       final isInvalidStatus = statusCode != null && statusCode >= 400 && statusCode < 500;
       if (isInvalidStatus) {
-        logger.info('Session expired');
+        logger.event(Level.SEVERE.withEvent(LogEventType.RECLAIM_EXPIRED_SESSION_EXCEPTION), 'Session expired');
         throw const ReclaimExpiredSessionException();
       }
     } catch (error, stackTrace) {
@@ -188,7 +200,7 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
                   'invalid status',
                 ].any(data.toLowerCase().contains) ||
             isInvalidStatus) {
-          logger.info('Session expired');
+          logger.event(Level.SEVERE.withEvent(LogEventType.RECLAIM_EXPIRED_SESSION_EXCEPTION), 'Session expired');
           throw const ReclaimExpiredSessionException();
         }
       }
@@ -278,6 +290,10 @@ class _SessionUpdateHandlerImpl extends _DefaultSessionUpdateHandler {
       );
       final sessionId = session?.sessionId;
       if (session == null || sessionId == null || sessionId.isEmpty) {
+        logging.event(
+          Level.SEVERE.withEvent(LogEventType.RECLAIM_INIT_SESSION_EXCEPTION),
+          'Error initializing session',
+        );
         throw const ReclaimInitSessionException();
       }
       return session;
@@ -297,6 +313,9 @@ class _SessionUpdateHandlerImpl extends _DefaultSessionUpdateHandler {
     if (updateSession != null) {
       final isSessionOk = await updateSession(sessionId, status, metadata);
       if (!isSessionOk) {
+        logging
+            .child('updateSession')
+            .event(Level.SEVERE.withEvent(LogEventType.RECLAIM_EXPIRED_SESSION_EXCEPTION), 'Session expired');
         throw const ReclaimExpiredSessionException();
       }
       return;

@@ -33,4 +33,8 @@ class FeatureFlagsProvider {
   Future<void> set<T>(FeatureFlag<T> flag, T value) {
     return _repository.setFeatureFlag(identity, flag, value);
   }
+
+  void checkAndClearExpiredFlags() {
+    _repository.checkAndClearExpiredFlags();
+  }
 }

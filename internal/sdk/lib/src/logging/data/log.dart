@@ -2,19 +2,56 @@ import 'package:flutter/foundation.dart';
 import '../../data/identity.dart';
 import '../logging.dart';
 
+enum LogEntryLogLevel {
+  // Failures & Errors
+  SEVERE,
+  WARNING,
+  INFO,
+  // Configurations
+  CONFIG,
+  // Verbose debugging logs
+  FINE,
+  // PII Logging
+  FINER,
+  // PII & Extremely Verbose debugging logs
+  FINEST;
+
+  factory LogEntryLogLevel.fromLoggingLevel(Level level) {
+    if (level.value >= Level.SEVERE.value) {
+      return LogEntryLogLevel.SEVERE;
+    } else if (level.value >= Level.WARNING.value) {
+      return LogEntryLogLevel.WARNING;
+    } else if (level.value >= Level.INFO.value) {
+      return LogEntryLogLevel.INFO;
+    } else if (level.value >= Level.CONFIG.value) {
+      return LogEntryLogLevel.CONFIG;
+    } else if (level.value >= Level.FINE.value) {
+      return LogEntryLogLevel.FINE;
+    } else if (level.value >= Level.FINER.value) {
+      return LogEntryLogLevel.FINER;
+    } else {
+      return LogEntryLogLevel.FINEST;
+    }
+  }
+}
+
 class LogEntry {
   final SessionIdentity sessionIdentity;
   final String logLine;
   final int sequence;
   final DateTime time;
   final String type;
+  final LogEntryLogLevel logLevel;
+  final LogEventType? eventType;
 
   LogEntry({
     required this.sessionIdentity,
     required this.logLine,
     required this.sequence,
     required this.type,
+    required this.eventType,
     required DateTime? time,
+    required this.logLevel,
   }) : time = time ?? DateTime.now();
 
   factory LogEntry.fromRecord(
@@ -38,12 +75,16 @@ class LogEntry {
       }
     }
 
+    final level = record.level;
+
     return LogEntry(
       sessionIdentity: fallbackSessionIdentity.merge(identity),
       logLine: logLineBuffer.toString(),
       sequence: record.sequenceNumber,
       type: record.loggerName,
       time: record.time,
+      eventType: level is LevelWithEvent ? level.eventType : null,
+      logLevel: LogEntryLogLevel.fromLoggingLevel(record.level),
     );
   }
 
@@ -55,6 +96,8 @@ class LogEntry {
       "sessionId": sessionIdentity.sessionId,
       "providerId": sessionIdentity.providerId,
       "appId": sessionIdentity.appId,
+      "logLevel": logLevel.name,
+      "eventType": eventType?.name ?? '',
     };
   }
 

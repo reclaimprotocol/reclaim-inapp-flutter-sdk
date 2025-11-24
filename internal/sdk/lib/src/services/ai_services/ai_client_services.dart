@@ -11,6 +11,7 @@ import '../../data/app_events.dart';
 import '../../data/screenshot_metadata.dart';
 import '../../logging/logging.dart';
 import '../../utils/http/http.dart';
+import 'timeline/timeline_event_creator.dart';
 
 typedef AiServiceMetadata = Map<String, dynamic>;
 
@@ -22,6 +23,8 @@ class AiServiceClient {
   final http.Client client;
 
   AiServiceClient(this.sessionId, this.providerId, [http.Client? client]) : client = client ?? ReclaimHttpClient();
+
+  late final TimelineEventCreator createTimelineEvent = TimelineEventCreator(sessionId: sessionId, client: client);
 
   Future<void> sendEvent<T extends AppEvent>(
     List<T> events,
@@ -51,7 +54,9 @@ class AiServiceClient {
 
       final eventsTypes = events.map((e) => e.runtimeType).toList();
 
-      logger.info('Sending Events to AI Service: length: ${eventDataList.length} types: $eventsTypes');
+      final msg = 'Sending Events to AI Service: length: ${eventDataList.length} types: $eventsTypes';
+
+      logger.info(msg);
       logger.info('Events data: $data');
 
       final response = await client.post(

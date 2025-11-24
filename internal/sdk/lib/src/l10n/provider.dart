@@ -1,0 +1,103 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+
+import '../utils/observable_notifier.dart';
+import 'generated/app_localizations.dart';
+import 'remote/remote_l10n.dart';
+
+export 'generated/app_localizations.dart';
+
+typedef MaybeTranslationCallback = String? Function(ReclaimAppLocalizations it);
+
+extension ReclaimLocalizationX on BuildContext {
+  ReclaimAppLocalizations get l10n {
+    return ReclaimLocalizationProvider.of(this);
+  }
+
+  String translate(MaybeTranslationCallback cb) {
+    return ReclaimLocalizationProvider.translate(this, cb);
+  }
+}
+
+class ReclaimLocalizationProvider extends ObservableNotifier<Locale?> {
+  ReclaimLocalizationProvider({Locale? locale}) : super(locale);
+
+  static List<Locale> get supportedLocales => ReclaimAppLocalizations.supportedLocales;
+  static List<LocalizationsDelegate<dynamic>> get localizationsDelegate =>
+      ReclaimAppLocalizations.localizationsDelegates;
+
+  static ReclaimAppLocalizations of(BuildContext context) {
+    final l10n = maybeOf(context);
+    assert(l10n != null, 'Ensure ReclaimThemeProvider is available as an ancestor in the context of this widget');
+    return l10n!;
+  }
+
+  static ReclaimAppLocalizations? maybeOf(BuildContext context) {
+    final remotel10n = Localizations.of<RemoteLocalizations>(context, RemoteLocalizations);
+    final appl10n = ReclaimAppLocalizations.of(context);
+    // Prefer remote translation over in-app
+    return remotel10n ?? appl10n;
+  }
+
+  static ReclaimLocalizationProvider? find(BuildContext context) {
+    final _ProviderScope? scope = context.getInheritedWidgetOfExactType<_ProviderScope>();
+
+    return scope?.notifier;
+  }
+
+  static String? translateByLocale(Locale locale, MaybeTranslationCallback cb) {
+    final l10n = lookupReclaimAppLocalizations(locale);
+    final text = cb(l10n);
+    if (text != null) return text;
+    return null;
+  }
+
+  static String? maybeTranslate(BuildContext context, MaybeTranslationCallback cb) {
+    final remotel10n = Localizations.of<RemoteLocalizations>(context, RemoteLocalizations);
+    final appl10n = ReclaimAppLocalizations.of(context);
+    // Prefer remote translation over in-app
+    if (remotel10n != null) {
+      final text = cb(remotel10n);
+      if (text != null) return text;
+    }
+    if (appl10n != null) {
+      final text = cb(appl10n);
+      if (text != null) return text;
+    }
+    final locale = Localizations.maybeLocaleOf(context);
+    if (locale != null) {
+      final text = cb(lookupReclaimAppLocalizations(locale));
+      if (text != null) return text;
+    }
+    return null;
+  }
+
+  static String translate(BuildContext context, MaybeTranslationCallback cb) {
+    final text = maybeTranslate(context, cb);
+    if (text != null) return text;
+    // to use same assertion if localization unavailable
+    ReclaimAppLocalizations.of(context);
+    throw FlutterError('No translation available');
+  }
+
+  Widget wrap({required Widget child}) {
+    return _ProviderScope(notifier: this, child: child);
+  }
+
+  void update(Locale? newValue) {
+    value = newValue;
+  }
+
+  void updateSilently(Locale? newValue) {
+    super.setValueSilently(newValue);
+  }
+}
+
+class _ProviderScope extends InheritedNotifier<ReclaimLocalizationProvider> {
+  const _ProviderScope({required super.child, required ReclaimLocalizationProvider super.notifier});
+
+  @override
+  bool updateShouldNotify(covariant _ProviderScope oldWidget) {
+    return oldWidget.notifier?.value != notifier?.value;
+  }
+}

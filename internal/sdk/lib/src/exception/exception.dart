@@ -73,6 +73,14 @@ final class ReclaimVerificationPlatformNotSupportedException extends ReclaimVeri
   final exceptionName = 'ReclaimVerificationPlatformNotSupportedException';
 }
 
+final class ReclaimVerificationOutdatedSDKException extends ReclaimVerificationCancelledException {
+  const ReclaimVerificationOutdatedSDKException([String? message])
+    : super(message ?? 'InApp SDK version is outdated and not functional anymore');
+
+  @override
+  final exceptionName = 'ReclaimVerificationOutdatedSDKException';
+}
+
 /// The verification was submitted for manual review by the user.
 final class ReclaimVerificationManualReviewException extends ReclaimVerificationSkippedException {
   const ReclaimVerificationManualReviewException([String? message]) : super(message ?? 'Manual review initiated');

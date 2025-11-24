@@ -1,3 +1,9 @@
+import 'dart:convert';
+
+import 'package:json_annotation/json_annotation.dart';
+
+part 'interception_method.g.dart';
+
 enum HawkeyeInterceptionMethod {
   PROXY,
   DIRECT_REPLACEMENT,
@@ -16,4 +22,44 @@ enum HawkeyeInterceptionMethod {
 
   bool get useProxyForFetch => this == HawkeyeInterceptionMethod.PROXY;
   bool get useGetterForFetch => this == HawkeyeInterceptionMethod.GETTER_SETTER;
+}
+
+@JsonSerializable()
+class HawkeyeInterceptionOptions {
+  @JsonKey(defaultValue: false)
+  final bool disableFormIntercept;
+  @JsonKey(defaultValue: true)
+  final bool delayFormSubmitForFetch;
+  @JsonKey(defaultValue: HawkeyeInterceptionMethod.PROXY)
+  final HawkeyeInterceptionMethod interceptionMethod;
+
+  const HawkeyeInterceptionOptions({
+    this.disableFormIntercept = false,
+    this.delayFormSubmitForFetch = true,
+    this.interceptionMethod = HawkeyeInterceptionMethod.PROXY,
+  });
+
+  factory HawkeyeInterceptionOptions.fromJson(Map<String, dynamic> json) => _$HawkeyeInterceptionOptionsFromJson(json);
+  factory HawkeyeInterceptionOptions.fromString(String? jsonString) {
+    return HawkeyeInterceptionOptions.fromJson(json.decode(jsonString ?? '{}'));
+  }
+
+  Map<String, dynamic> toJson() => _$HawkeyeInterceptionOptionsToJson(this);
+
+  HawkeyeInterceptionOptions copyWith({
+    bool? disableFormIntercept,
+    bool? delayFormSubmitForFetch,
+    HawkeyeInterceptionMethod? interceptionMethod,
+  }) {
+    return HawkeyeInterceptionOptions(
+      disableFormIntercept: disableFormIntercept ?? this.disableFormIntercept,
+      delayFormSubmitForFetch: delayFormSubmitForFetch ?? this.delayFormSubmitForFetch,
+      interceptionMethod: interceptionMethod ?? this.interceptionMethod,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'HawkeyeInterceptionOptions(disableFormIntercept: $disableFormIntercept, delayFormSubmitForFetch: $delayFormSubmitForFetch, interceptionMethod: $interceptionMethod)';
+  }
 }

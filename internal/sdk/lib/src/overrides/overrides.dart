@@ -3,6 +3,7 @@ import '../data/feature_flag_data.dart' show ReclaimFeatureFlagData;
 import '../data/providers_override.dart' show ReclaimProviderOverride;
 import '../logging/override.dart' show LogConsumerOverride;
 import '../services/capability/access_token.dart' show CapabilityAccessToken;
+import '../services/version.dart' show SDKUpdateRequirement;
 import '../utils/session/session_override.dart' show ReclaimSessionOverride;
 import 'override.dart';
 
@@ -37,5 +38,9 @@ interface class ReclaimOverrides {
 
   static CapabilityAccessToken? get capabilityAccessToken {
     return ReclaimOverride.get<CapabilityAccessToken>();
+  }
+
+  static SDKUpdateRequirement? get sdkUpdateRequirements {
+    return ReclaimOverride.get<SDKUpdateRequirement>();
   }
 }

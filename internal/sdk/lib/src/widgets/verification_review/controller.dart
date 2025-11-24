@@ -19,12 +19,18 @@ class VerificationReviewState with EquatableMixin {
 class VerificationReviewController extends ObservableNotifier<VerificationReviewState> {
   VerificationReviewController() : super(const VerificationReviewState());
 
+  VoidCallback? onExtendNoActivity;
+
   Widget wrap({required Widget child}) {
     return _Provider(notifier: this, child: child);
   }
 
   void setIsVisible(bool isVisible) {
     value = value.copyWith(isVisible: isVisible);
+  }
+
+  void notifyActivity() {
+    onExtendNoActivity?.call();
   }
 
   static VerificationReviewController readOf(BuildContext context) {

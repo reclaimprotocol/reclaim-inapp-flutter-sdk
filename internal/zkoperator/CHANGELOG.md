@@ -1,3 +1,17 @@
+## 1.6.1
+
+* Remove unnecessary logs
+
+## 1.6.0
+
+* Update asset links for v3 circuits
+* Add support for new circuits
+
+## 1.5.1
+
+* Add tests for identifyAlgorithmFromZKOperationRequest
+* Update logs to show which algorithm maybe used in proof generation
+
 ## 1.5.0
 
 * Refactor all isolate workers to be a runnable and add `WorkerManager` that manages background worker with runnables and runs them on isolate

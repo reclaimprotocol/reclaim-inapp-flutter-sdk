@@ -21,7 +21,7 @@ class Attestor {
   static final _log = logging.child('Attestor');
 
   AttestorClient _createAttestorWebView(String debugLabel) {
-    _log.info('creating attestor webview client: $debugLabel');
+    _log.fine('creating attestor webview client: $debugLabel');
 
     final effectiveUrl = _attestorUrl ?? Uri.parse(ReclaimUrls.DEFAULT_ATTESTOR_WEB_URL);
     _attestorUrl = effectiveUrl;
@@ -38,13 +38,13 @@ class Attestor {
 
     attestor.zkOperator = _attestorZkOperator;
 
-    _log.info('attestor client created');
+    _log.fine('attestor client created');
 
     return attestor;
   }
 
   Future<void> _disposeAttestor(AttestorClient attestor) async {
-    _log.info('disposing attestor webview client: $attestor');
+    _log.fine('disposing attestor webview client: $attestor');
 
     try {
       await attestor.dispose();
@@ -217,15 +217,15 @@ class Attestor {
     int attempt = 1;
     return retry(
       () {
-        log.info('going for attempt: $attempt');
+        log.fine('going for attempt: $attempt');
         return pool.compute((client) async {
-          log.info('attempt: $attempt with $client');
+          log.fine('attempt: $attempt with $client');
           try {
             final response = await fn(client).timeout(timeout);
             if (canMarkNotResponding) {
               client.markResponding();
             }
-            log.info('success for attempt: $attempt with $client, notRespondingCount:${client.notRespondingCount}');
+            log.fine('success for attempt: $attempt with $client, notRespondingCount:${client.notRespondingCount}');
             return response;
           } on TimeoutException catch (e, s) {
             log.warning('timed out for isCompute: $isCompute, client:$client', e, s);

@@ -1,0 +1,220 @@
+{
+  "@@locale": "es",
+  "languageName": "Español",
+  "helloWorld": "¡Hola mundo!",
+  "@helloWorld": {
+    "description": "The conventional newborn programmer greeting"
+  },
+  "defaultLanguage": "Idioma predeterminado",
+  "changeLanguage": "Cambiar idioma",
+  "verificationCancelled": "Verificación cancelada",
+  "verificationDismissedByUser": "Verificación rechazada por el usuario",
+  "providerNotFound": "Proveedor no encontrado",
+  "weCouldntDeliverProofs": "No pudimos entregar las pruebas a \"{appName}\".",
+  "@weCouldntDeliverProofs": {
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "App"
+      }
+    }
+  },
+  "verifyingFor": "Verificando {appName}",
+  "@verifyingFor": {
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "App"
+      }
+    }
+  },
+  "invalidVerificationRequest": "Solicitud de verificación no válida",
+  "waitingForVerificationStart": "Esperando a que comience la verificación…",
+  "hideDetails": "Ocultar detalles",
+  "viewDetails": "Ver detalles",
+  "platformNotSupported": "Plataforma no compatible",
+  "inappSdkVersionIsOutdatedAndNotFunctionalAnymore": "La versión del SDK InApp está desactualizada y ya no funciona",
+  "requirementForVerificationCouldNotBeMet": "No se cumplió el requisito necesario para la verificación",
+  "sessionExpired": "Sesión expirada",
+  "submit": "Enviar",
+  "termsOfService": "Términos de servicio",
+  "privacyPolicy": "Política de privacidad",
+  "tryAgain": "Intentar de nuevo",
+  "gettingReady": "Preparando…",
+  "gettingReadyToVerify": "Preparándose para verificar",
+  "almostThereJustFinalizingTheDetails": "Casi listo, finalizando los detalles",
+  "pleaseHoldOnForJustALittleLonger": "Por favor, espera un poco más",
+  "thisShouldntTakeMuchLonger": "Esto no debería tardar mucho más",
+  "verifyingDataFrom": "Verificando los datos de {domain}",
+  "@verifyingDataFrom": {
+    "placeholders": {
+      "domain": {
+        "type": "String",
+        "example": "xyz.com"
+      }
+    }
+  },
+  "thisMightTakeAFewSeconds": "Esto puede tardar unos segundos",
+  "waitingForVerification": "Esperando verificación",
+  "sharingWith": "Compartiendo con {appName}",
+  "@sharingWith": {
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "App"
+      }
+    }
+  },
+  "youAlwaysControlWhoYouShareYourDataWith": "Tú decides con quién compartes tus datos.",
+  "youAreInCompleteControlOfYourData": "Tienes control total sobre tus datos.",
+  "lookingForInformationToVerify": "Buscando información para verificar",
+  "findOurTermsOfServicePrivacyPolicyAt": "Encuentra nuestros términos de servicio y política de privacidad en _reclaimprotocol.org_",
+  "byContinuingYouAgreeToThese": "Al continuar, aceptas estos _Términos de Servicio@1_ y _Política de Privacidad@2_",
+  "infinite": "Infinito",
+  "empty": "Vacío",
+  "loading": "cargando…",
+  "copiedToYourClipboard": "Copiado al portapapeles",
+  "proofsGeneratedByReclaimProtocolAreSecureAndPrivate": "Las pruebas generadas por Reclaim Protocol son seguras y privadas.",
+  "notAvailable": "No disponible",
+  "allow": "Permitir",
+  "dontAllow": "No permitir",
+  "copySessionId": "Copiar ID de sesión",
+  "refreshPage": "Actualizar página",
+  "settings": "Configuración",
+  "troubleshootingMode": "Modo de solución de problemas",
+  "saveWebsiteData": "Guardar datos del sitio web",
+  "requestingPermission": "Solicitando permiso",
+  "areYouSureYouSeeAllTheDataThatNeedsVerification": "¿Estás seguro de que ves todos los datos que necesitan verificación?",
+  "shareRequests": "Solicitudes de acceso",
+  "tapShareToSendForManualReview": "Toca (compartir) para enviar a revisión manual",
+  "wantsToAccessYour": "{domain} quiere acceder a tu {resource}",
+  "@wantsToAccessYour": {
+    "placeholders": {
+      "domain": {
+        "type": "String",
+        "example": "xyz.com"
+      },
+      "resource": {
+        "type": "String",
+        "example": "camera"
+      }
+    }
+  },
+  "contactApplicationSupportForMoreInformation": "Contacta al soporte de la aplicación para más información.",
+  "share": "Compartir",
+  "createAndVerifyDataInSeconds": "Crea y verifica datos en segundos",
+  "orBrowseSomeOfOur": "O explora algunos _ejemplos de nuestros proveedores de datos_",
+  "returnTo": "Volver a {appName}",
+  "@returnTo": {
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "app"
+      }
+    }
+  },
+  "youCanNowReturnTo": "Ahora puedes volver a {appName}",
+  "@youCanNowReturnTo": {
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "app"
+      }
+    }
+  },
+  "providers": "Proveedores",
+  "invalidLink": "Enlace inválido",
+  "theRequestedProofLinkIsInvalid": "El enlace de prueba solicitado es inválido",
+  "ok": "Aceptar",
+  "somethingWentWrong": "Algo salió mal",
+  "noProvidersFound": "No se encontraron proveedores de datos",
+  "searchByProvider": "Buscar por proveedor",
+  "pasteTheRequestedProofLinkHere": "Pega el enlace de prueba solicitado aquí",
+  "searchForAProvider": "Buscar un proveedor",
+  "youPreviouslyVerifiedThisData": "Ya verificaste estos datos anteriormente",
+  "verifyAgain": "Verificar de nuevo",
+  "shareData": "Compartir datos",
+  "isRequestingADataFrom": "{appName} está solicitando datos de {user}",
+  "@isRequestingADataFrom": {
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "An app"
+      },
+      "user": {
+        "type": "String",
+        "example": "you"
+      }
+    }
+  },
+  "privacy": "Privacidad",
+  "proofSubmissionFailed": "Falló el envío de la prueba",
+  "anUnknownProblemOccurred": "Ocurrió un problema desconocido",
+  "outdated": "Desactualizado",
+  "verificationFailed": "Verificación fallida",
+  "verificationRequestInvalid": "La solicitud de verificación es inválida. Por favor, intenta iniciar la verificación de nuevo. Si el problema persiste, contacta a {appName}.",
+  "@verificationRequestInvalid": {
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "appName"
+      }
+    }
+  },
+  "unsupportedDevice": "Dispositivo no compatible",
+  "thisDeviceIsNotSupportedForVerifications": "Este dispositivo no es compatible para verificaciones. Por favor, inténtalo en un dispositivo diferente.",
+  "thisVersionOfAppIsNotSupportedAnymore": "Esta versión de la aplicación ya no es compatible. Por favor, intenta de nuevo después de actualizar.",
+  "yourLoginCredentialsAndPrivateDataStaySecure": "Tus credenciales de inicio de sesión y datos privados permanecen seguros y nunca son visibles para {appName}, Reclaim Protocol, ni nadie más.",
+  "@yourLoginCredentialsAndPrivateDataStaySecure": {
+    "placecolors": {
+      "appName": {
+        "type": "String",
+        "example": "appName"
+      }
+    }
+  },
+  "theApplicationHasEncounteredAnUnknownError": "La aplicación ha encontrado un error desconocido. Por favor, inténtalo de nuevo más tarde.",
+  "tapOnTheLinkOnTheOtherAppBrowser": "Toca el enlace en la otra aplicación/navegador que estabas usando para iniciar la verificación",
+  "proofGenerationWasCancelledByTheUser": "La generación de la prueba fue cancelada por el usuario",
+  "whatWasShared": "Qué se compartió",
+  "whatWentWrong": "¿Qué salió mal?",
+  "dataSavedShared": "Datos Guardados y Compartidos",
+  "dataShared": "Datos Compartidos",
+  "wereReviewingYourSubmission": "Estamos revisando tu solicitud",
+  "unexpectedErrorOccurredDuringVerification": "Ocurrió un error inesperado durante la verificación. {message}. Si el problema persiste, contacta a {appName}.",
+  "@unexpectedErrorOccurredDuringVerification": {
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "App"
+      },
+      "message": {
+        "type": "String",
+        "example": "Solicitud de verificación inválida"
+      }
+    }
+  },
+  "yourDataHasBeenSubmittedSuccessfully": "Tus datos se han enviado con éxito y están actualmente bajo revisión manual por nuestro equipo. No se requiere ninguna acción adicional de tu parte. Te notificaremos una vez que la revisión esté completa.",
+  "why": "¿POR QUÉ?",
+  "verificationSessionExpired": "La sesión de verificación ha expirado. Por favor, intenta iniciar la verificación de nuevo desde {appName}.",
+  "@verificationSessionExpired": {
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "appName"
+      }
+    }
+  },
+  "updateForInappSdkAvailableCritical": "⚠️🚨 Hay una actualización disponible para el SDK InApp. La versión actual ya no se puede usar, por favor actualiza la versión del SDK InApp usada por esta aplicación para asegurar la compatibilidad.",
+  "updateForInappSdkAvailableWarning": "⚠️ Hay una actualización disponible para el SDK InApp. Por favor actualiza la versión del SDK InApp usada por esta aplicación para asegurar la compatibilidad.",
+  "forMoreInformationAboutThisError": "Para más información sobre este error, por favor _consulta las posibles razones de falla._",
+  "verifyingStudentStatus": "Verificando el estado de estudiante para {providerName}.",
+  "@verifyingStudentStatus": {
+    "placeholders": {
+      "providerName": {
+        "type": "String",
+        "example": "Nombre del proveedor"
+      }
+    }
+  }
+}

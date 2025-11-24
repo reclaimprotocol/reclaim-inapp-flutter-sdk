@@ -40,7 +40,8 @@ class AttestorWebViewClient extends AttestorClient with AttestorClientOperator {
       final message = json.encode(rpcMessage);
 
       // using json.encode here to string escape the json message correctly
-      final js = 'window.postMessage(${json.encode(message)});';
+      final js =
+          'globalThis.ATTESTOR_BASE_URL = "${attestorBrowserRpcUrl.origin}";globalThis.RPC_CHANNEL_NAME = "${AttestorClient.hostMessengerChannelName}";window.HostMessenger = window.backupMessenger;window.postMessage(${json.encode(message)});';
 
       await retry(
         () => executeJavascript(js, debugId: rpcMessage.id),
@@ -54,18 +55,13 @@ class AttestorWebViewClient extends AttestorClient with AttestorClientOperator {
   Future<Object?> executeJavascript(String js, {String? debugId}) async {
     final log = logger.child('AttestorWebViewClient.executeJavascript');
 
-    log.info({'tag': 'rpc.js', 'value': js, if (debugId != null) 'debugId': debugId});
+    log.debug({'tag': 'rpc.js', 'value': js, if (debugId != null) 'debugId': debugId});
 
     final controller = _innerWebView.webViewController;
-
-    log.info('Ensuring webview is ready');
     await _ensureReadiness();
-    log.info('Webview is ready for js execution');
     if (controller == null) {
       throw const AttestorClientInitializationException('Webview controller is null');
     }
-
-    log.info('running js with controller');
 
     return () async {
       try {
@@ -82,12 +78,10 @@ class AttestorWebViewClient extends AttestorClient with AttestorClientOperator {
 
   Future<void> _ensureReadiness() async {
     final log = logger.child('AttestorWebViewClient._ensureReadiness');
-    log.info('Ensuring webview is ready');
 
     final controller = _innerWebView.webViewController;
 
     Future<bool> evaluateIsWebviewReady() async {
-      log.info('Evaluating webview readiness');
       await ensureReady().timeout(const Duration(seconds: 5));
       if (controller == null) {
         throw const AttestorClientInitializationException('Webview controller is null');
@@ -95,7 +89,6 @@ class AttestorWebViewClient extends AttestorClient with AttestorClientOperator {
       final response = await controller
           .evaluateJavascript(source: '(() => { return 0 + 1; })()')
           .timeout(const Duration(seconds: 5));
-      log.info({'tag': 'evaluateIsWebviewReady', 'response': response});
       return response == 1 || response.toString() == '1';
     }
 
@@ -200,7 +193,7 @@ class AttestorWebViewClient extends AttestorClient with AttestorClientOperator {
         controller.addJavaScriptHandler(handlerName: 'ClientReadyHandler', callback: _handleClientReady);
         controller.addUserScript(
           userScript: UserScript(
-            source: _attestorInAppWebViewUserScript(debugLabel),
+            source: _attestorInAppWebViewUserScript(attestorBrowserRpcUrl, debugLabel),
             injectionTime: UserScriptInjectionTime.AT_DOCUMENT_END,
           ),
         );
@@ -250,62 +243,61 @@ class AttestorWebViewClient extends AttestorClient with AttestorClientOperator {
   }
 }
 
-String _attestorInAppWebViewUserScript(String debugLabel) =>
+String _attestorInAppWebViewUserScript(Uri attestorBrowserRpcUrl, String debugLabel) =>
     """
-const sendMessageToHost = (name, message) => {
-  return window.flutter_inappwebview.callHandler(name, message);
-}
+globalThis.ATTESTOR_BASE_URL = "${attestorBrowserRpcUrl.origin}"
+globalThis.RPC_CHANNEL_NAME = "${AttestorClient.hostMessengerChannelName}"
 
-window.HostMessenger = {
-  notifyReady: () => {
-    sendMessageToHost('ClientReadyHandler', true);
-  },
-  consoleLog: (level, logs) => {
-    sendMessageToHost('HostRpcMessageHandler', JSON.stringify({
-      'type': 'console',
-      'data': logs,
-      'source': 'webview-console',
-      'level': level,
-    }));
-  },
-  postMessage: (message) => {
-    sendMessageToHost('HostRpcMessageHandler', message);
-  },
+const _setupMessaging = (event) => {
+  try {
+    globalThis.ATTESTOR_BASE_URL = "${attestorBrowserRpcUrl.origin}"
+  	globalThis.RPC_CHANNEL_NAME = "${AttestorClient.hostMessengerChannelName}"
+
+    const sendMessageToHost = (name, message) => {
+      return window.flutter_inappwebview.callHandler(name, message);
+    }
+
+    window.HostMessenger = {
+      notifyReady: () => {
+        sendMessageToHost('ClientReadyHandler', true);
+      },
+      consoleLog: (level, logs) => {
+        sendMessageToHost('HostRpcMessageHandler', JSON.stringify({
+          'type': 'console',
+          'data': logs,
+          'source': 'webview-console',
+          'level': level,
+        }));
+      },
+      postMessage: (message) => {
+        sendMessageToHost('HostRpcMessageHandler', message);
+      },
+    };
+    window.backupMessenger = window.HostMessenger;
+
+    const setupConsoleLogs = () => {
+      const logLevels = ['log', 'debug', 'info', 'warn', 'error'];
+      for (const level of logLevels) {
+        const originalLog = console[level];
+        console[level] = (...log) => {
+          originalLog(...log);
+          window.HostMessenger.consoleLog(level, log);
+        }
+      }
+      window.onunhandledrejection = (err) => {
+        console.error(`unhandled reject: \${err.reason} \${err.reason.stack} `)
+      }
+    }
+
+    setupConsoleLogs();
+
+    window.HostMessenger.notifyReady();
+  } catch (e) {
+    console.error('Error in DOMContentLoaded', e);
+  }
 };
 
-const setupConsoleLogs = () => {
-  const logLevels = ['log', 'debug', 'info', 'warn', 'error'];
-  for (const level of logLevels) {
-    const originalLog = console[level];
-    console[level] = (...log) => {
-      originalLog(...log);
-      window.HostMessenger.consoleLog(level, log);
-    }
-  }
-  window.onunhandledrejection = (err) => {
-    console.error(`unhandled reject: \${err.reason} \${err.reason.stack} `)
-  }
-}
+addEventListener("DOMContentLoaded", _setupMessaging);
 
-setupConsoleLogs();
-
-window.HostMessenger.notifyReady();
-
-setInterval(() => {
-  try {
-    window.HostMessenger.consoleLog('info', 'ping from $debugLabel');
-  } catch (e) {
-    console.error(`error in ping: \${e}`);
-  }
-}, 10 * 1000);
-
-const _logClientMessage = (args) => {
-  try {
-    window.HostMessenger.consoleLog('info', {type: 'message sent from client $debugLabel', args });
-  } catch (e) {
-    console.error(`error in ping: \${e}`);
-  }
-}
-
-window.addEventListener('message', _logClientMessage, false);
+_setupMessaging();
 """;

@@ -37,6 +37,9 @@ class ReclaimVerificationOptions {
   /// A custom [AttestorZkOperator] to be used for the verification.
   final AttestorZkOperator? attestorZkOperator;
 
+  /// A language code & Country code for localization that should be enforced in the verification flow.
+  final String? locale;
+
   const ReclaimVerificationOptions({
     this.canAutoSubmit = false,
     this.isCloseButtonVisible = true,
@@ -45,6 +48,7 @@ class ReclaimVerificationOptions {
     this.attestorAuthenticationRequest,
     this.canContinueVerification,
     this.attestorZkOperator,
+    this.locale,
   });
 
   ReclaimVerificationOptions copyWith({
@@ -55,6 +59,7 @@ class ReclaimVerificationOptions {
     ReclaimAttestorAuthenticationRequestCallback? attestorAuthenticationRequest,
     CanContinueVerificationCallback? canContinueVerification,
     AttestorZkOperator? attestorZkOperator,
+    String? locale,
   }) {
     return ReclaimVerificationOptions(
       canAutoSubmit: canAutoSubmit ?? this.canAutoSubmit,
@@ -64,6 +69,7 @@ class ReclaimVerificationOptions {
       attestorAuthenticationRequest: attestorAuthenticationRequest ?? this.attestorAuthenticationRequest,
       canContinueVerification: canContinueVerification ?? this.canContinueVerification,
       attestorZkOperator: attestorZkOperator ?? this.attestorZkOperator,
+      locale: locale ?? this.locale,
     );
   }
 }

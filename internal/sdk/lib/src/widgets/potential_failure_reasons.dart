@@ -2,7 +2,9 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../ui.dart';
 import '../constants.dart';
+import '../l10n/provider.dart';
 import '../logging/logging.dart';
 import 'fonts_loaded.dart';
 import 'verification_review/verification_review.dart';
@@ -35,21 +37,26 @@ class PotentialErrorReasonsLearnMoreWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLargeScreen = MediaQuery.sizeOf(context).width > VerificationReviewPageSurface.smallScreenWidthExtent;
+    final highlightColor = Theme.brightnessOf(context) == Brightness.light ? Colors.indigo : Colors.amber;
 
     return FontsLoaded(
       child: Text.rich(
         TextSpan(
-          children: [
-            const TextSpan(text: "For more information about this error, please "),
-            TextSpan(
-              text: "see potential failure reasons.",
-              style: const TextStyle(color: Colors.indigo, decoration: TextDecoration.underline),
-              recognizer: TapGestureRecognizer()
-                ..onTap = () {
-                  _onSeePotentialFailureReasons(context);
-                },
-            ),
-          ],
+          children: buildTextSpanWithHighlights(
+            context.l10n.forMoreInformationAboutThisError,
+            highlightedStyle: TextStyle(color: highlightColor, decoration: TextDecoration.underline),
+            builder: ({style, text}) {
+              return TextSpan(
+                text: text,
+                style: style,
+                // Moving this to parent textspan doesn't work
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () {
+                    _onSeePotentialFailureReasons(context);
+                  },
+              );
+            },
+          ),
         ),
         style: textStyle,
         textAlign: isLargeScreen ? TextAlign.center : TextAlign.start,

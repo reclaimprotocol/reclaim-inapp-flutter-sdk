@@ -4,6 +4,7 @@ import 'package:simple_shimmer/simple_shimmer.dart';
 import '../theme/theme.dart';
 import 'claim_creation/claim_creation.dart';
 import 'claim_creation/trigger_indicator.dart';
+import 'color_or_image.dart';
 import 'icon.dart';
 import 'item_alignment.dart';
 import 'reclaim_image_provider.dart';
@@ -76,6 +77,14 @@ class AppProviderIconsBar extends StatelessWidget {
           ),
           ReclaimVectorGraphicAsset(uri: final uri, options: final options) => LogoSvgIcon(
             key: ValueKey('app-${isUsingMainAppIcon ? 'main-' : ''}icon.vector'),
+            logoUrl: uri.toString(),
+            size: logoSize,
+            borderRadius: borderRadius,
+            placeholder: placeholder,
+            fit: options.fit,
+          ),
+          ReclaimRiveGraphicAsset(uri: final uri, options: final options) => LogoRiveIcon(
+            key: ValueKey('app-${isUsingMainAppIcon ? 'main-' : ''}icon.rive'),
             logoUrl: uri.toString(),
             size: logoSize,
             borderRadius: borderRadius,
@@ -168,14 +177,37 @@ class _AppVerificationTransferIcon extends StatelessWidget {
       final controller = ClaimCreationController.of(context);
       final claimCreationValue = controller.value;
 
-      if (!claimCreationValue.isFinished) {
+      if (!claimCreationValue.isFinished ||
+          // show only image if we have one
+          appTheme.providerToAppLoader?.map(
+                onColor: (color) => false,
+                onAssetProvider: (provider) => provider.asset != null,
+              ) ==
+              true) {
+        Color? providerToAppLoaderColor;
+        switch (appTheme.providerToAppLoader) {
+          case null:
+            break;
+          case ColorDecorationProvider(color: final color):
+            providerToAppLoaderColor = color;
+            break;
+          case ImageDecorationProvider(assetProvider: final assetProvider):
+            const placeholder = SizedBox();
+            return ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: size),
+              child: ReclaimGraphicIcon(
+                provider: assetProvider,
+                size: size,
+                placeholder: placeholder,
+                fit: BoxFit.scaleDown,
+              ),
+            );
+        }
         return ConstrainedBox(
           constraints: BoxConstraints(maxWidth: size),
           child: ClaimTriggerIndicator(
-            key: const ValueKey('iw-progress-indicator'),
-            color: claimCreationValue.hasError
-                ? colorScheme.error
-                : (appTheme.providerToAppLoaderColor ?? colorScheme.primary),
+            key: const ValueKey('aicon-progress-indicator'),
+            color: claimCreationValue.hasError ? colorScheme.error : (providerToAppLoaderColor ?? colorScheme.primary),
             progress: claimCreationValue.progress ?? 0.0,
             padding: const EdgeInsetsDirectional.symmetric(horizontal: 4),
             thickness: 3,

@@ -9,16 +9,30 @@ import '../../logging/logging.dart';
 // To avoid breaking builds in web
 import 'os_web.dart' if (dart.library.io) 'os_io.dart';
 
-Future<String> getReclaimMainSdkVersion() async {
-  final logger = logging.child('_getFlutterSdkVersion');
+String? cachedInAppSdkVersion;
+
+Future<String?> getReclaimMainSdkVersionRaw() async {
+  final logger = logging.child('getReclaimMainSdkVersionRaw');
   try {
+    if (cachedInAppSdkVersion != null) {
+      return cachedInAppSdkVersion;
+    }
     final packagePubspec = yaml.loadYaml(await rootBundle.loadString('packages/reclaim_inapp_sdk/pubspec.yaml'));
     final version = packagePubspec['version'];
-    return 'v$version';
+    cachedInAppSdkVersion = version;
+    return version;
   } catch (e, s) {
     logger.severe('Failed to get SDK version', e, s);
+    return null;
+  }
+}
+
+Future<String> getReclaimMainSdkVersion() async {
+  final version = await getReclaimMainSdkVersionRaw();
+  if (version == null) {
     return 'unknown';
   }
+  return 'v$version';
 }
 
 bool isReclaimApp(PackageInfo packageInfo) {
@@ -29,7 +43,7 @@ bool isReclaimApp(PackageInfo packageInfo) {
   };
 }
 
-const _inappModuleIdentifierPrefix = BuildEnv.IS_VERIFIER_INAPP_MODULE ? "inapp_module:" : "";
+final _inappModuleIdentifierPrefix = ReclaimEnv.IS_VERIFIER_INAPP_MODULE ? "inapp_module:" : "";
 
 Future<String> _getSdkConsumerIdentifier() async {
   final packageInfo = await PackageInfo.fromPlatform();

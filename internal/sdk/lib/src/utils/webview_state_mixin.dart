@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -7,7 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../logging/logging.dart';
+import '../services/hybrid_screenshot_service.dart';
 import '../services/permission.dart';
+import '../ui/claim_creation_webview/view_model.dart';
+import '../ui/claim_creation_webview/webview_handler_manager.dart';
+import '../ui/claim_creation_webview/window/controller.dart';
 import '../ui/claim_creation_webview/window/view.dart';
 import '../widgets/permission.dart';
 
@@ -44,6 +49,16 @@ class WKNavigationActionPolicyAllowWithoutTryingAppLink implements NavigationAct
 
 mixin WebViewCompanionMixin<T extends StatefulWidget> implements State<T> {
   static final _logger = logging.child('WebViewCompanionMixin');
+
+  HybridScreenshotService? get screenshotService => null;
+  InAppWebViewController? get mainWebViewController => null;
+  PopupWindowController? get popupWindowController => null;
+
+  WebViewJSHandlerManager get handlerManager;
+
+  ClaimCreationWebClientViewModel get viewModel;
+
+  UnmodifiableListView<UserScript> get userScripts;
 
   @protected
   final gestureRecognizers = {Factory(() => EagerGestureRecognizer())};
@@ -120,10 +135,33 @@ mixin WebViewCompanionMixin<T extends StatefulWidget> implements State<T> {
     final settings = await controller.getSettings() ?? defaultWebViewSettings;
     if (!mounted) return false;
 
-    await WebViewWindow.open(
-      context: context,
-      parameters: WebViewWindowParameters(webViewSettings: settings, action: createWindowAction),
-    );
+    final log = _logger.child('onCreateWindowAction');
+    log.info('creating window for url: ${createWindowAction.request.url}');
+    log.finest(() => {'type': 'createWindowAction', 'data': json.encode(createWindowAction.toJson())});
+
+    final popupController = popupWindowController;
+    if (popupController == null) {
+      _logger.warning('PopupWindowController not available, cannot open popup window');
+      return false;
+    }
+
+    try {
+      popupController.showPopup(
+        WebViewWindowParameters(
+          webViewSettings: settings,
+          action: createWindowAction,
+          screenshotService: screenshotService,
+          mainWebViewController: mainWebViewController,
+          handlerManager: handlerManager,
+          viewModel: viewModel,
+          userScripts: userScripts,
+          onClose: popupController.hidePopup,
+        ),
+      );
+    } catch (e, s) {
+      _logger.severe('Error opening popup window', e, s);
+      return false;
+    }
 
     return true;
   }

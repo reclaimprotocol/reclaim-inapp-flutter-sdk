@@ -16,11 +16,10 @@ class UserScriptService {
     required HttpProvider providerData,
     required Map<String, String> parameters,
     required int idleTimeThreshold,
-    required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
+    required HawkeyeInterceptionOptions options,
     required int debounceTimeoutMs,
   }) async {
     try {
-      logger.info('Creating user scripts with provider: ${providerData.name}');
       final scripts = [
         UserScript(
           source: getProviderScriptEnvironment(providerData, parameters),
@@ -31,17 +30,10 @@ class UserScriptService {
           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
         ),
         UserScript(
-          source: createInterceptorInjection(providerData, hawkeyeInterceptionMethod: hawkeyeInterceptionMethod),
+          source: createInterceptorInjection(providerData, options: options),
           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
         ),
       ];
-
-      // Add custom injection if available
-      if (providerData.customInjection != null && providerData.customInjection!.isNotEmpty) {
-        scripts.add(
-          UserScript(source: providerData.customInjection!, injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
-        );
-      }
 
       // Add support for React Native custom injections
       scripts.add(
@@ -61,6 +53,9 @@ class UserScriptService {
         UserScript(source: userInteractionInjection, injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
       );
 
+      // Add workflow management script for persistent state across page loads
+      scripts.add(UserScript(source: workflowScript, injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START));
+
       // Add page load event injection
       scripts.add(
         UserScript(
@@ -69,7 +64,14 @@ class UserScriptService {
         ),
       );
 
-      logger.info('Successfully created ${scripts.length} user scripts');
+      // Add custom injection if available
+      if (providerData.customInjection != null && providerData.customInjection!.isNotEmpty) {
+        scripts.add(
+          UserScript(source: providerData.customInjection!, injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
+        );
+      }
+
+      logger.config('Successfully created ${scripts.length} user scripts');
       return UnmodifiableListView<UserScript>(scripts);
     } catch (e, s) {
       logger.severe('Error creating user scripts', e, s);
@@ -97,17 +99,14 @@ class UserScriptService {
     }
   }
 
-  static String createInterceptorInjection(
-    HttpProvider? providerData, {
-    required HawkeyeInterceptionMethod hawkeyeInterceptionMethod,
-  }) {
+  static String createInterceptorInjection(HttpProvider? providerData, {required HawkeyeInterceptionOptions options}) {
     try {
       final injectionType = providerData?.injectionType;
 
       return createInjection(
         providerData?.disableRequestReplay ?? false,
         injectionType ?? InjectionType.MSWJS,
-        hawkeyeInterceptionMethod: hawkeyeInterceptionMethod,
+        options: options,
       );
     } catch (e, s) {
       logger.severe('Error creating intercepter injection', e, s);

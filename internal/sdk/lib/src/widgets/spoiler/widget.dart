@@ -18,18 +18,26 @@ class HashedValueSpoilerTextSpan extends WidgetSpan {
 }
 
 class HashedValueTextSpanWidget extends StatefulWidget {
-  const HashedValueTextSpanWidget({super.key, required this.value, required this.realValue, required this.style});
+  const HashedValueTextSpanWidget({
+    super.key,
+    required this.value,
+    required this.realValue,
+    required this.style,
+    this.color,
+  });
   HashedValueTextSpanWidget.handleLargeText({
     super.key,
     required String value,
     required String? realValue,
     required this.style,
+    this.color,
   }) : value = _handleLargeText(value),
        realValue = realValue == null ? null : _handleLargeText(realValue);
 
   final String value;
   final String? realValue;
   final TextStyle? style;
+  final Color? color;
 
   @override
   State<HashedValueTextSpanWidget> createState() => _HashedValueTextSpanWidgetState();
@@ -89,7 +97,11 @@ class _HashedValueTextSpanWidgetState extends State<HashedValueTextSpanWidget> {
 
   @override
   Widget build(BuildContext context) {
-    const defaultTextStyle = TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 14);
+    final defaultTextStyle = TextStyle(
+      color: widget.color ?? const Color(0xFF2563EB),
+      fontWeight: FontWeight.bold,
+      fontSize: 14,
+    );
 
     final effectiveTextStyle = widget.style ?? defaultTextStyle;
 
@@ -98,6 +110,7 @@ class _HashedValueTextSpanWidgetState extends State<HashedValueTextSpanWidget> {
     return Text.rich(
       SpoilerTextSpan(
         text: text,
+        color: widget.color,
         canAllowGesture: _isGestureAllowed,
         children: [
           TextSpan(

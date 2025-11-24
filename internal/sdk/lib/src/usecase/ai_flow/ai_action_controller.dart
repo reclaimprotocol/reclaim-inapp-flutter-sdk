@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../controller.dart';
 import '../../data/ai_response.dart';
 import '../../data/create_claim.dart';
+import '../../l10n/provider.dart';
 import '../../logging/logging.dart';
 import '../../repository/ai_response_puller.dart';
 import '../../services/ai_services/ai_client_services.dart';
@@ -173,7 +174,15 @@ class AIActionController {
     final controller = ClaimCreationWebClientViewModel.readOf(context);
 
     final verification = VerificationController.readOf(context);
+    final providerName = verification.value.provider?.name;
+    if (providerName != null) {
+      webContext.setInfoText(context.l10n.verifyingStudentStatus(providerName: providerName));
+    }
+
     verification.updateProvider(versionNumber, controller);
+
+    // Notify activity to extend no-activity timeout
+    VerificationReviewController.readOf(context).notifyActivity();
 
     pause();
   }

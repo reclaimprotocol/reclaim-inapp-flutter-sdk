@@ -33,7 +33,7 @@ class SessionManager {
     } on ReclaimSessionException {
       rethrow;
     } catch (e, s) {
-      logging.severe('Error session start', e, s);
+      logging.event(Level.SEVERE.withEvent(LogEventType.RECLAIM_INIT_SESSION_EXCEPTION), 'Error session start', e, s);
       throw const ReclaimInitSessionException('Could not start session');
     }
   }

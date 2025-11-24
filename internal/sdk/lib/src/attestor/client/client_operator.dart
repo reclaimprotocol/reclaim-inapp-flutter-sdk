@@ -52,7 +52,7 @@ abstract mixin class AttestorClientOperator implements AttestorClient {
   Future<bool> _handleRequest(String id, String type, Map<String, Object?> message) async {
     final log = logger.child('_handleRequest');
 
-    log.info('ok 1 $type $id');
+    log.fine('handling request of type "$type" and id "$id"');
 
     switch (type.toString().toLowerCase().trim()) {
       case 'console':
@@ -79,18 +79,15 @@ abstract mixin class AttestorClientOperator implements AttestorClient {
         return _onSendWsMessage(id, type, message);
     }
 
-    log.info('ok 2 $type $id');
-
     final manager = getProcessManagerById(id);
-
-    log.info('ok 3 $manager $type $id');
 
     if (manager == null) {
       log.warning(
-        'No manager for request $type with id $id, available managers: ${getProcessManagers().map((e) => e.process.id).toList()}',
+        'No manager available for request $type with id $id, available managers: ${getProcessManagers().map((e) => e.process.id).toList()}',
       );
       return false;
     }
+    log.fine('Using manager (id ${manager.process.id}) to respond for request of type $type and id $id');
 
     if (type.endsWith('Done')) {
       try {
@@ -107,9 +104,9 @@ abstract mixin class AttestorClientOperator implements AttestorClient {
       }
     } else {
       log.finest({
-        'emitUpdate': message,
-        'listeners': manager.updatesController.hasListener,
-        'manager.process.id': manager.process.id,
+        'Notifying update': message,
+        'has listeners': manager.updatesController.hasListener,
+        'process manager id': manager.process.id,
       });
       // Note: could also be an unknown request type which hasn't been handled
       manager.emitUpdate.add(message);
@@ -119,7 +116,7 @@ abstract mixin class AttestorClientOperator implements AttestorClient {
 
   void _handleRpcLog(Map<String, Object?> message) {
     final log = logger.child('_handleRpcLog');
-    log.info({'tag': 'rpc.console', 'value': message});
+    log.info({'tag': 'attestor_client.console', 'value': message});
   }
 
   Future<bool> _handleError(String id, String type, Map<String, Object?> message) async {

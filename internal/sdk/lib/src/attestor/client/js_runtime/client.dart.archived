@@ -80,7 +80,7 @@ class AttestorJsRuntimeClient extends AttestorClient with AttestorClientOperator
     await _js.runJavaScriptFromFileReturningResult(attestorScriptFile.absolute.path);
     await _js.runJavaScriptReturningResult('console.info("loaded attestor script")');
     await _js.runJavaScriptReturningResult(
-      'AttestorRPC.setupFlutterJsRpc("${attestorBrowserRpcUrl.origin}", "${AttestorClient.hostMessengerChannelName}")',
+      'AttestorRPC.setupJsRpc("${attestorBrowserRpcUrl.origin}", "${AttestorClient.hostMessengerChannelName}")',
     );
 
     log.info('initialized attestor js client');
