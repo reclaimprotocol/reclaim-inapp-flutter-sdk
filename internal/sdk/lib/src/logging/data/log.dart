@@ -33,6 +33,25 @@ enum LogEntryLogLevel {
       return LogEntryLogLevel.FINEST;
     }
   }
+
+  Level toLevel() {
+    switch (this) {
+      case LogEntryLogLevel.SEVERE:
+        return Level.SEVERE;
+      case LogEntryLogLevel.WARNING:
+        return Level.WARNING;
+      case LogEntryLogLevel.INFO:
+        return Level.INFO;
+      case LogEntryLogLevel.CONFIG:
+        return Level.CONFIG;
+      case LogEntryLogLevel.FINE:
+        return Level.FINE;
+      case LogEntryLogLevel.FINER:
+        return Level.FINER;
+      case LogEntryLogLevel.FINEST:
+        return Level.FINEST;
+    }
+  }
 }
 
 class LogEntry {

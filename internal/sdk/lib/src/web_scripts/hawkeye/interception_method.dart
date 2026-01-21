@@ -26,16 +26,16 @@ enum HawkeyeInterceptionMethod {
 
 @JsonSerializable()
 class HawkeyeInterceptionOptions {
-  @JsonKey(defaultValue: false)
-  final bool disableFormIntercept;
   @JsonKey(defaultValue: true)
+  final bool disableFormIntercept;
+  @JsonKey(defaultValue: false)
   final bool delayFormSubmitForFetch;
   @JsonKey(defaultValue: HawkeyeInterceptionMethod.PROXY)
   final HawkeyeInterceptionMethod interceptionMethod;
 
   const HawkeyeInterceptionOptions({
-    this.disableFormIntercept = false,
-    this.delayFormSubmitForFetch = true,
+    this.disableFormIntercept = true,
+    this.delayFormSubmitForFetch = false,
     this.interceptionMethod = HawkeyeInterceptionMethod.PROXY,
   });
 

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -15,7 +14,7 @@ import '../../utils/observable_notifier.dart';
 import '../../utils/strings.dart';
 import '../../utils/url.dart' as url_util;
 import '../../utils/user_agent.dart';
-import '../../utils/webview_state_mixin.dart';
+import '../../utils/webview.dart';
 import '../../widgets/reclaim_appbar.dart';
 
 class ClaimCreationWebState {
@@ -167,10 +166,10 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
       final loadUrlTimeout = const Duration(seconds: 20);
       // Adding a delay to ensure the webview is ready to load the url
       await Future.delayed(const Duration(milliseconds: 100));
-      log.info('loading url $initialUrl');
+      log.event(Level.INFO.withEvent(LogEventType.LOADING_INITIAL_URL), 'sending request to load url $initialUrl');
       log.fine({'hasLoadedRequestedUrl': value.hasLoadedRequestedUrl, 'lastLoadStopTime': value.lastLoadStopTime});
       await controller.loadUrl(urlRequest: URLRequest(url: WebUri(initialUrl))).timeout(loadUrlTimeout);
-      log.info('loaded url $initialUrl');
+      log.info('request to load url $initialUrl sent');
       await Future.delayed(initializationTimeout);
       log.fine({'hasLoadedRequestedUrl': value.hasLoadedRequestedUrl, 'lastLoadStopTime': value.lastLoadStopTime});
       if (!value.hasLoadedRequestedUrl) {
@@ -249,14 +248,7 @@ class ClaimCreationWebClientViewModel extends ObservableNotifier<ClaimCreationWe
   Future<void> setWebViewSettings(FutureOr<InAppWebViewSettings?> Function(InAppWebViewSettings) update) async {
     await ensureInitialized();
 
-    final currentSettings = ((await controller.getSettings()) ?? defaultWebViewSettings).copy();
-    log.fine(() => 'old webview settings: ${json.encode(currentSettings)}');
-    final newSettings = await update(currentSettings);
-    if (newSettings == null) {
-      return;
-    }
-    log.fine(() => 'Setting webview settings: ${json.encode(newSettings)}');
-    await controller.setSettings(settings: newSettings);
+    return setWebViewSettingsWith(controller, update);
   }
 
   final log = logging.child('ClaimCreationWebViewModel');

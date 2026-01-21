@@ -108,6 +108,8 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       handleUserInteraction: handleUserInteraction,
       onProofData: onInterceptedRequest,
       onExtractedData: _onExtractedDataReceived,
+      onAllowAppLinkRequest: setAllowedAppLink,
+      onUpdateUserAgent: setUserAgent,
     );
 
     // VerificationController.identity can throw StateError in the beginning, the future that completes with it is [startingSession].
@@ -278,7 +280,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
   // methods related to claim creation - webview configuration
 
   void _onLoad(InAppWebViewController controller, WebUri? uri) async {
-    logger.info('page loading started on $uri');
+    logger.log(Level.INFO.withEvent(LogEventType.PAGE_LOADING_STARTED), 'page loading started on $uri');
     _hideToken = Object();
     final vm = ClaimCreationWebClientViewModel.readOf(context);
     final webContext = AIFlowCoordinatorWidget.of(context).webContext;
@@ -295,7 +297,7 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
   }
 
   void _onLoadStop(InAppWebViewController controller, WebUri? uri) {
-    logger.fine('page loading stopped on $uri');
+    logger.log(Level.INFO.withEvent(LogEventType.PAGE_LOADING_STOPPED), 'page loading stopped on $uri');
     final vm = ClaimCreationWebClientViewModel.readOf(context);
     if (uri != null) vm.setDisplayUrl(uri.toString());
     vm.setDisplayProgress(1);

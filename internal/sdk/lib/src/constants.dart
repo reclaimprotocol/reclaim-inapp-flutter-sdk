@@ -18,6 +18,12 @@ sealed class ReclaimUrls {
   // - Last updated copy was hosted at: https://reclaim-inapp-sdk.s3.ap-south-1.amazonaws.com/attestor-jsc.min.mjs?v=0
   // TODO: Change to default production url when we have it
   static const String DEFAULT_ATTESTOR_WEB_SCRIPT_URL = '$DEFAULT_ATTESTOR_WEB_URL/resources/attestor-jsc.min.mjs?v=0';
+
+  // TEE (Trusted Execution Environment) URLs
+  static const String DEFAULT_TEEK_URL = 'wss://tk.reclaimprotocol.org/ws';
+  static const String DEFAULT_TEET_URL = 'wss://tt.reclaimprotocol.org/ws';
+  static const String DEFAULT_TEE_ATTESTOR_URL = 'wss://attestor.reclaimprotocol.org:444/ws';
+
   static const String DIAGNOSTIC_LOGGING = String.fromEnvironment(
     'org.reclaimprotocol.inapp_sdk.DIAGNOSTIC_LOGGING_API',
     defaultValue: '$LOGS_API_BASE_URL/api/business-logs/logDump',

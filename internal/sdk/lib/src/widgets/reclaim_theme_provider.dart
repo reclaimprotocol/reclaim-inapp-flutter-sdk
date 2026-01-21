@@ -155,6 +155,9 @@ class ReclaimThemeProvider extends StatelessWidget {
           dataSharedMessage: clientThemeInfo.dataSharedMessage,
           termsAndConditionsUri: Uri.tryParse(clientThemeInfo.termsAndConditionLink ?? ''),
           privacyPolicyUri: Uri.tryParse(clientThemeInfo.privacyPolicyLink ?? ''),
+          potentialFailureReasonsUri: clientThemeInfo.potentialFailureReasonsLink?.isNotEmpty == true
+              ? Uri.tryParse(clientThemeInfo.potentialFailureReasonsLink!)
+              : null,
           sessionChipSurfaceColor: sessionChipSurfaceColor,
           sessionChipOnSurfaceColor: sessionChipOnSurfaceColor,
           parametersTheme: ParametersTheme(
@@ -369,6 +372,7 @@ class _ReclaimAppLocalizationsState extends State<_ReclaimAppLocalizations> {
       child: ListenableBuilder(
         listenable: _localizationsResolver,
         builder: (BuildContext context, _) {
+          ReclaimLocalizationProvider.lastKnownLocale = _localizationsResolver.locale;
           return Localizations(
             isApplicationLevel: widget.isApplicationLevel,
             locale: _localizationsResolver.locale,

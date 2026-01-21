@@ -161,6 +161,13 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
   }
 
   void requestRetry() {
+    // Clear cumulative metrics when retry is requested (Try Again button clicked)
+    try {
+      logging.info('Cleared cumulative metrics - retry requested');
+    } catch (e) {
+      logging.fine('Failed to clear cumulative metrics: $e');
+    }
+
     value = value.copyWith(status: ClaimCreationStatus.retryRequested, claimsByRequest: const {});
     value = value.copyWith(status: ClaimCreationStatus.ready);
   }
@@ -182,7 +189,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
   Future<void> _onProofGenerated(
     List<CreateClaimOutput> generatedProof,
     ClaimCreationRequest proofRequest,
-    ProviderRequestPerformanceReport? performanceReports,
+    ProviderRequestPerformanceReport performanceReports,
   ) async {
     final logger = logging.child('ClaimCreationController._onProofGenerated');
     final sessionId = proofRequest.sessionId;
@@ -229,7 +236,12 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     logger.info({'generatedProof': generatedProof});
   }
 
-  Future<void> _onProofGenerationFailed(Object e, StackTrace s, ClaimCreationRequest proofRequest) async {
+  Future<void> _onProofGenerationFailed(
+    Object e,
+    StackTrace s,
+    ClaimCreationRequest proofRequest,
+    ProviderRequestPerformanceReport performanceReport,
+  ) async {
     final logger = logging.child('ClaimCreationController._onProofGenerationFailed');
     final sessionId = proofRequest.sessionId;
     final httpProviderId = proofRequest.httpProviderId;
@@ -253,7 +265,17 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
       ReclaimSession.updateSession(
         sessionId,
         SessionStatus.PROOF_GENERATION_FAILED,
-        metadata: {'failing_request': proofRequest.requestData.toJson()},
+        metadata: {
+          'failing_request': proofRequest.requestData.toJson(),
+          'report': () {
+            try {
+              return ProviderRequestPerformanceMeasurements(reports: [performanceReport]).toJson();
+            } catch (e, s) {
+              logger.severe('Failed to get performance report', e, s);
+              return null;
+            }
+          }(),
+        },
       ),
     ]);
     logger.severe('proof generation failed error at ${StackTrace.current}', e, s);
@@ -573,12 +595,16 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     final requestIdentifier = proofRequest.requestData.requestIdentifier;
     final log = logging.child('ClaimCreationController._onCreateClaim.$requestIdentifier');
 
+    value = value.copyWithStatus(ClaimStatus.create(proofRequest));
+
     final sessionId = proofRequest.sessionId;
     final httpProviderId = proofRequest.httpProviderId;
     final useSingleRequest = proofRequest.useSingleRequest;
     final ownerPrivateKey = await ReclaimOwnerKeys().getReclaimPrivateKeyOfOwner();
 
     await _onProofGenerationStarted(sessionId);
+
+    final requestMeasurePerformance = MeasurePerformance();
 
     try {
       log.event(
@@ -593,6 +619,9 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
         "context": proofRequest.claimContext,
         "ownerPrivateKey": ownerPrivateKey,
         "updateProviderParams": useSingleRequest,
+        //Analyziz part for delete after release
+        "httpProviderId": httpProviderId,
+        "providerName": value.httpProvider?.name ?? httpProviderId,
       };
 
       log.finest({
@@ -605,7 +634,6 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
 
       final List<Future> delegateCallbackFutures = [];
 
-      final requestMeasurePerformance = MeasurePerformance();
       Iterable<ZKComputePerformanceReport>? requestPerformanceReports;
 
       requestMeasurePerformance.start();
@@ -652,6 +680,14 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
         delegateCallbackFutures.add(delegate._onClaimUpdate(data, requestIdentifier));
       });
 
+      attestorRequest.updateSink?.add({
+        'step': {
+          "type": "update",
+          "name": "attestor-progress",
+          "step": {"name": "connecting"},
+        },
+      });
+
       log.info('attestor request created ${attestorRequest.id}');
 
       final proofs = await attestorRequest.response;
@@ -673,12 +709,15 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
         );
         return throw const ClaimCreationCancelledException();
       }
+      //Analyziz part for delete after release
+      // Get performance report for storage
+      final performanceReport = requestMeasurePerformance.getReport();
 
       await _onProofGenerated(
         proofs,
         proofRequest,
         ProviderRequestPerformanceReport(
-          requestReport: requestMeasurePerformance.getReport(),
+          requestReport: performanceReport,
           proofs: requestPerformanceReports ?? const <ZKComputePerformanceReport>[],
         ),
       );
@@ -705,7 +744,17 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
         e,
         s,
       );
-      await _onProofGenerationFailed(e, s, proofRequest);
+      requestMeasurePerformance.stop();
+      final performanceReport = requestMeasurePerformance.getReport();
+      await _onProofGenerationFailed(
+        e,
+        s,
+        proofRequest,
+        ProviderRequestPerformanceReport(
+          requestReport: performanceReport,
+          proofs: const <ZKComputePerformanceReport>[],
+        ),
+      );
       rethrow;
     }
   }

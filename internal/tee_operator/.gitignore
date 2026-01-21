@@ -1,0 +1,88 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+# Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
+/pubspec.lock
+**/doc/api/
+.dart_tool/
+build/
+
+*.h
+*.so
+*.a
+*.xcframework
+
+!android/src/main/jniLibs/**/*.h
+!android/src/main/jniLibs/**/*.so
+!ios/Classes/binding.h
+!ios/libreclaim.xcframework
+!ios/libreclaim.xcframework/**/*.a
+!assets/**/*.a
+!assets/**/*.so
+!assets/**/*.h
+!src/libreclaim.h
+
+vendor/
+benchmarks/
+archive/
+
+# Reclaim example app (Flutter)
+example/.dart_tool/
+example/.packages
+example/.flutter-plugins
+example/.flutter-plugins-dependencies
+example/build/
+example/*.iml
+example/.idea/
+
+# Android
+example/android/.gradle/
+example/android/local.properties
+example/android/**/build/
+example/android/**/*.iml
+
+# iOS
+example/ios/Pods/
+example/ios/Runner.xcworkspace/
+example/ios/Flutter/Flutter.podspec
+example/ios/Flutter/Generated.xcconfig
+example/ios/Flutter/flutter_export_environment.sh
+example/ios/**/xcuserdata/
+example/ios/**/DerivedData/
+
+# macOS
+example/macos/Flutter/ephemeral/
+example/macos/**/xcuserdata/
+example/macos/**/DerivedData/
+
+# Windows/Linux
+example/windows/flutter/ephemeral/
+example/linux/flutter/ephemeral/
+
+# Web (generated during builds)
+example/.firebase/
+example/.dart_tool/
+
+# General
+example/.DS_Store

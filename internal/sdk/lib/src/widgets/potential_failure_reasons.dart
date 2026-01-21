@@ -6,7 +6,7 @@ import '../../ui.dart';
 import '../constants.dart';
 import '../l10n/provider.dart';
 import '../logging/logging.dart';
-import 'fonts_loaded.dart';
+import '../theme/theme.dart';
 import 'verification_review/verification_review.dart';
 
 class PotentialErrorReasonsLearnMoreWidget extends StatelessWidget {
@@ -17,12 +17,11 @@ class PotentialErrorReasonsLearnMoreWidget extends StatelessWidget {
   void _onSeePotentialFailureReasons(BuildContext context) async {
     final log = logging.child('_onSeePotentialFailureReasons');
     final messenger = ScaffoldMessenger.of(context);
+    final reclaimTheme = ReclaimTheme.of(context);
     try {
+      final uri = reclaimTheme.potentialFailureReasonsUri ?? Uri.parse(ReclaimUrls.POTENTIAL_FAILURE_REASONS_URL);
       final stopwatch = Stopwatch()..start();
-      final didLaunch = await launchUrl(
-        Uri.parse(ReclaimUrls.POTENTIAL_FAILURE_REASONS_URL),
-        mode: LaunchMode.inAppBrowserView,
-      );
+      final didLaunch = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
       stopwatch.stop();
 
       if (didLaunch || stopwatch.elapsed > const Duration(seconds: 2)) {

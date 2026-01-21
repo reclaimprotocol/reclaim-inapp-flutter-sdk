@@ -8,6 +8,7 @@ DIST_IOS=./dist/ios/$VERSION
 
 flutter clean
 flutter pub get
+dart run rive_native:setup --verbose --clean --platform android,ios;
 
 ./scripts/build_android.sh
 

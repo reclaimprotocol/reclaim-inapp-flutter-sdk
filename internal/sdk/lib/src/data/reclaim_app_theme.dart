@@ -46,6 +46,7 @@ class ReclaimImageInfoOptions {
   @JsonKey()
   final ImageBoxFit? fit;
   @JsonKey(defaultValue: false)
+  @Deprecated('Use not implemented yet. May get removed in future.')
   final bool spin;
 
   const ReclaimImageInfoOptions({
@@ -53,6 +54,7 @@ class ReclaimImageInfoOptions {
     this.backgroundColor,
     this.opacity = 1,
     this.fit = ImageBoxFit.cover,
+    // ignore: deprecated_consistency
     this.spin = false,
   });
 
@@ -63,6 +65,10 @@ class ReclaimImageInfoOptions {
 
 @JsonSerializable()
 class ReclaimImageInfo {
+  /// URL to the graphic. Currently supports: JPEG, PNG, GIF, Animated GIF, WebP, Animated WebP, BMP, and WBMP, SVG, RIV (rive asset).
+  ///
+  /// Note: Animated SVGs aren't supported. RIV format recommended for complex vector images or animations.
+  /// Learn more about RIV here: https://editor.rive.app/.
   final String? url;
   final ReclaimImageInfoOptions? options;
 
@@ -257,6 +263,7 @@ class ReclaimAppThemeInfo {
   final DataSharedMessage? dataSharedMessage;
   final String? termsAndConditionLink;
   final String? privacyPolicyLink;
+  final String? potentialFailureReasonsLink;
   final String? preferredLocale;
 
   const ReclaimAppThemeInfo({
@@ -268,6 +275,7 @@ class ReclaimAppThemeInfo {
     this.dataSharedMessage,
     this.termsAndConditionLink,
     this.privacyPolicyLink,
+    this.potentialFailureReasonsLink,
     this.preferredLocale,
   });
 
@@ -285,6 +293,7 @@ class ReclaimAppThemeInfo {
       dataSharedMessage: dataSharedMessage,
       termsAndConditionLink: termsAndConditionLink,
       privacyPolicyLink: privacyPolicyLink,
+      potentialFailureReasonsLink: potentialFailureReasonsLink,
     );
   }
 }

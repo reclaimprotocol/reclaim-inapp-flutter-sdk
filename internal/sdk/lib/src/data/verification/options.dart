@@ -1,13 +1,11 @@
 import 'dart:async';
 
 import '../../attestor/data/attestor/auth.dart' show AttestorAuthenticationRequest;
-import '../../attestor/operator/operator.dart';
 import '../claim_creation_type.dart';
 import '../providers.dart';
 import '../session.dart';
 
 export 'package:reclaim_inapp_sdk/src/attestor/data/attestor/auth.dart' show AttestorAuthenticationRequest;
-export 'package:reclaim_inapp_sdk/src/attestor/operator/operator.dart';
 export 'package:reclaim_inapp_sdk/src/data/claim_creation_type.dart';
 export 'package:reclaim_inapp_sdk/src/data/session.dart';
 
@@ -34,8 +32,19 @@ class ReclaimVerificationOptions {
   /// A callback that returns a boolean value indicating whether the verification can continue.
   final CanContinueVerificationCallback? canContinueVerification;
 
-  /// A custom [AttestorZkOperator] to be used for the verification.
-  final AttestorZkOperator? attestorZkOperator;
+  /// {@template ReclaimVerificationOptions.useTeeOperator}
+  /// Enables use of Reclaim's TEE+MPC protocol for HTTP Request claim verification and
+  /// attestation.
+  ///
+  /// When set to `true`, the verification will use Trusted Execution Environment
+  /// (TEE) with Multi-Party Computation (MPC) for enhanced security.
+  ///
+  /// When set to `false`, the standard Reclaim's proxy attestor verification flow is used.
+  ///
+  /// When `null` (default), the backend decides whether to use TEE based on
+  /// a feature flag (currently in staged rollout).
+  /// {@endtemplate}
+  final bool? useTeeOperator;
 
   /// A language code & Country code for localization that should be enforced in the verification flow.
   final String? locale;
@@ -47,7 +56,7 @@ class ReclaimVerificationOptions {
     this.canClearWebStorage = true,
     this.attestorAuthenticationRequest,
     this.canContinueVerification,
-    this.attestorZkOperator,
+    this.useTeeOperator,
     this.locale,
   });
 
@@ -58,7 +67,7 @@ class ReclaimVerificationOptions {
     bool? canClearWebStorage,
     ReclaimAttestorAuthenticationRequestCallback? attestorAuthenticationRequest,
     CanContinueVerificationCallback? canContinueVerification,
-    AttestorZkOperator? attestorZkOperator,
+    bool? useTeeOperator,
     String? locale,
   }) {
     return ReclaimVerificationOptions(
@@ -68,7 +77,7 @@ class ReclaimVerificationOptions {
       canClearWebStorage: canClearWebStorage ?? this.canClearWebStorage,
       attestorAuthenticationRequest: attestorAuthenticationRequest ?? this.attestorAuthenticationRequest,
       canContinueVerification: canContinueVerification ?? this.canContinueVerification,
-      attestorZkOperator: attestorZkOperator ?? this.attestorZkOperator,
+      useTeeOperator: useTeeOperator ?? this.useTeeOperator,
       locale: locale ?? this.locale,
     );
   }

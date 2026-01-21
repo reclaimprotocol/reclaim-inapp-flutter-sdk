@@ -7,10 +7,10 @@ import '../../../logging.dart';
 import '../../utils/json.dart';
 import '../../utils/random.dart';
 import '../../widgets/claim_creation/claim_creation.dart';
-import '../operator/operator.dart';
+import '../operator/proxy_operator.dart';
 import 'base.dart';
 
-abstract mixin class AttestorClientOperator implements AttestorClient {
+abstract mixin class AttestorClientOperator implements AttestorJsClient {
   Future<void> handleIncomingMessage(String rpcMessageString) async {
     final log = logger.child('handleIncomingMessage');
     log.finest({'tag': 'rpc.message', 'value': rpcMessageString});
@@ -61,12 +61,7 @@ abstract mixin class AttestorClientOperator implements AttestorClient {
       case 'zkprove':
       case 'executezkfunctionv3':
       case 'executeoprffunctionv3':
-        final opr = zkOperator;
-        if (opr == null) {
-          log.warning('No operator for handling request type $type');
-          throw StateError('No ZK operator available to handle request type $type');
-        }
-        return _onComputeZKProve(id, opr, type, message);
+        return _onComputeZKProve(id, type, message);
       case 'updateproviderparams':
         return _onUpdateProviderParams(id, message);
       case 'error':
@@ -142,10 +137,12 @@ abstract mixin class AttestorClientOperator implements AttestorClient {
     return true;
   }
 
-  Future<bool> _onComputeZKProve(String id, AttestorZkOperator opr, String type, Map<String, Object?> message) async {
+  Future<bool> _onComputeZKProve(String id, String type, Map<String, Object?> message) async {
     final dynamic requestArgs = message['request'];
     final String fnName = requestArgs['fn'];
     final args = requestArgs['args'];
+
+    final opr = AttestorReclaimProxyOperator.instance;
 
     if (!await opr.isSupported(fnName, args)) {
       // ignore unsupported requests
@@ -234,7 +231,7 @@ abstract mixin class AttestorClientOperator implements AttestorClient {
           postMessage(
             RpcRequest(
               id: generateRequestId(),
-              channel: AttestorClient.hostMessengerChannelName,
+              channel: AttestorJsClient.hostMessengerChannelName,
               type: 'sendWsMessage',
               request: {'id': id, 'data': data},
             ),
@@ -246,7 +243,7 @@ abstract mixin class AttestorClientOperator implements AttestorClient {
           postMessage(
             RpcRequest(
               id: generateRequestId(),
-              channel: AttestorClient.hostMessengerChannelName,
+              channel: AttestorJsClient.hostMessengerChannelName,
               type: 'sendWsMessage',
               request: {'id': id, 'data': bytesToBase64Json(data)},
             ),
@@ -257,7 +254,7 @@ abstract mixin class AttestorClientOperator implements AttestorClient {
           postMessage(
             RpcRequest(
               id: generateRequestId(),
-              channel: AttestorClient.hostMessengerChannelName,
+              channel: AttestorJsClient.hostMessengerChannelName,
               type: 'disconnectWs',
               request: {'id': id},
             ),

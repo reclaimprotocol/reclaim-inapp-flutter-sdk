@@ -98,3 +98,15 @@ String createUrlFromLocation(String nextLocation, String? fullUrl) {
 
   return fullExpectedUrl;
 }
+
+bool isUrlAllowedToLaunch(Uri url, String allowedAppLinkPattern) {
+  if (!['http', 'https'].contains(url.scheme) && allowedAppLinkPattern == '*') {
+    return true;
+  }
+  final urlString = url.toString();
+  if (allowedAppLinkPattern == urlString) {
+    return true;
+  }
+  if (allowedAppLinkPattern == '*') return false;
+  return RegExp(allowedAppLinkPattern).hasMatch(urlString);
+}

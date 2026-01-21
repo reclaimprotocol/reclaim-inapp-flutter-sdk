@@ -41,7 +41,7 @@ rm temp;
 
 echo $VERSION > version;
 
-sed -i '' "s/reclaim_verifier_module = \".*\"/reclaim_verifier_module = \"$VERSION\"/" ./gradle/libs.versions.toml;
+sed -i '' "s/reclaimVerifierModule = \".*\"/reclaimVerifierModule = \"$VERSION\"/" ./gradle/libs.versions.toml;
 sed -i '' "s/implementation \"org.reclaimprotocol:inapp_sdk:.*\"/implementation \"org.reclaimprotocol:inapp_sdk:$VERSION\"/" ./README.md;
 sed -i '' "s/implementation \"org.reclaimprotocol:inapp_sdk:.*\"/implementation \"org.reclaimprotocol:inapp_sdk:$VERSION\"/" ./example/app/build.gradle;
 sed -i '' "s/..\/dist\/library\/.*\/repo/..\/dist\/library\/$VERSION\/repo/" ./example/settings.gradle;

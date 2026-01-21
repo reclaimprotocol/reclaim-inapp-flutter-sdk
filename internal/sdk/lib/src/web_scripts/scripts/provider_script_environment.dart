@@ -73,6 +73,18 @@ window.Reclaim = {
     requiresUserInteraction: (isUserInteractionRequired) => {
         window.ReclaimMessenger.send('requiresUserInteraction', { value: !!isUserInteractionRequired });
     },
+    setAllowedAppLinks: (allowedAppLinks) => {
+      if (typeof allowedAppLinks !== 'string' && allowedAppLinks !== null && allowedAppLinks !== undefined) {
+          console.warn('Unknown type of arg', typeof allowedAppLinks);
+      }
+      window.ReclaimMessenger.send('setAllowedAppLinks', { value: allowedAppLinks });
+    },
+    updateUserAgent: (userAgent) => {
+      if (typeof userAgent !== 'string' && userAgent !== null && userAgent !== undefined) {
+          console.warn('Unknown type of arg', typeof userAgent);
+      }
+      window.ReclaimMessenger.send('updateUserAgent', { value: userAgent });
+    },
     canExpectManyClaims: (canExpectManyClaims) => {
         window.ReclaimMessenger.send('canExpectManyClaims', { value: !!canExpectManyClaims });
     },

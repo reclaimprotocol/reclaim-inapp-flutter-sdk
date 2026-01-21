@@ -50,11 +50,9 @@ sed -i '' "s/Currently the latest version is \`.*\`/Currently the latest version
 sed -i '' "s/pod 'ReclaimInAppSdk', :git => 'https:\/\/github.com\/reclaimprotocol\/reclaim-inapp-ios-sdk.git', :tag => '.*'/pod 'ReclaimInAppSdk', :git => 'https:\/\/github.com\/reclaimprotocol\/reclaim-inapp-ios-sdk.git', :tag => '$VERSION'/" ./Examples/SwiftUIWithPodExample/Podfile;
 sed -i '' "s/pod 'ReclaimInAppSdk', '~> .*'/pod 'ReclaimInAppSdk', '~> $VERSION'/" ./Examples/SwiftUIWithPodExample/Podfile;
 
-echo "
-RECLAIM_APP_ID = ${RECLAIM_CONSUMER_APP_ID}
+echo "RECLAIM_APP_ID = ${RECLAIM_CONSUMER_APP_ID}
 RECLAIM_APP_SECRET = ${RECLAIM_CONSUMER_APP_SECRET}
 RECLAIM_PROVIDER_ID = example
-
 " > Examples/SwiftUIWithPodExample/BaseConfig.xcconfig;
 
 cp Examples/SwiftUIWithPodExample/BaseConfig.xcconfig Examples/SwiftUIExample/BaseConfig.xcconfig;

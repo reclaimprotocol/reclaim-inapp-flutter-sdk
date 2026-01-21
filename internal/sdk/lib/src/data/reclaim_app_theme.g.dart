@@ -194,6 +194,7 @@ ReclaimAppThemeInfo _$ReclaimAppThemeInfoFromJson(Map<String, dynamic> json) => 
       : DataSharedMessage.fromJson(json['dataSharedMessage'] as Map<String, dynamic>),
   termsAndConditionLink: json['termsAndConditionLink'] as String?,
   privacyPolicyLink: json['privacyPolicyLink'] as String?,
+  potentialFailureReasonsLink: json['potentialFailureReasonsLink'] as String?,
   preferredLocale: json['preferredLocale'] as String?,
 );
 
@@ -206,6 +207,7 @@ Map<String, dynamic> _$ReclaimAppThemeInfoToJson(ReclaimAppThemeInfo instance) =
   'dataSharedMessage': instance.dataSharedMessage,
   'termsAndConditionLink': instance.termsAndConditionLink,
   'privacyPolicyLink': instance.privacyPolicyLink,
+  'potentialFailureReasonsLink': instance.potentialFailureReasonsLink,
   'preferredLocale': instance.preferredLocale,
 };
 

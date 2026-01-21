@@ -4,22 +4,24 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
-import 'package:reclaim_gnark_zkoperator/reclaim_gnark_zkoperator.dart';
-// ignore: implementation_imports
-import 'package:reclaim_gnark_zkoperator/src/download/download.dart' show downloadWithHttp;
 import 'package:reclaim_inapp_sdk/capability_access.dart';
 import 'package:reclaim_inapp_sdk/logging.dart';
 import 'package:reclaim_inapp_sdk/overrides.dart';
 import 'package:reclaim_inapp_sdk/reclaim_inapp_sdk.dart';
 import 'package:reclaim_inapp_sdk/ui.dart';
+import 'package:reclaim_inapp_sdk/utils.dart';
+// ignore: implementation_imports
+import 'package:reclaim_tee_operator_flutter/src/common/download/download.dart' show downloadWithHttp;
 
 import 'src/pigeon/messages.pigeon.dart';
+import 'utils/json.dart';
 
 export 'package:reclaim_inapp_sdk/capability_access.dart';
 export 'package:reclaim_inapp_sdk/logging.dart';
 export 'package:reclaim_inapp_sdk/overrides.dart';
 export 'package:reclaim_inapp_sdk/reclaim_inapp_sdk.dart';
 export 'package:reclaim_inapp_sdk/ui.dart';
+
 export 'src/pigeon/messages.pigeon.dart';
 
 final logger = Logger('reclaim_flutter_sdk.reclaim_verifier_module');
@@ -71,7 +73,6 @@ class ReclaimModuleApp extends StatefulWidget {
     _isPreWarmed = true;
 
     startReclaimSdkLogging();
-    ReclaimZkOperator.getInstance();
     _precacheFonts();
   }
 
@@ -173,19 +174,6 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
   final _defaultReclaimVerificationOptions = ReclaimVerificationOptions(
     canAutoSubmit: true,
     isCloseButtonVisible: true,
-    attestorZkOperator: AttestorZkOperatorWithCallback.withReclaimZKOperator(
-      onComputeProof: (type, args, onPerformanceReport) async {
-        // Get gnark prover instance and compute the attestor proof.
-        return (await ReclaimZkOperator.getInstance()).computeAttestorProof(
-          type,
-          args,
-          onPerformanceReport: (algorithm, report) {
-            onPerformanceReport(ZKComputePerformanceReport(algorithmName: algorithm?.name ?? '', report: report));
-          },
-        );
-      },
-      isPlatformSupported: () async => (await ReclaimZkOperator.getInstance()).isPlatformSupported(),
-    ),
   );
 
   late ReclaimVerificationOptions _reclaimVerificationOptions = _defaultReclaimVerificationOptions;
@@ -219,7 +207,8 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
     try {
       final reclaimVerification = ReclaimVerification.of(context);
 
-      logger.info(
+      logger.event(
+        Level.INFO.withEvent(LogEventType.IS_RECLAIM_INAPPSDK),
         'Starting verification with request applicationId: ${request.applicationId}, provider: ${request.providerId}, context: ${request.contextString}, params: ${json.encode(request.parameters)}',
       );
 
@@ -227,16 +216,69 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
         request: request,
         options: _reclaimVerificationOptions,
       );
+
+      final effectiveSessionId = SessionIdentity.latest?.sessionId ?? requestSessionId;
+
+      if (response.proofs.isNotEmpty) {
+        logger.event(Level.INFO.withEvent(LogEventType.SUBMITTING_PROOF), 'submitting proof');
+      }
+
+      final encodableProofs = (json.decode(json.encode(response.proofs)) as List)
+          .map((e) => e as Map<String, dynamic>)
+          .toList();
+
+      if (response.proofs.isNotEmpty) {
+        final isAIProofs = () {
+          try {
+            return areParamsFromAIProofs(response.proofs);
+          } catch (e, s) {
+            logger.severe('Failed to check whether proof is AI proof', e, s);
+            return false;
+          }
+        }();
+
+        logger.event(Level.INFO.withEvent(LogEventType.SUBMITTING_PROOF), 'submitted proof');
+
+        final sessionManager = SessionManager();
+        sessionManager.onProofSubmitted(
+          applicationId: request.applicationId,
+          providerId: request.providerId,
+          sessionId: effectiveSessionId,
+          isAIProofs: isAIProofs,
+          isInAppSdk: true,
+        );
+      } else {
+        logger.event(Level.SEVERE.withEvent(LogEventType.PROOF_SUBMISSION_FAILED), 'proof submission failed');
+
+        final sessionManager = SessionManager();
+        sessionManager.onProofSubmissionFailed(
+          applicationId: request.applicationId,
+          providerId: request.providerId,
+          sessionId: effectiveSessionId,
+          isInAppSdk: true,
+        );
+      }
+
       return ReclaimApiVerificationResponse(
-        sessionId: SessionIdentity.latest?.sessionId ?? requestSessionId,
+        sessionId: effectiveSessionId,
         didSubmitManualVerification: false,
-        proofs: (json.decode(json.encode(response.proofs)) as List).map((e) => e as Map<String, dynamic>).toList(),
+        proofs: encodableProofs,
         exception: null,
       );
     } catch (e, s) {
-      logger.severe('Failed verification response', e, s);
+      final effectiveSessionId = SessionIdentity.latest?.sessionId ?? requestSessionId;
+      logger.event(Level.SEVERE.withEvent(LogEventType.PROOF_SUBMISSION_FAILED), 'Failed verification response', e, s);
+
+      final sessionManager = SessionManager();
+      sessionManager.onProofSubmissionFailed(
+        applicationId: request.applicationId,
+        providerId: request.providerId,
+        sessionId: effectiveSessionId,
+        isInAppSdk: true,
+      );
+
       return ReclaimApiVerificationResponse(
-        sessionId: SessionIdentity.latest?.sessionId ?? requestSessionId,
+        sessionId: effectiveSessionId,
         didSubmitManualVerification: e is ReclaimVerificationManualReviewException,
         proofs: const [],
         exception: ReclaimApiVerificationException(
@@ -450,14 +492,15 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
           canUseAiFlow: feature.isAIFlowEnabled ?? false,
           manualReviewMessage: feature.manualReviewMessage,
           loginPromptMessage: feature.loginPromptMessage,
-          // TODO: UNIMPLEMENTED
-          interceptorOptions: null,
-          claimCreationTimeoutDurationInMins: null,
-          sessionNoActivityTimeoutDurationInMins: null,
-          aiProviderNoActivityTimeoutDurationInSecs: null,
-          pageLoadedCompletedDebounceTimeoutMs: null,
-          potentialLoginTimeoutS: null,
-          screenshotCaptureIntervalSeconds: null,
+          useTEE: feature.useTEE,
+          interceptorOptions: feature.interceptorOptions,
+          claimCreationTimeoutDurationInMins: feature.claimCreationTimeoutDurationInMins,
+          sessionNoActivityTimeoutDurationInMins: feature.sessionNoActivityTimeoutDurationInMins,
+          aiProviderNoActivityTimeoutDurationInSecs: feature.aiProviderNoActivityTimeoutDurationInSecs,
+          pageLoadedCompletedDebounceTimeoutMs: feature.pageLoadedCompletedDebounceTimeoutMs,
+          potentialLoginTimeoutS: feature.potentialLoginTimeoutS,
+          screenshotCaptureIntervalSeconds: feature.screenshotCaptureIntervalSeconds,
+          teeUrls: feature.teeUrls,
         ),
       if (provider != null)
         ReclaimProviderOverride(
@@ -519,11 +562,11 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
           // Setting this to true will print logs from reclaim_flutter_sdk to the console.
           canPrintLogs: logConsumer.canSdkPrintLogs == true,
           onRecord: logConsumer.enableLogHandler
-              ? (record, identity) {
-                  _sendLogsToHost(record, identity, overridesHandler);
+              ? (record) {
+                  _sendLogsToHost(record, overridesHandler);
                   return logConsumer.canSdkCollectTelemetry;
                 }
-              : (!logConsumer.canSdkCollectTelemetry ? (_, _) => false : null),
+              : (!logConsumer.canSdkCollectTelemetry ? (_) => false : null),
         ),
       // A handler has been provided. We'll not let SDK manage sessions in this case.
       // Disabling [enableSdkSessionManagement] lets the host manage sessions.
@@ -553,7 +596,7 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
             return overridesHandler.updateSession(
               sessionId: sessionId,
               status: ReclaimSessionStatusExtension.fromSessionStatus(status),
-              metadata: metadata,
+              metadata: ensureMap<String>(metadata),
             );
           },
           logRecord:
@@ -569,12 +612,25 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
                   providerId: providerId,
                   sessionId: sessionId,
                   logType: logType,
-                  metadata: metadata,
+                  metadata: ensureMap<String>(metadata),
                 );
               },
         ),
       if (appInfo != null)
-        AppInfo(appName: appInfo.appName, appImage: appInfo.appImageUrl, isRecurring: appInfo.isRecurring),
+        AppInfo(
+          appName: appInfo.appName,
+          appImage: appInfo.appImageUrl,
+          isRecurring: appInfo.isRecurring,
+          theme: appInfo.theme != null
+              ? fromStringToObject(
+                  content: appInfo.theme!,
+                  fromJson: ReclaimAppThemeInfo.fromJson,
+                  onInvalidContent: (e, s) {
+                    logger.severe('Failed to parse app theme', e, s);
+                  },
+                )
+              : null,
+        ),
     ]);
   }
 
@@ -587,25 +643,30 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
     } else {
       log.info({
         'reason': 'Setting verification options',
+        'canAutoSubmit': options.canAutoSubmit,
         'canDeleteCookiesBeforeVerificationStarts': options.canDeleteCookiesBeforeVerificationStarts,
         'canUseAttestorAuthenticationRequest': options.canUseAttestorAuthenticationRequest,
         'claimCreationType': options.claimCreationType,
+        'isCloseButtonVisible': options.isCloseButtonVisible,
+        'locale': options.locale,
+        'useTeeOperator': options.useTeeOperator,
       });
       _reclaimVerificationOptions = _reclaimVerificationOptions.copyWith(
         canAutoSubmit: options.canAutoSubmit,
-        isCloseButtonVisible: options.isCloseButtonVisible,
-        claimCreationType: options.claimCreationType.toClaimCreationType,
         canClearWebStorage: options.canDeleteCookiesBeforeVerificationStarts,
         attestorAuthenticationRequest: options.canUseAttestorAuthenticationRequest
             ? _requestAttestorAuthenticationRequestFromHost
             : null,
+        claimCreationType: options.claimCreationType.toClaimCreationType,
+        isCloseButtonVisible: options.isCloseButtonVisible,
+        locale: options.locale,
+        useTeeOperator: options.useTeeOperator,
       );
     }
   }
 
   Future<AttestorAuthenticationRequest> _requestAttestorAuthenticationRequestFromHost(HttpProvider provider) async {
-    // Encode to a JSON string and decode to a Map<dynamic, dynamic> to avoid type errors. This causes all nested objects's toJson to be called.
-    final Map<dynamic, dynamic> providerMap = json.decode(json.encode(provider));
+    final providerMap = ensureMap<Object?>(provider.toJson())!;
     final result = await hostVerificationApi.fetchAttestorAuthenticationRequest(providerMap);
     try {
       final map = json.decode(result);
@@ -619,12 +680,7 @@ class ReclaimModuleAppState extends State<ReclaimModuleApp> implements ReclaimMo
     }
   }
 
-  void _sendLogsToHost(LogRecord record, SessionIdentity? identity, ReclaimHostOverridesApi overridesHandler) {
-    final entry = LogEntry.fromRecord(
-      record,
-      identity,
-      fallbackSessionIdentity: SessionIdentity.latest ?? SessionIdentity(appId: '', providerId: '', sessionId: ''),
-    );
+  void _sendLogsToHost(LogEntry entry, ReclaimHostOverridesApi overridesHandler) {
     overridesHandler.onLogs(json.encode(entry));
   }
 

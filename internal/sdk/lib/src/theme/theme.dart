@@ -51,6 +51,7 @@ class ReclaimTheme extends ThemeExtension<ReclaimTheme> {
   final DataSharedMessage? dataSharedMessage;
   final Uri? termsAndConditionsUri;
   final Uri? privacyPolicyUri;
+  final Uri? potentialFailureReasonsUri;
   final ParametersTheme parametersTheme;
 
   const ReclaimTheme({
@@ -78,6 +79,7 @@ class ReclaimTheme extends ThemeExtension<ReclaimTheme> {
     this.dataSharedMessage,
     this.termsAndConditionsUri,
     this.privacyPolicyUri,
+    this.potentialFailureReasonsUri,
     this.parametersTheme = const ParametersTheme(),
   });
 

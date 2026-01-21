@@ -6,6 +6,9 @@ enum LogEventType {
   /// Checking if the current environment is a Reclaim verifier.
   IS_RECLAIM_VERIFIER,
 
+  /// Checking if the current environment is a Reclaim inapp SDK.
+  IS_RECLAIM_INAPPSDK,
+
   /// An update for inapp SDK is available. Use is still allowed.
   UPDATE_AVAILABLE,
 
@@ -21,7 +24,7 @@ enum LogEventType {
   /// The Reclaim verification process was dismissed by the user.
   RECLAIM_VERIFICATION_DISMISSED,
 
-  /// An exception indicating the user cancelled the verification process.
+  /// An exception indicating the verification process was cancelled for the user.
   RECLAIM_VERIFICATION_CANCELLED_EXCEPTION,
 
   /// An exception during the loading of a verification provider.
@@ -39,8 +42,17 @@ enum LogEventType {
   /// An exception related to attestor authentication.
   RECLAIM_ATTESTOR_AUTH_EXCEPTION,
 
-  /// The web page for verification is ready.
+  /// Sending request to load initial url
+  LOADING_INITIAL_URL,
+
+  /// The first web page for verification is ready.
   WEB_PAGE_READY,
+
+  /// Page loading started
+  PAGE_LOADING_STARTED,
+
+  /// Page loading stopped
+  PAGE_LOADING_STOPPED,
 
   /// An exception when no user activity is detected during verification.
   RECLAIM_VERIFICATION_NO_ACTIVITY_DETECTED_EXCEPTION,

@@ -1,3 +1,12 @@
+## 0.29.0
+
+* Add proof submission events
+* Update default TEEK & TEET URLs
+* Add IS_RECLAIM_INAPPSDK in log events
+* Add isInAppSdk in metadata when SessionManager.onProofSubmitted is called
+* Update use of operator package
+* Initialize algorithms after first page loading starts
+
 ## 0.24.0
 
 * Fix use of capability access token

@@ -122,8 +122,6 @@ void main() {
       test('session independent flags persist across different sessions', () async {
         final identity1 = const SessionIdentity(appId: 'test-app', providerId: 'test-provider', sessionId: 'session1');
 
-        final identity2 = const SessionIdentity(appId: 'test-app', providerId: 'test-provider', sessionId: 'session2');
-
         final testFlags = {'independentFlag': 'persistent-value'};
 
         await FeatureFlagService.setFeatureFlagsToLocal(

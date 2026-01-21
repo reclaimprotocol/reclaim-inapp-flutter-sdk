@@ -90,6 +90,13 @@ class FeatureFlag<T> {
     selector: (data) => data.loginPromptMessage,
   );
 
+  static final useTEE = FeatureFlag<bool>(
+    key: 'useTEE',
+    canFetchFromRemote: true,
+    valueIfNull: false,
+    selector: (data) => data.useTEE,
+  );
+
   static final canUseAiFlow = FeatureFlag<bool>(
     key: 'canUseAiFlow',
     canFetchFromRemote: true,
@@ -114,14 +121,14 @@ class FeatureFlag<T> {
   static final sessionNoActivityTimeoutDurationInMins = FeatureFlag<int>(
     key: 'sessionNoActivityTimeoutDurationInMins',
     canFetchFromRemote: true,
-    valueIfNull: 2,
+    valueIfNull: 3,
     selector: (data) => data.sessionNoActivityTimeoutDurationInMins,
   );
 
   static final aiProviderNoActivityTimeoutDurationInSecs = FeatureFlag<int>(
     key: 'aiProviderNoActivityTimeoutDurationInSecs',
     canFetchFromRemote: true,
-    valueIfNull: 60,
+    valueIfNull: 40,
     selector: (data) => data.aiProviderNoActivityTimeoutDurationInSecs,
   );
 
@@ -142,11 +149,18 @@ class FeatureFlag<T> {
   static final screenshotCaptureIntervalSeconds = FeatureFlag<int>(
     key: 'screenshotCaptureIntervalSeconds',
     canFetchFromRemote: true,
-    valueIfNull: 5,
+    valueIfNull: 2,
     selector: (data) => data.screenshotCaptureIntervalSeconds,
   );
 
-  T _select(ReclaimFeatureFlagData data) => _selector?.call(data) ?? _valueIfNull;
+  static final teeUrls = FeatureFlag<String>(
+    key: 'teeUrlsv2',
+    canFetchFromRemote: true,
+    valueIfNull: '{}',
+    selector: (data) => data.teeUrls,
+  );
+
+  T? _select(ReclaimFeatureFlagData data) => _selector?.call(data);
 
   static bool isFlagSessionIndependent(String key) {
     return FeatureFlag.entries.values.any((e) => e.key == key && e.isSessionIndependent);
@@ -211,19 +225,34 @@ class FeatureFlagRepository {
 
   static final _fetchFlagsLock = Lock();
 
-  static final Set<String> _freshFlags = <String>{};
-  static DateTime? _freshFlagsExpiry;
+  static final Map<SessionIdentity, Set<String>> __freshFlagsPerSession = {};
+  void _clear(SessionIdentity identity) {
+    __freshFlagsPerSession[identity]?.clear();
+  }
 
-  void checkAndClearExpiredFlags() {
+  Set<String> _freshFlags(SessionIdentity identity) => __freshFlagsPerSession.putIfAbsent(identity, () => <String>{});
+  void addFreshFlags(SessionIdentity identity, Iterable<String> keys) {
+    if (keys.contains('useTEE')) {
+      log.info(StackTrace.current);
+    }
+    final currentFlags = _freshFlags(identity);
+    log.info('Adding fresh flags: $keys, old: $currentFlags, identity: ${identity.sessionId}');
+    currentFlags.addAll(keys);
+  }
+
+  static final Map<SessionIdentity, DateTime> _freshFlagsExpiryPerSession = {};
+
+  void checkAndClearExpiredFlags(SessionIdentity identity) {
     final now = DateTime.now();
-    if (_freshFlagsExpiry == null) {
-      _freshFlagsExpiry = now;
+    final expiry = _freshFlagsExpiryPerSession[identity];
+    if (expiry == null) {
+      _freshFlagsExpiryPerSession[identity] = now;
       return;
     }
-    final hasExpired = now.difference(_freshFlagsExpiry!).inHours > 1;
+    final hasExpired = now.difference(expiry).inHours > 1;
     if (hasExpired) {
-      _freshFlags.clear();
-      _freshFlagsExpiry = now;
+      _clear(identity);
+      _freshFlagsExpiryPerSession[identity] = now;
     }
   }
 
@@ -231,33 +260,43 @@ class FeatureFlagRepository {
   Future<Map<String, dynamic>> fetchFlags(SessionIdentity identity, FeatureFlag<dynamic> featureFlag) async {
     return _fetchFlagsLock.synchronized(() async {
       final cachedFlags = _preferredFlagsCache[identity];
+      final freshFlagsForSession = _freshFlags(identity);
 
-      log.finest('fetchFlag: ${featureFlag.key}, cachedFlags: ${cachedFlags?.keys}, _freshFlags: $_freshFlags');
+      log.config(
+        'before fetchFlag: ${featureFlag.key}, cachedFlags: ${cachedFlags?.keys}, _freshFlags: $freshFlagsForSession, sessionId: ${identity.sessionId}',
+      );
 
-      if (cachedFlags != null && _freshFlags.contains(featureFlag.key)) return cachedFlags;
+      if (cachedFlags != null && freshFlagsForSession.contains(featureFlag.key)) return cachedFlags;
 
       final localFlags = await FeatureFlagService.getFeatureFlagsFromLocal(identity);
       final flags = <String, dynamic>{...localFlags};
       final localSessionIndependentFlags = await FeatureFlagService.getSessionIndependentFeatureFlagsFromLocal();
       final sessionIndependentFlags = <String, dynamic>{...localSessionIndependentFlags};
 
-      final updatingFlags = FeatureFlag.entries.values
-          .where((it) {
-            return it.canFetchFromRemote &&
-                // don't have this key in in-memory cache
-                !_freshFlags.contains(it.key);
-          })
-          .map((e) => e.key);
+      final updatingFlags = List<String>.unmodifiable(
+        FeatureFlag.entries.values
+            .where((it) {
+              return it.canFetchFromRemote &&
+                  // don't have this key in in-memory cache
+                  !freshFlagsForSession.contains(it.key);
+            })
+            .map((e) => e.key),
+      );
       try {
+        log.finest('before updatingFlags: $updatingFlags, _freshFlags: $freshFlagsForSession');
         final remoteFlags = await FeatureFlagService.getFeatureFlagsFromRemote(identity, updatingFlags).then((value) {
           return <String, dynamic>{...value}..removeWhere((k, v) => _valueOrNull(v) == null);
         });
+        log.finest(
+          'after sessionIndependentFlags: $sessionIndependentFlags, flags: $flags, remoteFlags: $remoteFlags _freshFlags: $freshFlagsForSession, updatingFlags: $updatingFlags',
+        );
         if (remoteFlags.isNotEmpty) {
           flags.addAll(remoteFlags);
           sessionIndependentFlags.addAll(remoteFlags);
         }
-        _freshFlags.addAll(updatingFlags);
-        log.finest('updatedFreshFlags: $_freshFlags');
+        log.finest('after (before addAll) _freshFlags: $freshFlagsForSession, updatingFlags: $updatingFlags');
+        addFreshFlags(identity, updatingFlags);
+        log.finest('after (after addAll) _freshFlags: $freshFlagsForSession, updatingFlags: $updatingFlags');
       } catch (e, s) {
         log.severe('Failed to fetch feature flags from remote', e, s);
       }

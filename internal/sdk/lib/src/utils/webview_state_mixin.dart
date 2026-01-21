@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../logging/logging.dart';
 import '../services/hybrid_screenshot_service.dart';
@@ -15,6 +16,8 @@ import '../ui/claim_creation_webview/webview_handler_manager.dart';
 import '../ui/claim_creation_webview/window/controller.dart';
 import '../ui/claim_creation_webview/window/view.dart';
 import '../widgets/permission.dart';
+import 'url.dart';
+import 'webview.dart';
 
 final defaultWebViewSettings = InAppWebViewSettings(
   javaScriptCanOpenWindowsAutomatically: true,
@@ -166,15 +169,76 @@ mixin WebViewCompanionMixin<T extends StatefulWidget> implements State<T> {
     return true;
   }
 
+  Future<bool> launchUrlExternal(Uri url) async {
+    final log = _logger.child('launchUrlExternal');
+    try {
+      final didLaunch = await launchUrl(url, mode: LaunchMode.externalApplication);
+      log.info('Did ${didLaunch ? '' : 'not'} launch uri: $url');
+      return didLaunch;
+    } catch (e, s) {
+      log.severe('Failed to launch uri: $url', e, s);
+    }
+    return false;
+  }
+
   Future<NavigationActionPolicy?> shouldOverrideUrlLoading(
     InAppWebViewController controller,
     NavigationAction action,
   ) async {
     final log = _logger.child('shouldOverrideUrlLoading');
     log.finest('shouldOverrideUrlLoading: action: ${json.encode(action)}');
+    final url = action.request.url;
+
+    if (_allowedAppLinkPattern != null) {
+      if (url != null && isUrlAllowedToLaunch(url, _allowedAppLinkPattern!)) {
+        if (Platform.isAndroid) {
+          final didLaunch = await launchUrlExternal(url);
+          if (didLaunch) {
+            return NavigationActionPolicy.CANCEL;
+          }
+        }
+        return NavigationActionPolicy.ALLOW;
+      }
+    }
+
     if (Platform.isMacOS || Platform.isIOS) {
       return WKNavigationActionPolicyAllowWithoutTryingAppLink();
     }
     return NavigationActionPolicy.ALLOW;
+  }
+
+  String? _allowedAppLinkPattern;
+
+  @protected
+  void setAllowedAppLink(String? pattern) {
+    _allowedAppLinkPattern = pattern;
+  }
+
+  static String? _originalUserAgent;
+
+  @protected
+  Future<void> setUserAgent(InAppWebViewController controller, String? value) async {
+    final log = _logger.child('setUserAgent');
+    if (value == null || value.isEmpty) {
+      // restore to original user agent
+      final o = _originalUserAgent;
+      if (o != null && o.isNotEmpty) {
+        log.info('Restoring user agent to $o');
+        return setUserAgent(controller, o);
+      }
+      return;
+    }
+
+    _originalUserAgent ??= await controller.getSettings().then((value) => value?.userAgent ?? '');
+
+    try {
+      log.info('Updating user agent to: $value');
+      await setWebViewSettingsWith(controller, (settings) {
+        settings.userAgent = value;
+        return settings;
+      });
+    } catch (e, s) {
+      log.severe('Failed to update user agent', e, s);
+    }
   }
 }

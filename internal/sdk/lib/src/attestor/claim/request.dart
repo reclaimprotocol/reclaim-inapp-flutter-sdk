@@ -2,7 +2,7 @@ import 'dart:collection';
 
 import 'options.dart';
 
-enum ZKOperationType { snarkJs, gnarkRpc }
+enum ZKOperationType { snarkJs, gnarkRpc, gnarkTEENative }
 
 class AttestorClaimRequest {
   final ZKOperationType operationType;

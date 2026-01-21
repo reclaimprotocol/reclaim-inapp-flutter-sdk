@@ -55,4 +55,52 @@ void main() {
       );
     });
   });
+
+  group('isUrlAllowedToLaunch', () {
+    test('should return the true from a valid url', () {
+      expect(isUrlAllowedToLaunch(Uri.parse('https://example.com/login'), 'https://example.com/login'), isTrue);
+      expect(isUrlAllowedToLaunch(Uri.parse('hello://example.com/login'), '*'), isTrue);
+      const urls = [
+        'com-okta-authenticator:',
+        'https://login.okta.com/auth/okta-verify',
+        'https://login.okta.com/azt/install-android-device-policy',
+        'https://login.okta.com/oauth/callback',
+        'https://login.okta.com/oauth/callback',
+        'https://login.okta.com/actions/enroll',
+        'oktaverify',
+      ];
+      for (final url in urls) {
+        expect(
+          isUrlAllowedToLaunch(
+            Uri.parse(url),
+            r'^(com-okta-authenticator:|https:\/\/login\.okta\.com\/auth\/okta-verify|https:\/\/login\.okta\.com\/azt\/install-android-device-policy|https:\/\/login\.okta\.com\/oauth\/callback|https:\/\/login\.okta\.com\/actions\/enroll|oktaverify)',
+          ),
+          isTrue,
+          reason: 'Did not match with $url',
+        );
+      }
+    });
+    test('should return the false from a url with no match', () {
+      expect(isUrlAllowedToLaunch(Uri.parse('https://example.com'), 'https://example.com/login'), isFalse);
+      expect(isUrlAllowedToLaunch(Uri.parse('https://example.com/login'), '*'), isFalse);
+      const urls = [
+        'reclaimbank:',
+        'https://login.example.com/auth/okta-verify',
+        'https://login.example.com/azt/install-android-device-policy',
+        'https://google.com/oauth/callback',
+        'https://example.org/oauth/callback',
+        'googleverify',
+      ];
+      for (final url in urls) {
+        expect(
+          isUrlAllowedToLaunch(
+            Uri.parse(url),
+            r'^(com-okta-authenticator:|https:\/\/login\.okta\.com\/auth\/okta-verify|https:\/\/login\.okta\.com\/azt\/install-android-device-policy|https:\/\/login\.okta\.com\/oauth\/callback|https:\/\/login\.okta\.com\/actions\/enroll|oktaverify)',
+          ),
+          isFalse,
+          reason: 'Did match with $url',
+        );
+      }
+    });
+  });
 }
