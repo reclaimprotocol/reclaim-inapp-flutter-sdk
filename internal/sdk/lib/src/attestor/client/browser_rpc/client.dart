@@ -12,6 +12,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart'
         UserScript,
         UserScriptInjectionTime,
         WebUri;
+import 'package:reclaim_tee_operator_flutter/reclaim_tee_operator_flutter.dart';
 import 'package:retry/retry.dart';
 
 import '../../../../logging.dart';
@@ -19,7 +20,7 @@ import '../base.dart';
 import '../client_operator.dart';
 
 /// An attestor client that uses webview with attestor browser rpc
-class AttestorWebViewClient extends AttestorClient with AttestorClientOperator {
+class AttestorWebViewClient extends AttestorJsClient with AttestorClientOperator {
   final Uri attestorBrowserRpcUrl;
   final StreamController<bool> _isInspectableStreamController;
 
@@ -41,7 +42,7 @@ class AttestorWebViewClient extends AttestorClient with AttestorClientOperator {
 
       // using json.encode here to string escape the json message correctly
       final js =
-          'globalThis.ATTESTOR_BASE_URL = "${attestorBrowserRpcUrl.origin}";globalThis.RPC_CHANNEL_NAME = "${AttestorClient.hostMessengerChannelName}";window.HostMessenger = window.backupMessenger;window.postMessage(${json.encode(message)});';
+          'globalThis.ATTESTOR_BASE_URL = "${attestorBrowserRpcUrl.origin}";globalThis.RPC_CHANNEL_NAME = "${AttestorJsClient.hostMessengerChannelName}";window.HostMessenger = window.backupMessenger;window.postMessage(${json.encode(message)});';
 
       await retry(
         () => executeJavascript(js, debugId: rpcMessage.id),
@@ -238,20 +239,25 @@ class AttestorWebViewClient extends AttestorClient with AttestorClientOperator {
   }
 
   @override
+  Future<bool> isPlatformSupported() async {
+    return ReclaimProxyOperator.instance.isPlatformSupported();
+  }
+
+  @override
   String toString() {
-    return 'AttestorWebViewClient(attestorBrowserRpcUrl: $attestorBrowserRpcUrl, debugLabel: $debugLabel, createdAt: $createdAt, age: ${AttestorClient.getClientAge(this)})';
+    return 'AttestorWebViewClient(attestorBrowserRpcUrl: $attestorBrowserRpcUrl, debugLabel: $debugLabel, createdAt: $createdAt, age: ${AttestorJsClient.getClientAge(this)})';
   }
 }
 
 String _attestorInAppWebViewUserScript(Uri attestorBrowserRpcUrl, String debugLabel) =>
     """
 globalThis.ATTESTOR_BASE_URL = "${attestorBrowserRpcUrl.origin}"
-globalThis.RPC_CHANNEL_NAME = "${AttestorClient.hostMessengerChannelName}"
+globalThis.RPC_CHANNEL_NAME = "${AttestorJsClient.hostMessengerChannelName}"
 
 const _setupMessaging = (event) => {
   try {
     globalThis.ATTESTOR_BASE_URL = "${attestorBrowserRpcUrl.origin}"
-  	globalThis.RPC_CHANNEL_NAME = "${AttestorClient.hostMessengerChannelName}"
+  	globalThis.RPC_CHANNEL_NAME = "${AttestorJsClient.hostMessengerChannelName}"
 
     const sendMessageToHost = (name, message) => {
       return window.flutter_inappwebview.callHandler(name, message);

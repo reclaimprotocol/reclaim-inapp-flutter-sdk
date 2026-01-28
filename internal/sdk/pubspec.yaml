@@ -1,12 +1,13 @@
 name: reclaim_inapp_sdk
 description: Pre-built widgets library to export user's data with provable authenticity using HTTPS & Reclaim Protocol Zero-knowledge proof technology
-version: 0.24.0
-homepage: https://reclaimprotocol.org
+version: 0.29.0
+homepage: https://docs.reclaimprotocol.org/inapp-sdks/introduction
 repository: https://github.com/reclaimprotocol/reclaim-inapp-sdk.git
+publish_to: none
 
 environment:
-  sdk: '>=3.9.0 <4.0.0'
-  flutter: '>=3.35.0'
+  sdk: '>=3.10.0 <4.0.0'
+  flutter: '>=3.38.0'
 
 dependencies:
   flutter:
@@ -34,7 +35,7 @@ dependencies:
   cached_network_image: ^3.3.1
   flutter_cache_manager: ^3.4.1
   clock: ^1.1.1
-  flutter_secure_storage: ^9.2.4
+  flutter_secure_storage: ^10.0.0
   permission_handler: ^12.0.0+1
   pool: ^1.0.0
   meta: ^1.0.0
@@ -55,6 +56,10 @@ dependencies:
   retry: ^3.1.2
   convert: ^3.1.2
   collection: ^1.19.1
+  
+  # Reclaim TEE operator for native protocol execution
+  reclaim_tee_operator_flutter:
+
   web_socket: ^1.0.1
   http_parser: ^4.0.0
   rive: ^0.14.0-dev.14

@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:reclaim_inapp_flutter_sdk/reclaim_inapp_flutter_sdk.dart';
@@ -68,8 +69,10 @@ class _ExampleState extends State<Example> {
     });
     final msg = ScaffoldMessenger.of(context);
     try {
-      print("Starting proof for provider: $effectiveProviderId");
+      print("Starting proof for provider: $effectiveProviderId, with appId: $appId");
       final sdk = ReclaimInAppSdk.of(context);
+      await sdk.setConsoleLogging(kDebugMode);
+
       response = await sdk.startVerification(
         ReclaimVerificationRequest(
           applicationId: appId,
@@ -78,7 +81,7 @@ class _ExampleState extends State<Example> {
             return ReclaimSessionInformation.generateNew(
               applicationId: appId,
               applicationSecret: appSecret,
-              providerId: providerId,
+              providerId: _providerIdController.text.trim(),
             );
           },
           contextString: '',

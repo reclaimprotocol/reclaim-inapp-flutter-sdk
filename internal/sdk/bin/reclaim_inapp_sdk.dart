@@ -3,7 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:reclaim_inapp_sdk/overrides.dart';
+import 'package:reclaim_inapp_sdk/src/build_env.dart';
 import 'package:reclaim_inapp_sdk/src/services/capability/access_token.dart';
 import 'package:reclaim_inapp_sdk/src/utils/crypto/signature.dart';
 import 'package:reclaim_inapp_sdk/src/utils/crypto/url_safe_codec.dart';

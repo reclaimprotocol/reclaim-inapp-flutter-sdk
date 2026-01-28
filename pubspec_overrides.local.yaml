@@ -1,7 +1,7 @@
 dependency_overrides:
   reclaim_inapp_sdk:
-    path: internal/sdk
-  reclaim_gnark_zkoperator:
-    path: internal/zkoperator
+    path: ./internal/sdk
+  reclaim_tee_operator_flutter:
+    path: ./internal/tee_operator
   reclaim_verifier_module:
-    path: internal/reclaim_verifier_module
+    path: ./internal/reclaim_verifier_module

@@ -148,7 +148,12 @@ void _onLoggingLogRecord(LogRecord record) async {
 
     final onRecord = ReclaimOverrides.logsConsumer?.onRecord;
     if (onRecord != null) {
-      final canHandleLogs = await onRecord(record, SessionIdentity.latest);
+      final entry = LogEntry.fromRecord(
+        record,
+        SessionIdentity.latest,
+        fallbackSessionIdentity: const SessionIdentity(appId: '', providerId: '', sessionId: ''),
+      );
+      final canHandleLogs = await onRecord(entry);
       if (!canHandleLogs) {
         // the sdk will not use this log record
         return;

@@ -8,7 +8,7 @@ rm -rf internal;
 mkdir -p internal;
 
 # SDK_MODULE_VERSION=main
-SDK_MODULE_VERSION=0.24.0
+SDK_MODULE_VERSION=0.29.0
 
 cd internal;
 
@@ -22,17 +22,21 @@ rm -rf ./sdk/.git
 rm -rf ./sdk/example
 rm -rf ./sdk/README.md
 
-echo "Downloading ZK Operator package"
+echo "Downloading TEE Operator"
 
-git clone --depth=1 --branch=main git@github.com:reclaimprotocol/reclaim-gnark-zkoperator-flutter.git zkoperator
-rm -rf ./zkoperator/.git
+git clone --depth=1 --branch=main git@github.com:reclaimprotocol/reclaim-tee-operator-flutter.git tee_operator
+rm -rf ./tee_operator/.git
+rm -rf ./tee_operator/example
+rm -rf ./tee_operator/README.md
+rm -rf ./tee_operator/src
 
 echo "Downloading Add to App Module"
 
-git clone --depth=1 --branch=$SDK_MODULE_VERSION git@github.com:reclaimprotocol/reclaim_inapp_sdk_wrapper.git reclaim_verifier_module
+git clone --depth=1 --branch=$SDK_MODULE_VERSION git@github.com:reclaimprotocol/reclaim-inapp-add-to-app-module.git reclaim_verifier_module
 rm -rf ./reclaim_verifier_module/.git
 rm -rf ./reclaim_verifier_module/env.json
 rm -rf ./reclaim_verifier_module/Makefile
+rm -rf ./reclaim_verifier_module/scripts
 
 cd ..;
 

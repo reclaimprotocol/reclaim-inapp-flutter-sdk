@@ -75,8 +75,6 @@ class ReclaimLocalizationProvider extends ObservableNotifier<Locale?> {
   static String translate(BuildContext context, MaybeTranslationCallback cb) {
     final text = maybeTranslate(context, cb);
     if (text != null) return text;
-    // to use same assertion if localization unavailable
-    ReclaimAppLocalizations.of(context);
     throw FlutterError('No translation available');
   }
 
@@ -91,6 +89,8 @@ class ReclaimLocalizationProvider extends ObservableNotifier<Locale?> {
   void updateSilently(Locale? newValue) {
     super.setValueSilently(newValue);
   }
+
+  static Locale? lastKnownLocale;
 }
 
 class _ProviderScope extends InheritedNotifier<ReclaimLocalizationProvider> {

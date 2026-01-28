@@ -176,6 +176,7 @@ class DebugBottomSheet extends StatelessWidget {
                         },
                         child: _ConsumerIdentifierLabel(sessionId: sessionId),
                       ),
+                      const SizedBox(height: 40),
                     ].map((e) {
                       return Padding(padding: const EdgeInsets.fromLTRB(8, 8, 8, 0), child: e);
                     }).toList(),

@@ -4,11 +4,12 @@ import 'dart:io';
 
 import 'package:cronet_http/cronet_http.dart' as cronet;
 import 'package:cupertino_http/cupertino_http.dart' as cupertino;
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/retry.dart' as http_retry;
-import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 
+import '../../l10n/provider.dart';
 import '../../logging/logging.dart';
 import '../../services/source/source.dart';
 import 'status_codes.dart';
@@ -138,7 +139,7 @@ class ReclaimHttpClient extends http.BaseClient {
         if (_isClosed) {
           return false;
         }
-        logging.warning('Http failed. Checking if we can retry..', e);
+        debugPrint('Http failed. Checking if we can retry.., $e');
         return e is SocketException ||
             e is TimeoutException ||
             e.toString().contains('net::ERR_TIMED_OUT') ||
@@ -171,6 +172,10 @@ class ReclaimHttpClient extends http.BaseClient {
     if (!canSetClientSource) return;
     try {
       request.headers['reclaim-api-client'] = _clientSource ??= await getClientSource();
+      final localeString = ReclaimLocalizationProvider.lastKnownLocale?.toString();
+      if (localeString != null) {
+        request.headers['reclaim-locale'] = localeString;
+      }
     } catch (e, s) {
       // request headers are not mutable, request may be finalized
       logging.warning('Failed to add reclaim-api-client header', e, s);

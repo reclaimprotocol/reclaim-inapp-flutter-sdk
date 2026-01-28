@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+import '../attestor.dart';
 import 'data/app_info.dart';
 import 'data/create_claim.dart';
 import 'data/identity.dart';
@@ -180,8 +182,7 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       _log.info('Session started: ${sessionInformation.sessionId}');
 
       await SDKVersionInformation().verifyUpdateRequirement();
-
-      await ZkOperatorManager().setupZkOperator(identity, options.attestorZkOperator);
+      await ZkOperatorManager().setupZkOperator(identity, explicitUseTeeOperator: options.useTeeOperator);
 
       final verificationFlowManager = VerificationFlowManager();
 
@@ -195,6 +196,9 @@ class VerificationController extends ObservableNotifier<VerificationState> {
         version: sessionInformation.version,
       );
       _log.info('Provider fetched with version: ${provider.version}');
+      // Dumping provider information as JSON for debugging
+      // Useful for consumers that override provider
+      _log.info(json.encode(provider));
 
       final clearingWebStorage = verificationFlowManager.clearWebStorageIfRequired(
         identity,
@@ -238,6 +242,15 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       await _loadUserScripts(provider, response.identity);
 
       _log.info('User scripts loaded');
+
+      // Allow the webpage to load before preparing the Protocol Operator
+      Future.delayed(const Duration(seconds: 2)).then((_) async {
+        try {
+          await ZkOperatorManager().prepareOperatorForAlgorithmWithHints(provider);
+        } catch (e, s) {
+          _log.severe('Error preparing ZK operator', e, s);
+        }
+      });
     } on ReclaimException catch (e, s) {
       updateException(e, s);
     } catch (e, s) {

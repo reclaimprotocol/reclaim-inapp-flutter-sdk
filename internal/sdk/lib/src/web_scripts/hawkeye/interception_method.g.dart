@@ -8,8 +8,8 @@ part of 'interception_method.dart';
 
 HawkeyeInterceptionOptions _$HawkeyeInterceptionOptionsFromJson(Map<String, dynamic> json) =>
     HawkeyeInterceptionOptions(
-      disableFormIntercept: json['disableFormIntercept'] as bool? ?? false,
-      delayFormSubmitForFetch: json['delayFormSubmitForFetch'] as bool? ?? true,
+      disableFormIntercept: json['disableFormIntercept'] as bool? ?? true,
+      delayFormSubmitForFetch: json['delayFormSubmitForFetch'] as bool? ?? false,
       interceptionMethod:
           $enumDecodeNullable(_$HawkeyeInterceptionMethodEnumMap, json['interceptionMethod']) ??
           HawkeyeInterceptionMethod.PROXY,

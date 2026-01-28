@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import '../data/identity.dart';
 import '../overrides/override.dart';
 
+import 'data/log.dart';
 import 'logging.dart';
 
-typedef LogRecordCallback = FutureOr<bool> Function(LogRecord record, SessionIdentity? identity);
+typedef LogRecordCallback = FutureOr<bool> Function(LogEntry entry);
 typedef LogLevelChangedCallback = FutureOr<void> Function(Level? level);
 typedef GetLevelCallback = FutureOr<Level> Function();
 

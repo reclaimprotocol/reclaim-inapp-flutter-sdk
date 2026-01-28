@@ -12,6 +12,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     this.canUseAiFlow,
     this.manualReviewMessage,
     this.loginPromptMessage,
+    this.useTEE,
     this.interceptorOptions,
     this.claimCreationTimeoutDurationInMins,
     this.sessionNoActivityTimeoutDurationInMins,
@@ -19,6 +20,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     this.pageLoadedCompletedDebounceTimeoutMs,
     this.potentialLoginTimeoutS,
     this.screenshotCaptureIntervalSeconds,
+    this.teeUrls,
   });
 
   final bool? cookiePersist;
@@ -29,6 +31,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
   final bool? canUseAiFlow;
   final String? manualReviewMessage;
   final String? loginPromptMessage;
+  final bool? useTEE;
   // JSON type:  HawkeyeInterceptionOptions
   final String? interceptorOptions;
   final int? claimCreationTimeoutDurationInMins;
@@ -37,6 +40,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
   final int? pageLoadedCompletedDebounceTimeoutMs;
   final int? potentialLoginTimeoutS;
   final int? screenshotCaptureIntervalSeconds;
+  final String? teeUrls;
 
   @override
   ReclaimFeatureFlagData copyWith({
@@ -48,6 +52,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     bool? canUseAiFlow,
     String? manualReviewMessage,
     String? loginPromptMessage,
+    bool? useTEE,
     String? interceptorOptions,
     int? claimCreationTimeoutDurationInMins,
     int? sessionNoActivityTimeoutDurationInMins,
@@ -55,6 +60,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     int? pageLoadedCompletedDebounceTimeoutMs,
     int? potentialLoginTimeoutS,
     int? screenshotCaptureIntervalSeconds,
+    String? teeUrls,
   }) {
     return ReclaimFeatureFlagData(
       cookiePersist: cookiePersist ?? this.cookiePersist,
@@ -67,6 +73,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       canUseAiFlow: canUseAiFlow ?? this.canUseAiFlow,
       manualReviewMessage: manualReviewMessage ?? this.manualReviewMessage,
       loginPromptMessage: loginPromptMessage ?? this.loginPromptMessage,
+      useTEE: useTEE ?? this.useTEE,
       interceptorOptions: interceptorOptions ?? this.interceptorOptions,
       claimCreationTimeoutDurationInMins: claimCreationTimeoutDurationInMins ?? this.claimCreationTimeoutDurationInMins,
       sessionNoActivityTimeoutDurationInMins:
@@ -77,6 +84,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
           pageLoadedCompletedDebounceTimeoutMs ?? this.pageLoadedCompletedDebounceTimeoutMs,
       potentialLoginTimeoutS: potentialLoginTimeoutS ?? this.potentialLoginTimeoutS,
       screenshotCaptureIntervalSeconds: screenshotCaptureIntervalSeconds ?? this.screenshotCaptureIntervalSeconds,
+      teeUrls: teeUrls ?? this.teeUrls,
     );
   }
 
@@ -90,6 +98,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       canUseAiFlow: json['canUseAiFlow'] as bool?,
       manualReviewMessage: json['manualReviewMessage'] as String?,
       loginPromptMessage: json['loginPromptMessage'] as String?,
+      useTEE: json['useTEE'] as bool?,
       interceptorOptions: json['interceptorOptions'] as String?,
       claimCreationTimeoutDurationInMins: json['claimCreationTimeoutDurationInMins'] as int?,
       sessionNoActivityTimeoutDurationInMins: json['sessionNoActivityTimeoutDurationInMins'] as int?,
@@ -97,6 +106,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       pageLoadedCompletedDebounceTimeoutMs: json['pageLoadedCompletedDebounceTimeoutMs'] as int?,
       potentialLoginTimeoutS: json['potentialLoginTimeoutS'] as int?,
       screenshotCaptureIntervalSeconds: json['screenshotCaptureIntervalSeconds'] as int?,
+      teeUrls: json['teeUrls'] as String?,
     );
   }
 
@@ -110,6 +120,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       'canUseAiFlow': canUseAiFlow,
       'manualReviewMessage': manualReviewMessage,
       'loginPromptMessage': loginPromptMessage,
+      'useTEE': useTEE,
       'interceptorOptions': interceptorOptions,
       'claimCreationTimeoutDurationInMins': claimCreationTimeoutDurationInMins,
       'sessionNoActivityTimeoutDurationInMins': sessionNoActivityTimeoutDurationInMins,
@@ -117,6 +128,7 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       'pageLoadedCompletedDebounceTimeoutMs': pageLoadedCompletedDebounceTimeoutMs,
       'potentialLoginTimeoutS': potentialLoginTimeoutS,
       'screenshotCaptureIntervalSeconds': screenshotCaptureIntervalSeconds,
+      'teeUrls': teeUrls,
     };
   }
 

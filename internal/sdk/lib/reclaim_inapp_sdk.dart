@@ -108,15 +108,6 @@ class ReclaimVerification {
 
         attempt = _PendingVerifications();
 
-        final isPlatformSupported = options.attestorZkOperator?.isPlatformSupported();
-        if (isPlatformSupported != null && !(await isPlatformSupported)) {
-          _log.event(
-            Level.SEVERE.withEvent(LogEventType.RECLAIM_VERIFICATION_PLATFORM_NOT_SUPPORTED_EXCEPTION),
-            'SDK is not running with a 64 bit runtime environment',
-          );
-          throw const ReclaimVerificationPlatformNotSupportedException();
-        }
-
         if (request.providerId.trim().isEmpty) {
           _log.event(Level.SEVERE.withEvent(LogEventType.INVALID_REQUEST_RECLAIM_EXCEPTION), 'Provider ID is required');
           throw const InvalidRequestReclaimException('Provider ID is required');

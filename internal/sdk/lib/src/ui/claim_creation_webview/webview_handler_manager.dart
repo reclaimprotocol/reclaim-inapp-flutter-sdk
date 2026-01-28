@@ -19,16 +19,20 @@ class WebViewJSHandlerManager {
   final ManualReviewController manualReviewController;
   final VoidCallback onActivity;
   final Future<void> Function(List<dynamic>, InAppWebViewController) handleUserInteraction;
-  final Function(List<dynamic>)? onProofData;
-  final Function(List<dynamic>)? onExtractedData;
+  final ValueChanged<List<dynamic>> onProofData;
+  final ValueChanged<List<dynamic>> onExtractedData;
+  final ValueChanged<String?> onAllowAppLinkRequest;
+  final void Function(InAppWebViewController, String?) onUpdateUserAgent;
 
   WebViewJSHandlerManager({
     required this.context,
     required this.manualReviewController,
     required this.onActivity,
     required this.handleUserInteraction,
-    this.onProofData,
-    this.onExtractedData,
+    required this.onAllowAppLinkRequest,
+    required this.onProofData,
+    required this.onExtractedData,
+    required this.onUpdateUserAgent,
   });
 
   final logger = logging.child('WebViewJSHandlerManager');
@@ -48,6 +52,8 @@ class WebViewJSHandlerManager {
     _registerLocationChangedHandler(controller);
     _registerPageLoadCompleteHandler(controller);
     _registerRequiresUserInteractionHandler(controller);
+    _registerSetAllowedAppLinksCallback(controller);
+    _registerUpdateUserAgentCallback(controller);
   }
 
   void _registerPublicDataHandler(InAppWebViewController controller) {
@@ -166,11 +172,7 @@ class WebViewJSHandlerManager {
     controller.addJavaScriptHandler(
       handlerName: 'proofData',
       callback: (args) async {
-        if (onProofData != null) {
-          onProofData!(args);
-        } else {
-          logger.warning('proofData handler called but no callback provided');
-        }
+        onProofData(args);
       },
     );
   }
@@ -179,11 +181,7 @@ class WebViewJSHandlerManager {
     controller.addJavaScriptHandler(
       handlerName: 'extractedData',
       callback: (args) async {
-        if (onExtractedData != null) {
-          onExtractedData!(args);
-        } else {
-          logger.warning('extractedData handler called but no callback provided');
-        }
+        onExtractedData(args);
       },
     );
   }
@@ -243,6 +241,58 @@ class WebViewJSHandlerManager {
           return;
         }
         _requiresUserInteraction(isUserInteractionRequired);
+      },
+    );
+  }
+
+  void _registerSetAllowedAppLinksCallback(InAppWebViewController controller) {
+    final log = logger.child('_registerSetAllowedAppLinksCallback');
+    controller.addJavaScriptHandler(
+      handlerName: 'setAllowedAppLinks',
+      callback: (args) async {
+        try {
+          log.finest({"args": args, 'tag': 'setAllowedAppLinks'});
+          final data = json.decode(args[0]);
+          if (data is! Map) {
+            log.warning('Received setAllowedAppLinks is not a map', data);
+            return;
+          }
+          final allowedAppLinks = data['value'];
+          if (allowedAppLinks is String || allowedAppLinks == null) {
+            onAllowAppLinkRequest(allowedAppLinks?.toString());
+          } else {
+            log.warning('Unexpected type of input: $allowedAppLinks');
+          }
+          onActivity();
+        } catch (e, s) {
+          log.severe('Failed', e, s);
+        }
+      },
+    );
+  }
+
+  void _registerUpdateUserAgentCallback(InAppWebViewController controller) {
+    final log = logger.child('_registerUpdateUserAgentCallback');
+    controller.addJavaScriptHandler(
+      handlerName: 'updateUserAgent',
+      callback: (args) async {
+        try {
+          log.finest({"args": args, 'tag': 'updateUserAgent'});
+          final data = json.decode(args[0]);
+          if (data is! Map) {
+            log.warning('Received updateUserAgent is not a map', data);
+            return;
+          }
+          final userAgent = data['value'];
+          if (userAgent is String || userAgent == null) {
+            onUpdateUserAgent(controller, userAgent?.toString());
+          } else {
+            log.warning('Unexpected type of input: $userAgent');
+          }
+          onActivity();
+        } catch (e, s) {
+          log.severe('Failed', e, s);
+        }
       },
     );
   }

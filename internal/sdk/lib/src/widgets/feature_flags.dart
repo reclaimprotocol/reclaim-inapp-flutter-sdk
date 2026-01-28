@@ -35,6 +35,6 @@ class FeatureFlagsProvider {
   }
 
   void checkAndClearExpiredFlags() {
-    _repository.checkAndClearExpiredFlags();
+    _repository.checkAndClearExpiredFlags(identity);
   }
 }

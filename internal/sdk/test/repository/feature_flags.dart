@@ -319,13 +319,15 @@ void main() {
 
     group('checkAndClearExpiredFlags', () {
       test('can be called without errors', () {
-        expect(() => repository.checkAndClearExpiredFlags(), returnsNormally);
+        const identity = SessionIdentity(appId: 'test-app', providerId: 'test-provider', sessionId: 'test-session');
+        expect(() => repository.checkAndClearExpiredFlags(identity), returnsNormally);
       });
 
       test('multiple calls do not cause errors', () {
-        repository.checkAndClearExpiredFlags();
-        repository.checkAndClearExpiredFlags();
-        repository.checkAndClearExpiredFlags();
+        const identity = SessionIdentity(appId: 'test-app', providerId: 'test-provider', sessionId: 'test-session');
+        repository.checkAndClearExpiredFlags(identity);
+        repository.checkAndClearExpiredFlags(identity);
+        repository.checkAndClearExpiredFlags(identity);
 
         // Should complete without errors
         expect(true, true);

@@ -1,0 +1,203 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:javascript_flutter/javascript_flutter.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart' as path_provider;
+
+import '../../../../logging.dart';
+import '../../../utils/file.dart';
+import '../base.dart';
+import '../client_operator.dart';
+
+/// An attestor client that uses a javascript runtime environment with attestor browser rpc
+class AttestorJsRuntimeClient extends AttestorJsClient with AttestorClientOperator {
+  final Uri attestorBrowserRpcUrl;
+  final Uri attestorScriptUrl;
+  final StreamController<bool> _isInspectableStreamController;
+  final bool _initialIsInspectable;
+
+  AttestorJsRuntimeClient({
+    required super.debugLabel,
+    required this.attestorBrowserRpcUrl,
+    required this.attestorScriptUrl,
+    bool isInspectable = kDebugMode,
+  }) : _isInspectableStreamController = StreamController.broadcast()..add(isInspectable),
+       _initialIsInspectable = isInspectable;
+
+  JavaScript? __js;
+  JavaScript get _js => __js!;
+
+  @override
+  bool get isFaulty {
+    if (super.isFaulty) return true;
+    final j = __js;
+    if (j == null) return false;
+    if (j.isFunctional) return false;
+    logger.warning('js runtime is not functional', j.unavailableReason);
+    return true;
+  }
+
+  final List<StreamSubscription> _subscriptions = [];
+
+  Stream<bool> get isInspectableStream => _isInspectableStreamController.stream;
+
+  Future<void> _initializeJavaScript() async {
+    final log = logger.child('_initializeJavaScript');
+
+    final cacheDir = await path_provider.getApplicationCacheDirectory();
+    final downloadDirectory = Directory(path.join(cacheDir.absolute.path, 'attestor_script'));
+
+    final fileFuture = downloadFromUrl(attestorScriptUrl, extension: '.js', downloadDirectory: downloadDirectory);
+    __js = await JavaScript.createNew();
+    await _js.setIsInspectable(_initialIsInspectable);
+    await _js.runJavaScriptReturningResult(_INITIAL_SCRIPT);
+    await _js.addJavaScriptChannel(
+      JavaScriptChannelParams(
+        name: AttestorJsClient.hostMessengerChannelName,
+        onMessageReceived: (message) {
+          _onRpcMessage(message.message);
+          return const JavaScriptReply(message: '');
+        },
+      ),
+    );
+    _subscriptions.add(
+      isInspectableStream.listen((it) async {
+        await ensureReady();
+        await _js.setIsInspectable(it);
+      }),
+    );
+    final attestorScriptFile = await fileFuture;
+    // Generated for debugging purposes
+    final instanceId = await _js.runJavaScriptReturningResult(
+      "(globalThis.__id = '__id' in globalThis ? globalThis.__id : Math.random()).toString()",
+    );
+    log.finest({'clientInstanceId': hashCode, 'instanceId': instanceId, 'engineId': _js.instanceId});
+    await _js.runJavaScriptReturningResult('console.info("loading attestor script")');
+    log.info('running attestor script file ${attestorScriptFile.absolute.path}');
+    await _js.runJavaScriptFromFileReturningResult(attestorScriptFile.absolute.path);
+    await _js.runJavaScriptReturningResult('console.info("loaded attestor script")');
+    await _js.runJavaScriptReturningResult(
+      'AttestorRPC.setupJsRpc("${attestorBrowserRpcUrl.origin}", "${AttestorClient.hostMessengerChannelName}")',
+    );
+
+    log.info('initialized attestor js client');
+  }
+
+  void _onRpcMessage(String? message) async {
+    final log = logger.child('handleHostRpcMessage');
+    log.finest({'tag': 'rpc.message', 'value': message});
+
+    try {
+      if (message == null) {
+        log.warning('Received a null message from rpc');
+        return;
+      }
+      return await handleIncomingMessage(message);
+    } catch (e, s) {
+      log.severe('Error handling error for rpc message $message', e, s);
+    }
+  }
+
+  late Future<void> _ensureReady = _initializeJavaScript();
+
+  @override
+  Future<void> dispose() async {
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+    _isInspectableStreamController.close();
+    await _js.dispose();
+    super.dispose();
+  }
+
+  int _retryCount = 0;
+  static const _maxRetries = 5;
+
+  @override
+  Future<void> ensureReady() async {
+    try {
+      return await _ensureReady;
+    } catch (e, s) {
+      logger.severe('Error initializing js runtime', e, s);
+      if (_retryCount < _maxRetries) {
+        logger.info('Retrying js runtime initialization');
+        _retryCount++;
+        _ensureReady = _initializeJavaScript();
+      }
+      throw const AttestorClientInitializationException('Error initializing js runtime');
+    }
+  }
+
+  Future<Object?> executeJavascript(String js, {String? debugId}) async {
+    final log = logger.child('AttestorJsRuntimeClient.executeJavascript');
+
+    log.info({'tag': 'rpc.js', 'value': js, if (debugId != null) 'debugId': debugId});
+
+    log.info('Ensuring js runtime is ready');
+    await ensureReady();
+    log.info('JS runtime is ready for js execution');
+
+    log.info('running js with controller');
+
+    return () async {
+      try {
+        final response = await _js.runJavaScriptReturningResult(js);
+        log.finest({'tag': 'rpc.js.response', 'value': response, if (debugId != null) 'debugId': debugId});
+
+        return response;
+      } catch (e, s) {
+        log.severe('Error evaluating javascript for debugId $debugId ${e.runtimeType}', e, s);
+        if (js.length > 99) {
+          log.finest('js: ${js.substring(0, 99)}...');
+        } else {
+          log.finest('js: $js');
+        }
+        rethrow;
+      }
+    }();
+  }
+
+  @override
+  Future<void> postMessage(RpcMessage rpcMessage) async {
+    final log = logger.child('AttestorJsRuntimeClient.postMessage');
+
+    try {
+      final message = json.encode(rpcMessage);
+
+      // using json.encode here to string escape the json message correctly
+      final js = "AttestorRPC.handleIncomingMessage(${json.encode(message)})";
+
+      await executeJavascript(js);
+    } catch (e, s) {
+      log.severe('Error sending request', e, s);
+    }
+  }
+}
+
+const _INITIAL_SCRIPT =
+    '''
+const setupConsoleLogs = () => {
+  const logLevels = ['log', 'debug', 'info', 'warn', 'error'];
+  console = {};
+  for (const level of logLevels) {
+    console[level] = (...log) => {
+      try {
+        sendMessage('${AttestorJsClient.hostMessengerChannelName}', JSON.stringify({
+          'type': 'console',
+          'data': logs,
+          'source': 'jsruntime-console',
+          'level': level,
+        }));
+      } catch (e) {
+        // console.error(`error in console log`);
+      }
+    }
+  }
+}
+
+setupConsoleLogs();
+''';

@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:reclaim_tee_operator_flutter/reclaim_tee_operator_flutter.dart';
 import 'package:retry/retry.dart';
 
 import 'src/attestor/attestor.dart';
+import 'src/attestor/client/native/client.dart';
 import 'src/build_env.dart';
 import 'src/constants.dart';
 import 'src/data/create_claim.dart';
@@ -11,17 +13,35 @@ import 'src/logging/logging.dart';
 import 'src/utils/reusable_resource_pool.dart';
 
 export 'src/attestor/attestor.dart';
-export 'src/attestor/operator/callback.dart';
 
 class Attestor {
-  Attestor();
+  Attestor() {
+    initializedAlgorithmsNotifier.addListener(() {
+      _log.info('initialized algorithms: ${initializedAlgorithmsNotifier.value}');
+    });
+  }
 
   static final instance = Attestor();
 
   static final _log = logging.child('Attestor');
 
-  AttestorClient _createAttestorWebView(String debugLabel) {
-    _log.fine('creating attestor webview client: $debugLabel');
+  bool _useTeeOperator = false; // Default to WebView, user can enable TEE
+
+  /// Get current TEE operator usage status
+  bool get useTeeOperator => _useTeeOperator;
+
+  /// Enable or disable TEE operator for claim creation
+  /// When enabled, claims will be created using native TEE execution
+  /// When disabled, claims will use the WebView-based approach
+  void setUseTeeOperator(bool enable) {
+    if (_useTeeOperator == enable) return;
+
+    _useTeeOperator = enable;
+    _log.info('TEE operator usage ${enable ? "enabled" : "disabled"}');
+  }
+
+  AttestorJsClient _createAttestorWebView(String debugLabel) {
+    _log.info('creating attestor webview client: $debugLabel');
 
     final effectiveUrl = _attestorUrl ?? Uri.parse(ReclaimUrls.DEFAULT_ATTESTOR_WEB_URL);
     _attestorUrl = effectiveUrl;
@@ -36,15 +56,13 @@ class Attestor {
       }
     }
 
-    attestor.zkOperator = _attestorZkOperator;
-
     _log.fine('attestor client created');
 
     return attestor;
   }
 
-  Future<void> _disposeAttestor(AttestorClient attestor) async {
-    _log.fine('disposing attestor webview client: $attestor');
+  Future<void> _disposeAttestor(AttestorJsClient attestor) async {
+    _log.info('disposing attestor webview client: $attestor');
 
     try {
       await attestor.dispose();
@@ -64,7 +82,7 @@ class Attestor {
     },
     disposeResource: _disposeAttestor,
     ageLimit: const Duration(minutes: 3),
-    getResourceAge: AttestorClient.getClientAge,
+    getResourceAge: AttestorJsClient.getClientAge,
     isResourceFaulty: (client) => client.isFaulty,
   );
 
@@ -78,24 +96,12 @@ class Attestor {
     },
     disposeResource: _disposeAttestor,
     ageLimit: const Duration(minutes: 3),
-    getResourceAge: AttestorClient.getClientAge,
+    getResourceAge: AttestorJsClient.getClientAge,
     isResourceFaulty: (client) => client.isFaulty,
   );
 
-  List<AttestorClient> get _resources {
+  List<AttestorJsClient> get _resources {
     return [..._clientPool.resources, ..._pathValuePool.resources];
-  }
-
-  Future<Object?> pingClient({bool isCompute = false}) {
-    return useClient(
-      (client) async {
-        return await client.ping().response;
-      },
-      timeout: const Duration(seconds: 5),
-      retryOnTimeout: false,
-      isCompute: isCompute,
-      canMarkNotResponding: false,
-    );
   }
 
   Future<AttestorProcess<AttestorClaimRequest, List<CreateClaimOutput>>> createClaim(
@@ -106,7 +112,7 @@ class Attestor {
 
     /// proof generation time can typically take longer on larger data or waiting for circuits to download
     Duration timeoutAfter = const Duration(minutes: 2),
-  }) {
+  }) async {
     return useClient(
       (attestor) async {
         VoidCallback? createInitProgressListener() {
@@ -181,30 +187,24 @@ class Attestor {
     }
   }
 
-  AttestorZkOperator? _attestorZkOperator;
-
   static bool isLazyInitialized = BuildEnv.IS_CLIENT_LAZY_INITIALIZE;
 
-  Future<void> setZkOperator(AttestorZkOperator? operator) async {
-    if (_attestorZkOperator == operator) return;
-    _attestorZkOperator = operator;
-    if (!isLazyInitialized) {
+  Future<void> ensureReady() async {
+    if (useTeeOperator) {
+      return AttestorTeeClient.instance.ensureReady();
+    } else {
       final r = await peek(isCompute: false);
-      r.zkOperator = operator;
+      return r.ensureReady();
     }
   }
 
-  Future<void> ensureReady() async {
-    // do nothing
-  }
-
-  Future<AttestorClient> peek({bool isCompute = false}) async {
+  Future<AttestorJsClient> peek({bool isCompute = false}) async {
     final pool = isCompute ? _pathValuePool : _clientPool;
     return pool.peekResource;
   }
 
   Future<T> useClient<T>(
-    Future<T> Function(AttestorClient client) fn, {
+    Future<T> Function(AttestorPlatform client) fn, {
     required Duration timeout,
     required bool retryOnTimeout,
     bool isCompute = false,
@@ -215,8 +215,30 @@ class Attestor {
     final log = logging.child('useClient.$tag');
     final pool = isCompute ? _pathValuePool : _clientPool;
     int attempt = 1;
+
+    FutureOr<T> onClient(AttestorPlatform client) async {
+      log.info('attempt: $attempt with $client');
+      try {
+        final response = await fn(client).timeout(timeout);
+        if (canMarkNotResponding) {
+          client.markResponding();
+        }
+        log.info('success for attempt: $attempt with $client, notRespondingCount:${client.notRespondingCount}');
+        return response;
+      } on TimeoutException catch (e, s) {
+        log.warning('timed out for isCompute: $isCompute, client:$client', e, s);
+        if (canMarkNotResponding) {
+          client.markNotResponding();
+        }
+        rethrow;
+      }
+    }
+
     return retry(
       () {
+        if (_useTeeOperator) {
+          return onClient(AttestorTeeClient.instance);
+        }
         log.fine('going for attempt: $attempt');
         return pool.compute((client) async {
           log.fine('attempt: $attempt with $client');
@@ -274,5 +296,14 @@ class Attestor {
 
   Future<void> close() {
     return Future.wait([_clientPool.close()]);
+  }
+
+  Future<bool> isPlatformSupported() async {
+    if (useTeeOperator) {
+      return AttestorTeeClient.instance.isPlatformSupported();
+    } else {
+      final r = await peek(isCompute: false);
+      return r.isPlatformSupported();
+    }
   }
 }

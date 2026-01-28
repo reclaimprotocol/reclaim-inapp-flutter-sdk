@@ -98,6 +98,7 @@ class VerificationFlowManager {
       applicationId: applicationId,
       providerId: providerId,
       sessionId: sessionInformation.sessionId,
+      useTEE: Attestor.instance.useTeeOperator,
     );
 
     return provider;

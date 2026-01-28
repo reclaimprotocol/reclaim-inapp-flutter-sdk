@@ -55,6 +55,7 @@ class SessionManager {
     required String applicationId,
     required String providerId,
     required String sessionId,
+    required bool useTEE,
   }) async {
     unawaited(
       ReclaimSession.sendLogs(
@@ -62,6 +63,7 @@ class SessionManager {
         providerId: providerId,
         sessionId: sessionId,
         logType: "FETCHED_PROVIDERS",
+        metadata: {'useTEE': useTEE},
       ),
     );
   }
@@ -88,28 +90,23 @@ class SessionManager {
     required String providerId,
     required String sessionId,
     bool isAIProofs = false,
+    bool isInAppSdk = false,
   }) async {
     final status = isAIProofs ? SessionStatus.AI_PROOF_SUBMITTED : SessionStatus.PROOF_SUBMITTED;
-    unawaitedSequence([
-      ReclaimSession.sendLogs(appId: applicationId, sessionId: sessionId, providerId: providerId, logType: status.name),
-      ReclaimSession.updateSession(sessionId, status),
-    ]);
+    await ReclaimSession.updateSession(sessionId, status, metadata: isInAppSdk ? {'isInAppSdk': isInAppSdk} : null);
   }
 
   Future<void> onProofSubmissionFailed({
     required String applicationId,
     required String providerId,
     required String sessionId,
+    bool isInAppSdk = false,
   }) async {
-    unawaitedSequence([
-      ReclaimSession.sendLogs(
-        appId: applicationId,
-        sessionId: sessionId,
-        providerId: providerId,
-        logType: 'PROOF_SUBMISSION_FAILED',
-      ),
-      ReclaimSession.updateSession(sessionId, SessionStatus.PROOF_SUBMISSION_FAILED),
-    ]);
+    await ReclaimSession.updateSession(
+      sessionId,
+      SessionStatus.PROOF_SUBMISSION_FAILED,
+      metadata: isInAppSdk ? {'isInAppSdk': isInAppSdk} : null,
+    );
   }
 
   Future<void> onManualVerificationRequestSubmitted({

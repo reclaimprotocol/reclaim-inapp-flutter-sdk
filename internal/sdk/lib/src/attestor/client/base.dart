@@ -13,17 +13,19 @@ import '../data/data.dart';
 import '../data/message.dart';
 import '../data/request.dart';
 import '../exception/exception.dart';
-import '../operator/operator.dart';
 import 'manager.dart';
+import 'platform.dart';
 
 export '../data/message.dart';
 export '../exception/exception.dart';
+export 'platform.dart';
 
 typedef AttestorResponseTransformer<RESPONSE> = FutureOr<RESPONSE> Function(dynamic value);
 typedef AttestorCreateClaimPerformanceReportCallback =
     void Function(Iterable<ZKComputePerformanceReport> performanceReports);
 
-abstract class AttestorClient {
+abstract class AttestorJsClient extends AttestorPlatform {
+  @override
   final String debugLabel;
   final DateTime createdAt;
 
@@ -34,9 +36,9 @@ abstract class AttestorClient {
     '${kDebugMode ? runtimeType.toString() : 'AttestorClient'}#$hashCode.$debugLabel',
   );
 
-  AttestorClient({required this.debugLabel}) : createdAt = DateTime.now();
+  AttestorJsClient({required this.debugLabel}) : createdAt = DateTime.now(), super(debugLabel: debugLabel);
 
-  static Duration getClientAge(AttestorClient client) {
+  static Duration getClientAge(AttestorJsClient client) {
     return client.createdAt.difference(DateTime.now()).abs();
   }
 
@@ -56,8 +58,6 @@ abstract class AttestorClient {
 
   Future<void> ensureReady();
 
-  AttestorZkOperator? zkOperator;
-
   final List<ZKComputePerformanceReport> _performanceReports = [];
 
   @protected
@@ -69,6 +69,7 @@ abstract class AttestorClient {
     _performanceReports.clear();
   }
 
+  @override
   AttestorProcess<AttestorClaimRequest, List<CreateClaimOutput>> createClaim({
     required Map<String, Object?> request,
     required AttestorClaimOptions options,
@@ -79,7 +80,8 @@ abstract class AttestorClient {
       request: AttestorClaimRequest.create(
         request: request,
         options: options,
-        operationType: zkOperator != null ? ZKOperationType.gnarkRpc : ZKOperationType.snarkJs,
+        // If you want to use snark, change this.
+        operationType: ZKOperationType.gnarkRpc,
       ),
       transformResponse: (value) {
         if (onPerformanceReports != null) {
@@ -240,6 +242,6 @@ abstract class AttestorClient {
 
   @override
   String toString() {
-    return 'AttestorClient(debugLabel: $debugLabel, createdAt: $createdAt, age: ${AttestorClient.getClientAge(this)})';
+    return 'AttestorClient(debugLabel: $debugLabel, createdAt: $createdAt, age: ${AttestorJsClient.getClientAge(this)})';
   }
 }

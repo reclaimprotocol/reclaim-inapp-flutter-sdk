@@ -140,6 +140,7 @@ class FeatureFlagService {
       'operatingSystem': Platform.operatingSystem,
       'inappSdkVersion': await getReclaimMainSdkVersionRaw() ?? '',
     };
+    logging.child('FeatureFlags').finest('fetching flags: $queryParams');
 
     try {
       final response = await _dio.get(

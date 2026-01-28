@@ -17,6 +17,7 @@ class AttestorProcess<REQUEST extends Object?, RESPONSE extends Object?> {
   final REQUEST request;
   final Future<RESPONSE> response;
   final Stream<Map<String, Object?>> updateStream;
+  final StreamSink<Map<String, Object?>>? updateSink;
 
   const AttestorProcess({
     required this.id,
@@ -24,6 +25,7 @@ class AttestorProcess<REQUEST extends Object?, RESPONSE extends Object?> {
     required this.request,
     required this.response,
     required this.updateStream,
+    this.updateSink,
   });
 
   RpcRequest<REQUEST> createRequest({required String channel}) {

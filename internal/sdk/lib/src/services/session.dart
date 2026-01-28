@@ -116,7 +116,14 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
             error,
             stackTrace,
           );
-          throw const ReclaimExpiredSessionException();
+          String? message;
+          try {
+            final msg = data is String ? json.decode(data)['message'] : null;
+            if (msg is String) {
+              message = msg;
+            }
+          } catch (_) {}
+          throw ReclaimExpiredSessionException(message);
         }
       } else {
         logger.event(
@@ -139,21 +146,21 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
 
       // Get device information
       DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-      String brand = '';
-      String model = '';
+      String deviceType = '';
       String deviceId = '';
+      String osVersion = '';
 
       if (defaultTargetPlatform == TargetPlatform.android) {
         AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-        brand = androidInfo.brand;
-        model = androidInfo.model;
+        deviceType = '${androidInfo.brand} ${androidInfo.model}';
         deviceId = androidInfo.id;
+        osVersion = 'Android ${androidInfo.version.release} (SDK ${androidInfo.version.sdkInt})';
       }
       if (defaultTargetPlatform == TargetPlatform.iOS) {
         IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-        brand = 'Apple';
-        model = iosInfo.utsname.machine;
+        deviceType = 'Apple ${iosInfo.modelName}';
         deviceId = iosInfo.identifierForVendor ?? '';
+        osVersion = '${iosInfo.systemName} ${iosInfo.systemVersion}';
       }
       if (deviceId.trim().isEmpty || deviceId.trim().replaceAll('-', '').replaceAll('0', '').isEmpty) {
         try {
@@ -171,7 +178,8 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
         'sessionId': sessionId,
         'status': status.name,
         'deviceId': deviceId,
-        'deviceType': '$brand $model',
+        'deviceType': deviceType,
+        'osVersion': osVersion,
         'publicIpAddress': publicIpAddress,
         if (metadata != null && metadata.isNotEmpty) 'metadata': metadata,
       });
@@ -221,22 +229,23 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
     try {
       // Get device information
       DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-      String brand = '';
-      String model = '';
+      String deviceType = '';
       String deviceId = '';
+      String osVersion = '';
 
       if (defaultTargetPlatform == TargetPlatform.android) {
         AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-        brand = androidInfo.brand;
-        model = androidInfo.model;
+        deviceType = '${androidInfo.brand} ${androidInfo.model}';
         deviceId = androidInfo.id;
+        osVersion = 'Android ${androidInfo.version.release} (SDK ${androidInfo.version.sdkInt})';
       }
       if (defaultTargetPlatform == TargetPlatform.iOS) {
         IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-        brand = 'Apple';
-        model = iosInfo.utsname.machine;
+        deviceType = 'Apple ${iosInfo.modelName}';
         deviceId = iosInfo.identifierForVendor ?? '';
+        osVersion = '${iosInfo.systemName} ${iosInfo.systemVersion}';
       }
+      logger.info('deviceType: $deviceType, deviceId: $deviceId, osVersion: $osVersion');
 
       // Get public IP address
       String publicIpAddress = await getPublicIp();
@@ -246,7 +255,8 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
         'sessionId': sessionId,
         'date': DateTime.now().toUtc().toIso8601String(),
         'deviceId': deviceId,
-        'deviceType': '$brand $model',
+        'deviceType': deviceType,
+        'osVersion': osVersion,
         'providerId': providerId,
         'applicationId': appId,
         'publicIpAddress': publicIpAddress,
