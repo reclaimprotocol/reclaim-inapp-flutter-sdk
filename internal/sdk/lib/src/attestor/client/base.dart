@@ -25,38 +25,16 @@ typedef AttestorCreateClaimPerformanceReportCallback =
     void Function(Iterable<ZKComputePerformanceReport> performanceReports);
 
 abstract class AttestorJsClient extends AttestorPlatform {
-  @override
-  final String debugLabel;
   final DateTime createdAt;
 
-  @protected
-  // Using runtime type as name in debug mode to make it easier to identify the client in logs
-  // In release mode, we use a string constant because real runtime type names may be obfuscated
-  late final Logger logger = logging.child(
-    '${kDebugMode ? runtimeType.toString() : 'AttestorClient'}#$hashCode.$debugLabel',
-  );
-
-  AttestorJsClient({required this.debugLabel}) : createdAt = DateTime.now(), super(debugLabel: debugLabel);
+  AttestorJsClient({required super.debugLabel}) : createdAt = DateTime.now();
 
   static Duration getClientAge(AttestorJsClient client) {
     return client.createdAt.difference(DateTime.now()).abs();
   }
 
-  int _notRespondingCount = 0;
-
-  int get notRespondingCount => _notRespondingCount;
-
-  void markNotResponding() {
-    _notRespondingCount++;
-  }
-
-  void markResponding() {
-    _notRespondingCount = 0;
-  }
-
-  bool get isFaulty => _notRespondingCount > 6;
-
-  Future<void> ensureReady();
+  @override
+  bool get isFaulty => notRespondingCount > 6;
 
   final List<ZKComputePerformanceReport> _performanceReports = [];
 
@@ -98,6 +76,7 @@ abstract class AttestorJsClient extends AttestorPlatform {
     return result;
   }
 
+  @override
   AttestorProcess<ExtractHtmlElementRequest, String> extractHtmlElement(String htmlString, String xPathExpression) {
     return sendRequest(
       type: 'extractHtmlElement',
@@ -106,6 +85,7 @@ abstract class AttestorJsClient extends AttestorPlatform {
     );
   }
 
+  @override
   AttestorProcess<ExtractJsonValueIndexRequest, String> extractJSONValueIndex(
     String jsonString,
     String jsonPathExpression,
@@ -122,6 +102,7 @@ abstract class AttestorJsClient extends AttestorPlatform {
     );
   }
 
+  @override
   AttestorProcess<SetAttestorDebugLevelRequest, Object?> setAttestorDebugLevel(String level) {
     return sendRequest(
       type: 'setLogLevel',
@@ -223,6 +204,7 @@ abstract class AttestorJsClient extends AttestorPlatform {
     }
   }
 
+  @override
   @mustCallSuper
   Future<void> dispose() async {
     logger.fine('disposing with following managers: ${_processManagers.values.map((e) => e.process.id).toList()}');

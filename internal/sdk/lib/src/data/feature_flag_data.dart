@@ -21,6 +21,9 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     this.potentialLoginTimeoutS,
     this.screenshotCaptureIntervalSeconds,
     this.teeUrls,
+    this.privacyPolicyUrl,
+    this.termsOfServiceUrl,
+    this.potentialFailureReasonsUrl,
   });
 
   final bool? cookiePersist;
@@ -41,6 +44,9 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
   final int? potentialLoginTimeoutS;
   final int? screenshotCaptureIntervalSeconds;
   final String? teeUrls;
+  final String? privacyPolicyUrl;
+  final String? termsOfServiceUrl;
+  final String? potentialFailureReasonsUrl;
 
   @override
   ReclaimFeatureFlagData copyWith({
@@ -61,6 +67,9 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
     int? potentialLoginTimeoutS,
     int? screenshotCaptureIntervalSeconds,
     String? teeUrls,
+    String? privacyPolicyUrl,
+    String? termsOfServiceUrl,
+    String? potentialFailureReasonsUrl,
   }) {
     return ReclaimFeatureFlagData(
       cookiePersist: cookiePersist ?? this.cookiePersist,
@@ -85,6 +94,9 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       potentialLoginTimeoutS: potentialLoginTimeoutS ?? this.potentialLoginTimeoutS,
       screenshotCaptureIntervalSeconds: screenshotCaptureIntervalSeconds ?? this.screenshotCaptureIntervalSeconds,
       teeUrls: teeUrls ?? this.teeUrls,
+      privacyPolicyUrl: privacyPolicyUrl ?? this.privacyPolicyUrl,
+      termsOfServiceUrl: termsOfServiceUrl ?? this.termsOfServiceUrl,
+      potentialFailureReasonsUrl: potentialFailureReasonsUrl ?? this.potentialFailureReasonsUrl,
     );
   }
 
@@ -107,6 +119,9 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       potentialLoginTimeoutS: json['potentialLoginTimeoutS'] as int?,
       screenshotCaptureIntervalSeconds: json['screenshotCaptureIntervalSeconds'] as int?,
       teeUrls: json['teeUrls'] as String?,
+      privacyPolicyUrl: json['privacyPolicyUrl'] as String?,
+      termsOfServiceUrl: json['termsOfServiceUrl'] as String?,
+      potentialFailureReasonsUrl: json['potentialFailureReasonsUrl'] as String?,
     );
   }
 
@@ -129,6 +144,9 @@ class ReclaimFeatureFlagData extends ReclaimOverride<ReclaimFeatureFlagData> {
       'potentialLoginTimeoutS': potentialLoginTimeoutS,
       'screenshotCaptureIntervalSeconds': screenshotCaptureIntervalSeconds,
       'teeUrls': teeUrls,
+      'privacyPolicyUrl': privacyPolicyUrl,
+      'termsOfServiceUrl': termsOfServiceUrl,
+      'potentialFailureReasonsUrl': potentialFailureReasonsUrl,
     };
   }
 

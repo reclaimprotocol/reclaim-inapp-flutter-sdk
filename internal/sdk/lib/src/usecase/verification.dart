@@ -15,7 +15,6 @@ import '../services/cookie_service.dart';
 import '../services/provider.dart';
 import '../services/user_script_service.dart';
 import '../web_scripts/hawkeye/interception_method.dart';
-import 'session_manager.dart';
 
 class VerificationFlowManager {
   final log = logging.child('VerificationFlowManager');
@@ -92,13 +91,6 @@ class VerificationFlowManager {
       providerId: providerId,
       sessionInformation: sessionInformation,
       version: version,
-    );
-
-    await const SessionManager().onRequestedProvidersFetched(
-      applicationId: applicationId,
-      providerId: providerId,
-      sessionId: sessionInformation.sessionId,
-      useTEE: Attestor.instance.useTeeOperator,
     );
 
     return provider;

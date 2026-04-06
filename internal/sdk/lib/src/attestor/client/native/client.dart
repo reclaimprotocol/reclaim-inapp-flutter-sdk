@@ -11,11 +11,11 @@ import '../../../utils/provider_performance_report.dart';
 import '../../data/request.dart';
 
 class TeeUrls {
-  final String attestorUrl;
-  final String teekUrl;
-  final String teetUrl;
+  final String attestorWsUrl;
+  final String teekWsUrl;
+  final String teetWsUrl;
 
-  const TeeUrls({required this.attestorUrl, required this.teekUrl, required this.teetUrl});
+  const TeeUrls({required this.attestorWsUrl, required this.teekWsUrl, required this.teetWsUrl});
 }
 
 class AttestorTeeClient extends AttestorPlatform {
@@ -99,10 +99,11 @@ class AttestorTeeClient extends AttestorPlatform {
     try {
       final encoder = const JsonEncoder.withIndent('  ');
       final claimRequestJson = encoder.convert(claimRequest);
-      log.info('🔐 TEE: Claim request data:\n$claimRequestJson');
+      log.info('🔐 TEE: Creating claim request');
+      log.finer('🔐 TEE: Claim request data:\n$claimRequestJson');
     } catch (e) {
       log.warning('🔐 TEE: Failed to serialize claim request: $e');
-      log.info('🔐 TEE: Claim request data: $claimRequest');
+      log.finer('🔐 TEE: Claim request data: $claimRequest');
     }
 
     // Use the new clean constructor - eliminates all error-prone conversion!
@@ -112,7 +113,8 @@ class AttestorTeeClient extends AttestorPlatform {
     try {
       final encoder = const JsonEncoder.withIndent('  ');
       final requestJson = requestData.toJson();
-      log.info('🔐 TEE: Request parameters:\n${encoder.convert(requestJson)}');
+      log.info('🔐 TEE: Request parameters prepared');
+      log.finer('🔐 TEE: Request parameters:\n${encoder.convert(requestJson)}');
     } catch (e) {
       log.warning('🔐 TEE: Failed to serialize request parameters: $e');
     }
@@ -121,9 +123,9 @@ class AttestorTeeClient extends AttestorPlatform {
 
     final teeUrls = await ZkOperatorManager().getTeeUrls();
 
-    final String attestorUrl = teeUrls.attestorUrl;
-    final String teekUrl = teeUrls.teekUrl;
-    final String teetUrl = teeUrls.teetUrl;
+    final String attestorUrl = teeUrls.attestorWsUrl;
+    final String teekUrl = teeUrls.teekWsUrl;
+    final String teetUrl = teeUrls.teetWsUrl;
 
     log.info(
       '🔐 TEE URLS: Using URLs from feature flags - attestorUrl: $attestorUrl, teekUrl: $teekUrl, teetUrl: $teetUrl',
@@ -234,7 +236,7 @@ class AttestorTeeClient extends AttestorPlatform {
     required AttestorClaimOptions options,
     AttestorCreateClaimPerformanceReportCallback? onPerformanceReports,
   }) {
-    final log = logger.child('createClaim');
+    final log = logger.child('createClaim').child(Object().hashCode.toString());
     log.info('🔐 TEE: Starting native claim creation process');
 
     final id = Object().hashCode.toString();
@@ -274,8 +276,9 @@ class AttestorTeeClient extends AttestorPlatform {
 
   @override
   AttestorProcess<ExtractHtmlElementRequest, String> extractHtmlElement(String htmlString, String xPathExpression) {
-    final log = logger.child('extractHtmlElement');
+    final log = logger.child('extractHtmlElement').child(Object().hashCode.toString());
     log.info('🔐 TEE: Extracting HTML element with XPath: $xPathExpression');
+    log.finest('Extracting from html content: $htmlString');
 
     final id = Object().hashCode.toString();
     final responseCompleter = Completer<String>();
@@ -318,8 +321,9 @@ class AttestorTeeClient extends AttestorPlatform {
     String jsonString,
     String jsonPathExpression,
   ) {
-    final log = logger.child('extractJSONValueIndex');
+    final log = logger.child('extractJSONValueIndex').child(Object().hashCode.toString());
     log.info('🔐 TEE: Extracting JSON value with path: $jsonPathExpression');
+    log.finest('Extracting from JSON content: $jsonString');
 
     final id = Object().hashCode.toString();
     final responseCompleter = Completer<String>();

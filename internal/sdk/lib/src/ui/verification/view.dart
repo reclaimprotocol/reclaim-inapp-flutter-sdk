@@ -55,6 +55,7 @@ class _VerificationViewState extends State<VerificationView> {
     _clientViewModel = ClaimCreationWebClientViewModel(initialWebAppBarValue);
     _controllerSubscription = controller.subscribe(_onVerificationStateChanged);
     _webViewModelSubscription = _clientViewModel.subscribe(_onClientValueChanged);
+    _claimCreationController.errorCallbackUrl = controller.options.errorCallbackUrl;
     _claimCreationController.subscribe(_onClaimCreationControllerChanges);
     unawaited(controller.response.whenComplete(_onCompleted));
   }

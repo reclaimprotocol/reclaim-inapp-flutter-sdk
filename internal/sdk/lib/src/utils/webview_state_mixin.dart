@@ -35,7 +35,7 @@ final defaultWebViewSettings = InAppWebViewSettings(
 class WKNavigationActionPolicyAllowWithoutTryingAppLink implements NavigationActionPolicy {
   @override
   int toNativeValue() {
-    return NavigationActionPolicy.ALLOW.toNativeValue() + 2;
+    return (NavigationActionPolicy.ALLOW.toNativeValue() ?? 1) + 2;
   }
 
   @override
@@ -44,9 +44,13 @@ class WKNavigationActionPolicyAllowWithoutTryingAppLink implements NavigationAct
   }
 
   @override
-  // ignore: override_on_non_overriding_member
   String name() {
     return 'ALLOW_WITHOUT_TRYING_APP_LINK';
+  }
+
+  @override
+  bool isSupported() {
+    return Platform.isIOS;
   }
 }
 
@@ -205,6 +209,31 @@ mixin WebViewCompanionMixin<T extends StatefulWidget> implements State<T> {
       return WKNavigationActionPolicyAllowWithoutTryingAppLink();
     }
     return NavigationActionPolicy.ALLOW;
+  }
+
+  Future<ServerTrustAuthResponse?> onReceivedServerTrustAuthRequest(
+    InAppWebViewController controller,
+    // ServerTrustChallenge challenge,
+    URLAuthenticationChallenge challenge,
+  ) async {
+    final log = _logger.child('onReceivedServerTrustAuthRequest');
+    log.finest(() => 'onReceivedServerTrustAuthRequest: challenge=${json.encode(challenge)}');
+
+    // Force the WebView to proceed despite the SSL error.
+    // NOTE: This is only recommended for debugging! Should not be used in production, but often many websites fked up server trust authentication (certificate validation)
+    // We'll allow to proceed with anything because we are not a browser, we just select data and use our http attestors to handle the secure verifications.
+    return ServerTrustAuthResponse(action: ServerTrustAuthResponseAction.PROCEED);
+  }
+
+  void onReceivedHttpError(
+    InAppWebViewController controller,
+    WebResourceRequest request,
+    WebResourceResponse errorResponse,
+  ) {
+    final log = _logger.child('onReceivedHttpError');
+    log.warning(
+      () => 'onReceivedHttpError: request=${json.encode(request)}, errorResponse=${json.encode(errorResponse)}',
+    );
   }
 
   String? _allowedAppLinkPattern;

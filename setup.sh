@@ -7,8 +7,8 @@ echo "Removing existing vendored library..";
 rm -rf internal;
 mkdir -p internal;
 
-# SDK_MODULE_VERSION=main
-SDK_MODULE_VERSION=0.29.0
+# SDK_MODULE_VERSION=0.34.0
+SDK_MODULE_VERSION=0.34.0
 
 cd internal;
 

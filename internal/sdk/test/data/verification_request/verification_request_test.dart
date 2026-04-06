@@ -49,6 +49,12 @@ void main() {
         ),
         isA<ClientSdkVerificationRequest>(),
       );
+      expect(
+        await ClientSdkVerificationRequest.fromUrl(
+          'https://portal.reclaimprotocol.org/kernel/?template=%7B%22sessionId%22%3A%22a3b1ed8d2b%22%2C%22providerId%22%3A%22example%22%2C%22applicationId%22%3A%220x896501a5e799038f7526eAb1950c2A6996601B30%22%2C%22signature%22%3A%220x49624268fd10c00e442b999b0c1a56b9054b214e62a9358e35a75f7df229c1022b46b397adf4527f622b59bff51b5cc9761728a711601797ef389d43131039641b%22%2C%22timestamp%22%3A%221774544142961%22%2C%22callbackUrl%22%3A%22https%3A%2F%2Fapi.reclaimprotocol.org%2Fapi%2Fsdk%2Fcallback%3FcallbackId%3Da3b1ed8d2b%22%2C%22context%22%3A%22%7B%5C%22contextAddress%5C%22%3A%5C%220x0%5C%22%2C%5C%22contextMessage%5C%22%3A%5C%22sample%20context%5C%22%2C%5C%22reclaimSessionId%5C%22%3A%5C%22a3b1ed8d2b%5C%22%7D%22%2C%22providerVersion%22%3A%22%22%2C%22resolvedProviderVersion%22%3A%223.0.0%22%2C%22parameters%22%3A%7B%7D%2C%22redirectUrl%22%3A%22https%3A%2F%2Fgoogle.com%2Fsearch%3Fq%3Dsuccess%22%2C%22redirectUrlOptions%22%3A%7B%22method%22%3A%22POST%22%2C%22body%22%3A%5B%7B%22name%22%3A%22string%22%2C%22value%22%3A%22string%22%7D%5D%7D%2C%22cancelCallbackUrl%22%3A%22https%3A%2F%2Fapi.reclaimprotocol.org%2Fapi%2Fsdk%2Ferror-callback%3FcallbackId%3Da3b1ed8d2b%22%2C%22cancelRedirectUrl%22%3A%22https%3A%2F%2Fgoogle.com%2Fsearch%3Fq%3Dfailure%22%2C%22cancelRedirectUrlOptions%22%3A%7B%22method%22%3A%22POST%22%2C%22body%22%3A%5B%7B%22name%22%3A%22string%22%2C%22value%22%3A%22string%22%7D%5D%7D%2C%22acceptAiProviders%22%3Afalse%2C%22sdkVersion%22%3A%22js-5.0.0-dev.3%22%2C%22jsonProofResponse%22%3Afalse%2C%22log%22%3Afalse%2C%22canAutoSubmit%22%3Atrue%7D',
+        ),
+        isA<ClientSdkVerificationRequest>(),
+      );
     });
 
     test('can be parsed from url with redirects', () async {

@@ -261,7 +261,7 @@ Map<String, dynamic> _getHttpParams(ExtractedData data, Map<String, dynamic> add
     'method': data.method,
     'body': data.requestBody,
     'headers': publicHeaders,
-    if (writeRedactionModeString != null) 'writeRedactionMode': writeRedactionModeString,
+    'writeRedactionMode': ?writeRedactionModeString,
     'responseMatches': data.responseMatches.map((e) => e.toJson()).toList(),
     'responseRedactions': data.responseRedactions.map((e) => e.toJson()).toList(),
     'paramValues': publicWitnessParams,

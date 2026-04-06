@@ -161,6 +161,8 @@ class _WebViewWindowState extends State<WebViewWindow> with WebViewCompanionMixi
           },
           onCreateWindow: onCreateWindowAction,
           shouldOverrideUrlLoading: shouldOverrideUrlLoading,
+          onReceivedServerTrustAuthRequest: onReceivedServerTrustAuthRequest,
+          onReceivedHttpError: onReceivedHttpError,
         ),
         bottomNavigationBar: Builder(
           builder: (context) {

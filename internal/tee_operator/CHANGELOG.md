@@ -1,3 +1,20 @@
+## 2.3.1
+
+* Fix xpath evaluation to be less strict with bad xml
+
+## 2.3.0
+
+* Add OPRF-MPC support
+* Update library with bug fixes
+
+## 2.2.0
+
+* Add native network support for IOS
+
+## 2.1.1
+
+* Fix: surface Go extraction error in `extractJSONValueIndexes` instead of throwing generic "missing ranges field" exception
+
 ## 2.2.0
 
 * Update native library with support for tk.reclaimprotocol.org and tt.reclaimprotocol.org

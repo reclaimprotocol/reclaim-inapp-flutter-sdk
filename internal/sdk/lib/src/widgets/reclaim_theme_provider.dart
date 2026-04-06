@@ -12,7 +12,7 @@ import '../utils/observable_notifier.dart';
 import 'color_or_image.dart';
 import 'reclaim_image_provider.dart';
 
-class ReclaimThemeProvider extends StatelessWidget {
+class ReclaimThemeProvider extends StatefulWidget {
   const ReclaimThemeProvider({
     super.key,
     required this.builder,
@@ -29,6 +29,10 @@ class ReclaimThemeProvider extends StatelessWidget {
   static const font = $ReclaimFont.inter;
 
   static String? latestAppName;
+
+  /// Resolved [AppInfo] cache for synchronous access, keyed by application ID.
+  /// Eliminates theme flash on subsequent [ReclaimThemeProvider] instances.
+  static final Map<String, AppInfo> _resolvedAppInfo = {};
 
   static ThemeData buildClientTheme(ReclaimAppThemeInfo clientThemeInfo, Brightness themeBrightness) {
     final ReclaimAppTheme? clientTheme =
@@ -158,6 +162,7 @@ class ReclaimThemeProvider extends StatelessWidget {
           potentialFailureReasonsUri: clientThemeInfo.potentialFailureReasonsLink?.isNotEmpty == true
               ? Uri.tryParse(clientThemeInfo.potentialFailureReasonsLink!)
               : null,
+          secureAndPrivateText: clientThemeInfo.secureAndPrivateText,
           sessionChipSurfaceColor: sessionChipSurfaceColor,
           sessionChipOnSurfaceColor: sessionChipOnSurfaceColor,
           parametersTheme: ParametersTheme(
@@ -217,62 +222,121 @@ class ReclaimThemeProvider extends StatelessWidget {
   }
 
   @override
+  State<ReclaimThemeProvider> createState() => _ReclaimThemeProviderState();
+}
+
+class _ReclaimThemeProviderState extends State<ReclaimThemeProvider> {
+  static const _loadTimeout = Duration(seconds: 5);
+
+  AppInfo? _appInfo;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppInfo();
+  }
+
+  @override
+  void didUpdateWidget(ReclaimThemeProvider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.applicationId != widget.applicationId) {
+      _loadAppInfo();
+    }
+  }
+
+  void _loadAppInfo() {
+    final applicationId = widget.applicationId;
+    if (applicationId == null) {
+      _appInfo = null;
+      _isLoading = false;
+      return;
+    }
+
+    // Use synchronous cache if available — no flash on subsequent loads
+    final cached = ReclaimThemeProvider._resolvedAppInfo[applicationId];
+    if (cached != null) {
+      _appInfo = cached;
+      _isLoading = false;
+      return;
+    }
+
+    _isLoading = true;
+    AppInfo.fromAppId(applicationId)
+        .timeout(_loadTimeout)
+        .then((appInfo) {
+          ReclaimThemeProvider._resolvedAppInfo[applicationId] = appInfo;
+          if (mounted) {
+            setState(() {
+              _appInfo = appInfo;
+              _isLoading = false;
+            });
+          }
+        })
+        .catchError((Object error) {
+          // On error or timeout, fall through to render the default theme
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+        });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final applicationId = this.applicationId;
-    final clientAppThemeFuture = applicationId != null ? AppInfo.fromAppId(applicationId) : null;
+    // Don't render until theme data is loaded to avoid flashing the default theme.
+    if (_isLoading) {
+      return const SizedBox.shrink();
+    }
 
-    return FutureBuilder<AppInfo?>(
-      future: clientAppThemeFuture,
-      builder: (context, snapshot) {
-        final appInfo = snapshot.data;
-        final appName = appInfo?.appName;
-        var clientThemeInfo = appInfo?.theme;
+    final appInfo = _appInfo;
+    final appName = appInfo?.appName;
+    var clientThemeInfo = appInfo?.theme;
 
-        if (clientThemeInfo != null && clientThemeInfo.appName?.trim().isNotEmpty != true) {
-          clientThemeInfo = clientThemeInfo.copyWith(appName: appName);
-        }
+    if (clientThemeInfo != null && clientThemeInfo.appName?.trim().isNotEmpty != true) {
+      clientThemeInfo = clientThemeInfo.copyWith(appName: appName);
+    }
 
-        final themeBrightness = Theme.maybeBrightnessOf(context) ?? Brightness.light;
+    final themeBrightness = Theme.maybeBrightnessOf(context) ?? Brightness.light;
 
-        final theme = buildTheme(clientThemeInfo, themeBrightness);
+    final theme = ReclaimThemeProvider.buildTheme(clientThemeInfo, themeBrightness);
 
-        final TextStyle fallbackTextStyle = TextStyle(
-          color: Colors.white,
-          fontFamily: font.description.name,
-          fontSize: 16.0,
-          fontWeight: FontWeight.normal,
-          decoration: TextDecoration.none,
-          debugLabel: 'fallback style',
-        );
+    final TextStyle fallbackTextStyle = TextStyle(
+      color: Colors.white,
+      fontFamily: ReclaimThemeProvider.font.description.name,
+      fontSize: 16.0,
+      fontWeight: FontWeight.normal,
+      decoration: TextDecoration.none,
+      debugLabel: 'fallback style',
+    );
 
-        final clientThemePreferredLocale = clientThemeInfo?.preferredLocale ?? '';
+    final clientThemePreferredLocale = clientThemeInfo?.preferredLocale ?? '';
 
-        final l10nProvider = ReclaimLocalizationProvider.find(context);
+    final l10nProvider = ReclaimLocalizationProvider.find(context);
 
-        final preferredLocale =
-            // locale from ancestor reclaim l10n provider
-            l10nProvider?.value ??
-            parseLocaleName(locale) ??
-            // locale from app localization
-            Localizations.maybeLocaleOf(context) ??
-            // locale from reclaim app api
-            parseLocaleName(clientThemePreferredLocale);
+    final preferredLocale =
+        // locale from ancestor reclaim l10n provider
+        l10nProvider?.value ??
+        parseLocaleName(widget.locale) ??
+        // locale from app localization
+        Localizations.maybeLocaleOf(context) ??
+        // locale from reclaim app api
+        parseLocaleName(clientThemePreferredLocale);
 
-        return Theme(
-          data: theme,
-          child: _ReclaimAppLocalizations(
-            locale: preferredLocale,
-            isApplicationLevel: isApplicationLevel,
-            supportedLocales: ReclaimLocalizationProvider.supportedLocales,
-            localizationsDelegates: ReclaimAppLocalizations.localizationsDelegates,
-            child: DefaultTextStyle(
-              // used as fallback for providing font family wherever text theme isn't used
-              style: fallbackTextStyle,
-              child: Builder(builder: builder),
-            ),
-          ),
-        );
-      },
+    return Theme(
+      data: theme,
+      child: _ReclaimAppLocalizations(
+        locale: preferredLocale,
+        isApplicationLevel: widget.isApplicationLevel,
+        supportedLocales: ReclaimLocalizationProvider.supportedLocales,
+        localizationsDelegates: ReclaimAppLocalizations.localizationsDelegates,
+        child: DefaultTextStyle(
+          // used as fallback for providing font family wherever text theme isn't used
+          style: fallbackTextStyle,
+          child: Builder(builder: widget.builder),
+        ),
+      ),
     );
   }
 }

@@ -1,3 +1,40 @@
+## 0.34.0
+
+* Update [internal] analytics
+
+## 0.33.0
+
+* Update [internal] dependencies
+* Update tests
+* Update webview provider
+* Fix an issue where some websites where not trusted to run in webview
+* Fix ANR issues on android & iOS
+
+## 0.32.0
+
+* Add oprf-mpc support
+* Avoid circuit initialization when using oprf-mpc
+* Update operator SDK library
+* Update login detection 
+* Update login indicator event names
+* Add privacy policy, terms of service and potential failure reasons from feature flags
+
+## 0.31.1
+
+* Sanitize diagnostic log buffer before upload — redact cookies, auth headers, tokens, JWTs, keys, secrets, proofs, request/response bodies, payloads, and emails (F-021)
+* Fix upload bug where log entries were computed before size trimming
+* Zero log buffer contents after successful upload (F-054)
+
+## 0.31.0
+
+* Add session token authentication for AI service endpoints (F-002)
+* Add sessionToken to ClientSdkVerificationRequest
+* Make sessionToken private in AiServiceClient
+
+## 0.30.0
+
+* Fix [INTERNAL] TEE service connection check log
+
 ## 0.29.0
 
 * Update default TEEK & TEET URLs

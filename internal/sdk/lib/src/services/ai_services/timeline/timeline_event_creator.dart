@@ -11,8 +11,14 @@ import 'timeline_event_types.dart';
 class TimelineEventCreator {
   final String sessionId;
   final http.Client client;
+  final String? sessionToken;
 
-  TimelineEventCreator({required this.sessionId, required this.client});
+  TimelineEventCreator({required this.sessionId, required this.client, this.sessionToken});
+
+  late final Map<String, String> _authHeaders = {
+    'Content-Type': 'application/json',
+    if (sessionToken != null) 'Authorization': 'Bearer $sessionToken',
+  };
 
   Future<TimelineEventResponse> sendEvents(String message, {Map<String, dynamic>? details}) {
     return _sendTimelineEvent(
@@ -95,14 +101,15 @@ class TimelineEventCreator {
         'source': 'app', // Always 'app' since this is app-side
         'message': message,
         'severity': severity.toJson(),
-        if (details != null) 'details': details,
+        'details': ?details,
       };
 
-      logger.info('Creating timeline event: $body');
+      logger.info('Creating timeline event: type=$eventType, severity=${severity.toJson()}');
+      logger.finer('Timeline event payload: $body');
 
       final response = await client.post(
         Uri.parse('${ReclaimUrls.AI_SERVICE_BASE_URL}/timeline/event'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders,
         body: json.encode(body),
       );
 

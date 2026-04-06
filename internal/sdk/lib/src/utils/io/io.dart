@@ -3,4 +3,6 @@ import 'io_web.dart' // Stubbed implementation by default.
     if (dart.library.io) 'io_platform.dart'
     as io;
 
-bool get isFlutterTest => io.isFlutterTest;
+bool testingSetIsFlutterTest = false;
+
+bool get isFlutterTest => testingSetIsFlutterTest || io.isFlutterTest;

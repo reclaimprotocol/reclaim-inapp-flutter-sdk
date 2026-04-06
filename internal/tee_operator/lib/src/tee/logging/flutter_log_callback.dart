@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
@@ -178,8 +179,8 @@ class FlutterZapLogger {
   bool get isAvailable => _available;
 
   // Log history
-  final List<ZapLogMessage> _logHistory = [];
-  List<ZapLogMessage> get logHistory => List.unmodifiable(_logHistory);
+  final Queue<ZapLogMessage> _logHistory = ListQueue<ZapLogMessage>();
+  List<ZapLogMessage> get logHistory => _logHistory.toList(growable: false);
   final int maxHistorySize = 1000;
 
   Future<bool> initialize() async {
@@ -252,6 +253,13 @@ class FlutterZapLogger {
   ) {
     try {
       final levelStr = level.toDartString();
+
+      // Skip debug logs entirely in release mode to prevent excessive string allocations and isolate jank.
+      // progressPercentage >= 0 indicates a progress update, which we shouldn't skip.
+      if (levelStr == 'debug' && !kDebugMode && progressPercentage < 0) {
+        return;
+      }
+
       final messageStr = message.toDartString();
       final fieldsStr = fields.toDartString();
       final progressDescStr = progressDescription.toDartString();
@@ -270,7 +278,7 @@ class FlutterZapLogger {
       // Add to history
       instance._logHistory.add(logMessage);
       if (instance._logHistory.length > instance.maxHistorySize) {
-        instance._logHistory.removeAt(0);
+        instance._logHistory.removeFirst();
       }
 
       // Emit to progress controller if it's a progress update

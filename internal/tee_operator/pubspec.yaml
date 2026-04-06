@@ -1,6 +1,6 @@
 name: reclaim_tee_operator_flutter
 description: Reclaim Protocol's TEE (Trusted Execution Environment) + MPC protocol operator for HTTP Request verification & attestation powered by a native library
-version: 2.1.0
+version: 2.3.1
 homepage: https://reclaimprotocol.org
 publish_to: none
 
@@ -23,6 +23,7 @@ dependencies:
   pool: ^1.5.2
   hooks: ^1.0.0
   code_assets: ^1.0.0
+  native_synchronization: ^0.3.1
 
 dev_dependencies:
   ffigen: ^20.1.1
@@ -51,3 +52,6 @@ flutter:
         ffiPlugin: true
       ios:
         ffiPlugin: true
+        pluginClass: NativeNetworkPlugin
+  assets:
+    - pubspec.yaml

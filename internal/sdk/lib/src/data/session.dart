@@ -17,12 +17,14 @@ final class ReclaimSessionInformation {
   final String sessionId;
   final String signature;
   final ProviderVersionExact version;
+  final String? sessionToken;
 
   const ReclaimSessionInformation({
     required this.sessionId,
     required this.signature,
     required this.timestamp,
     required this.version,
+    this.sessionToken,
   });
 
   bool get isValid {
@@ -59,6 +61,7 @@ final class ReclaimSessionInformation {
         sessionId: session.sessionId,
         signature: signature,
         version: ProviderVersionExact(session.resolvedProviderVersion ?? '', versionExpression: providerVersion),
+        sessionToken: session.sessionToken,
       );
     } catch (e, s) {
       logging.severe('Error generating new session', e, s);

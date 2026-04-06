@@ -160,6 +160,27 @@ class FeatureFlag<T> {
     selector: (data) => data.teeUrls,
   );
 
+  static final privacyPolicyUrl = FeatureFlag<String>(
+    key: 'privacyPolicyUrl',
+    canFetchFromRemote: true,
+    valueIfNull: ReclaimUrls.PRIVACY_POLICY_URL,
+    selector: (data) => data.privacyPolicyUrl,
+  );
+
+  static final termsOfServiceUrl = FeatureFlag<String>(
+    key: 'termsOfServiceUrl',
+    canFetchFromRemote: true,
+    valueIfNull: ReclaimUrls.TERMS_OF_SERVICE_URL,
+    selector: (data) => data.termsOfServiceUrl,
+  );
+
+  static final potentialFailureReasonsUrl = FeatureFlag<String>(
+    key: 'potentialFailureReasonsUrl',
+    canFetchFromRemote: true,
+    valueIfNull: ReclaimUrls.POTENTIAL_FAILURE_REASONS_URL,
+    selector: (data) => data.potentialFailureReasonsUrl,
+  );
+
   T? _select(ReclaimFeatureFlagData data) => _selector?.call(data);
 
   static bool isFlagSessionIndependent(String key) {
@@ -182,6 +203,12 @@ T? _valueOrNull<T>(T? value) {
 }
 
 class FeatureFlagRepository {
+  FeatureFlagRepository._();
+
+  static final _instance = FeatureFlagRepository._();
+
+  factory FeatureFlagRepository() => _instance;
+
   final log = logging.child('FeatureFlagRepository');
 
   @protected

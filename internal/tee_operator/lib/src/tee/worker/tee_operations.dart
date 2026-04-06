@@ -85,6 +85,7 @@ class TEEExecuteRunnable extends Runnable<TEEOperationInput, TEEOperationResult>
   @override
   Future<TEEOperationResult> call(
     TEEOperationInput input, {
+
     required String debugLabel,
     required ReceivePort receivePort,
     required SendPort sendPort,

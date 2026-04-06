@@ -264,6 +264,7 @@ class ReclaimAppThemeInfo {
   final String? termsAndConditionLink;
   final String? privacyPolicyLink;
   final String? potentialFailureReasonsLink;
+  final String? secureAndPrivateText;
   final String? preferredLocale;
 
   const ReclaimAppThemeInfo({
@@ -276,6 +277,7 @@ class ReclaimAppThemeInfo {
     this.termsAndConditionLink,
     this.privacyPolicyLink,
     this.potentialFailureReasonsLink,
+    this.secureAndPrivateText,
     this.preferredLocale,
   });
 
@@ -294,6 +296,7 @@ class ReclaimAppThemeInfo {
       termsAndConditionLink: termsAndConditionLink,
       privacyPolicyLink: privacyPolicyLink,
       potentialFailureReasonsLink: potentialFailureReasonsLink,
+      secureAndPrivateText: secureAndPrivateText,
     );
   }
 }

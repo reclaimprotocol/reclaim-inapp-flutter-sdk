@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../data/identity.dart';
+import '../../utils/sanitize.dart';
 import '../logging.dart';
 
 enum LogEntryLogLevel {
@@ -79,26 +80,31 @@ class LogEntry {
     bool truncateLongerInformation = false,
     required SessionIdentity fallbackSessionIdentity,
   }) {
-    final logLineBuffer = StringBuffer(
-      truncateLongerInformation ? shortenStringIfContainsLargeHtml(record.message) : record.message,
-    );
+    final int safeLength = truncateLongerInformation ? 500 : 2000;
+
+    final message = truncateLogString(record.message, maxLength: safeLength);
+    final logLineBuffer = StringBuffer(message);
 
     final error = record.error;
 
     if (error != null) {
       logLineBuffer.write('\n');
-      logLineBuffer.writeln(truncateLongerInformation ? shortenStringIfContainsLargeHtml(error.toString()) : error);
+      final errorStr = error.toString();
+      logLineBuffer.writeln(truncateLogString(errorStr, maxLength: safeLength));
       if (record.stackTrace != null) {
         logLineBuffer.write('\n');
-        logLineBuffer.writeln(formatStackTrace(stackTrace: record.stackTrace));
+        // Cap stack traces dynamically to prevent unbounded logs
+        logLineBuffer.writeln(formatStackTrace(stackTrace: record.stackTrace, maxFrames: 20));
       }
     }
 
     final level = record.level;
 
+    final messageToSanitize = logLineBuffer.toString();
+
     return LogEntry(
       sessionIdentity: fallbackSessionIdentity.merge(identity),
-      logLine: logLineBuffer.toString(),
+      logLine: record.level > Level.FINE ? sanitizeLogMessage(messageToSanitize) : messageToSanitize,
       sequence: record.sequenceNumber,
       type: record.loggerName,
       time: record.time,
@@ -151,12 +157,11 @@ class LogEntry {
     return lines.join('\n');
   }
 
-  static String shortenStringIfContainsLargeHtml(String message) {
-    if (message.length > 500 && message.contains('</div')) {
-      // possibly html that's too large
-      // TODO: Only truncate the html content within the string.
-      return '${message.trim().substring(0, 500).trim()}...<other ${message.length - 500} characters>';
+  static String truncateLogString(String message, {int maxLength = 2000}) {
+    message = message.trim();
+    if (message.length > maxLength) {
+      return '${message.substring(0, maxLength)}...<truncated ${message.length - maxLength} chars>';
     }
-    return message.trim();
+    return message;
   }
 }

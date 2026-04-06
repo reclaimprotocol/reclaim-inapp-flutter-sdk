@@ -688,6 +688,75 @@ external int set_log_callback(ffi.Pointer<ffi.Void> callback);
 @ffi.Native<ffi.Void Function()>()
 external void clear_log_callback();
 
+@ffi.Native<ffi.Void Function(ffi.Int64, ffi.Pointer<ffi.Void>, ffi.Int, ffi.Pointer<ffi.Char>)>()
+external void submit_connect_result(
+  int req_id,
+  ffi.Pointer<ffi.Void> handle,
+  int err_code,
+  ffi.Pointer<ffi.Char> err_msg,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Int64, ffi.Pointer<ffi.UnsignedChar>, ffi.Int, ffi.Int)>()
+external void submit_read_result(int req_id, ffi.Pointer<ffi.UnsignedChar> data, int length, int err_code);
+
+@ffi.Native<ffi.Void Function(ffi.Int64, ffi.Int, ffi.Int)>()
+external void submit_write_result(int req_id, int bytes_written, int err_code);
+
+@ffi.Native<
+  ffi.Int Function(
+    ffi.Pointer<
+      ffi.NativeFunction<
+        ffi.Void Function(ffi.Int64 req_id, ffi.Int conn_type, ffi.Pointer<ffi.Char> url, ffi.Int timeout_ms)
+      >
+    >,
+    ffi.Pointer<
+      ffi.NativeFunction<
+        ffi.Void Function(ffi.Int64 req_id, ffi.Pointer<ffi.Void> handle, ffi.Int max_bytes, ffi.Int timeout_ms)
+      >
+    >,
+    ffi.Pointer<
+      ffi.NativeFunction<
+        ffi.Void Function(
+          ffi.Int64 req_id,
+          ffi.Pointer<ffi.Void> handle,
+          ffi.Pointer<ffi.UnsignedChar> data,
+          ffi.Int length,
+        )
+      >
+    >,
+    ffi.Pointer<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void> handle)>>,
+  )
+>()
+external int enable_native_networking(
+  ffi.Pointer<
+    ffi.NativeFunction<
+      ffi.Void Function(ffi.Int64 req_id, ffi.Int conn_type, ffi.Pointer<ffi.Char> url, ffi.Int timeout_ms)
+    >
+  >
+  connectCb,
+  ffi.Pointer<
+    ffi.NativeFunction<
+      ffi.Void Function(ffi.Int64 req_id, ffi.Pointer<ffi.Void> handle, ffi.Int max_bytes, ffi.Int timeout_ms)
+    >
+  >
+  readCb,
+  ffi.Pointer<
+    ffi.NativeFunction<
+      ffi.Void Function(
+        ffi.Int64 req_id,
+        ffi.Pointer<ffi.Void> handle,
+        ffi.Pointer<ffi.UnsignedChar> data,
+        ffi.Int length,
+      )
+    >
+  >
+  writeCb,
+  ffi.Pointer<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void> handle)>> closeCb,
+);
+
+@ffi.Native<ffi.Void Function()>()
+external void disable_native_networking();
+
 final class _GoString_ extends ffi.Struct {
   external ffi.Pointer<ffi.Char> p;
 

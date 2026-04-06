@@ -73,6 +73,31 @@ final class ReclaimBindings {
   bool isAlgorithmInitialized(int algorithmID) {
     return libreclaim.IsAlgorithmInitialized(algorithmID);
   }
+
+  int enableNativeNetworking(
+    Pointer<NativeFunction<Void Function(Int64, Int, Pointer<Char>, Int)>> connectCb,
+    Pointer<NativeFunction<Void Function(Int64, Pointer<Void>, Int, Int)>> readCb,
+    Pointer<NativeFunction<Void Function(Int64, Pointer<Void>, Pointer<UnsignedChar>, Int)>> writeCb,
+    Pointer<NativeFunction<Void Function(Pointer<Void>)>> closeCb,
+  ) {
+    return libreclaim.enable_native_networking(connectCb, readCb, writeCb, closeCb);
+  }
+
+  void submitConnectResult(int reqId, Pointer<Void> handle, int errorCode, Pointer<Char> errorMessage) {
+    libreclaim.submit_connect_result(reqId, handle, errorCode, errorMessage);
+  }
+
+  void submitReadResult(int reqId, Pointer<UnsignedChar> data, int length, int errorCode) {
+    libreclaim.submit_read_result(reqId, data, length, errorCode);
+  }
+
+  void submitWriteResult(int reqId, int bytesWritten, int errorCode) {
+    libreclaim.submit_write_result(reqId, bytesWritten, errorCode);
+  }
+
+  void disableNativeNetworking() {
+    return libreclaim.disable_native_networking();
+  }
 }
 
 extension GoSliceExtension on libreclaim.GoSlice {

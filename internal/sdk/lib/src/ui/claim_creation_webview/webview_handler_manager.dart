@@ -228,7 +228,6 @@ class WebViewJSHandlerManager {
       handlerName: 'requiresUserInteraction',
       callback: (args) {
         final log = logging.child('requiresUserInteraction');
-        log.info({"args": args});
         onActivity();
         final data = json.decode(args[0]);
         if (data is! Map) {

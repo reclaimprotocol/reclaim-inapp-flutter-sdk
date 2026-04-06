@@ -268,7 +268,7 @@ class Attestor {
     );
   }
 
-  static const _computeTimeout = Duration(seconds: 20);
+  static const _computeTimeout = Duration(seconds: 60);
 
   Future<String> extractJSONValueIndex(String json, String jsonPath) {
     return useClient(

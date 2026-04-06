@@ -12,6 +12,7 @@ import 'package:path/path.dart' as path;
 import '../../l10n/provider.dart';
 import '../../logging/logging.dart';
 import '../../services/source/source.dart';
+import '../io/io.dart';
 import 'status_codes.dart';
 
 Directory _getCacheDir([String? cacheDirName]) {
@@ -140,6 +141,10 @@ class ReclaimHttpClient extends http.BaseClient {
           return false;
         }
         debugPrint('Http failed. Checking if we can retry.., $e');
+        if (isFlutterTest) {
+          debugPrint('Ignoring retry because we are in a test');
+          return false;
+        }
         return e is SocketException ||
             e is TimeoutException ||
             e.toString().contains('net::ERR_TIMED_OUT') ||

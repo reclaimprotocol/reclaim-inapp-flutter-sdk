@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import '../constants.dart';
 import '../logging/logging.dart';
 import '../overrides/overrides.dart';
-import '../utils/dio.dart';
+import '../services/base_http.dart';
+import '../utils/http/http.dart';
 import 'reclaim_app_theme.dart';
 
 class AppInfo extends ReclaimOverride<AppInfo> {
@@ -37,23 +39,28 @@ class AppInfo extends ReclaimOverride<AppInfo> {
       }
       final completer = Completer<AppInfo>();
       _cachedAppInfo[appId] = completer;
-      final dio = buildDio();
-      final response = await dio.get<Map<String, dynamic>>(
-        '${ReclaimUrls.SDK_API_BASE_URL}/api/applications/info/$appId',
-      );
-      final Map<String, dynamic> data = response.data!;
+      final client = reclaimHttpBaseClient;
+      final response = await client.get(Uri.parse('${ReclaimUrls.SDK_API_BASE_URL}/api/applications/info/$appId'));
+      if (!response.isSuccess) {
+        throw Exception('Failed to fetch app info: ${response.statusCode} - ${response.body}');
+      }
+      final Map<String, dynamic> data = json.decode(response.body);
+      if (data['application'] == null) {
+        throw Exception('Application data is null');
+      }
       final appInfo = AppInfo.fromJson(data['application']);
       completer.complete(appInfo);
       return appInfo;
     } catch (error, stackTrace) {
       logger.severe('Error fetching app name', error, stackTrace);
+      final fallbackAppInfo = const AppInfo(appName: '', appImage: '', isRecurring: false);
       if (_cachedAppInfo.containsKey(appId)) {
         final completer = _cachedAppInfo.remove(appId);
         if (completer != null && !completer.isCompleted) {
-          completer.completeError(error, stackTrace);
+          completer.complete(fallbackAppInfo);
         }
       }
-      return const AppInfo(appName: '', appImage: '', isRecurring: false);
+      return fallbackAppInfo;
     }
   }
 
