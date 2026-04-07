@@ -18,6 +18,7 @@ class ProveRunnable extends Runnable<Uint8List, ProofResult> {
   @override
   Future<ProofResult> call(
     Uint8List input, {
+
     required String debugLabel,
     required ReceivePort receivePort,
     required SendPort sendPort,

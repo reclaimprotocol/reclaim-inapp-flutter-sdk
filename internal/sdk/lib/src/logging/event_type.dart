@@ -122,4 +122,6 @@ enum LogEventType {
 
   /// The proof submission has failed.
   PROOF_SUBMISSION_FAILED,
+
+  PASS,
 }

@@ -92,6 +92,102 @@ static void store_log_callback(LogCallback callback) {
 
 #line 1 "cgo-generated-wrapper"
 
+#line 3 "native_network.go"
+
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+// Native connection handle - opaque pointer managed by iOS/Flutter
+typedef void* native_conn_handle_t;
+
+// Connection types
+typedef enum {
+    CONN_TYPE_WEBSOCKET = 1,
+    CONN_TYPE_TCP = 2
+} connection_type_t;
+
+// Error codes for native network operations
+typedef enum {
+    NATIVE_NET_SUCCESS = 0,
+    NATIVE_NET_ERROR_UNKNOWN = -1,
+    NATIVE_NET_ERROR_TIMEOUT = -2,
+    NATIVE_NET_ERROR_EOF = -3,
+    NATIVE_NET_ERROR_CLOSED = -4,
+    NATIVE_NET_ERROR_CONNECT_FAILED = -5
+} native_net_error_t;
+
+// Result of a connection attempt
+typedef struct {
+    native_conn_handle_t handle;
+    int error_code;
+    const char* error_message;
+} connection_result_t;
+
+// Result of a read operation
+typedef struct {
+    const unsigned char* data;
+    int length;
+    int error_code;
+} read_result_t;
+
+// Callback function types (Async)
+// Note: Native callbacks must synchronously copy all inputs before returning.
+typedef void (*native_connect_cb_t)(int64_t req_id, int conn_type, const char* url, int timeout_ms);
+typedef void (*native_read_cb_t)(int64_t req_id, native_conn_handle_t handle, int max_bytes, int timeout_ms);
+typedef void (*native_write_cb_t)(int64_t req_id, native_conn_handle_t handle, const unsigned char* data, int length);
+typedef void (*native_close_cb_t)(native_conn_handle_t handle);
+
+// Global callback storage
+static native_connect_cb_t g_native_connect_cb = NULL;
+static native_read_cb_t g_native_read_cb = NULL;
+static native_write_cb_t g_native_write_cb = NULL;
+static native_close_cb_t g_native_close_cb = NULL;
+
+// Store callbacks
+static inline void store_native_connect_cb(native_connect_cb_t cb) {
+    g_native_connect_cb = cb;
+}
+static inline void store_native_read_cb(native_read_cb_t cb) {
+    g_native_read_cb = cb;
+}
+static inline void store_native_write_cb(native_write_cb_t cb) {
+    g_native_write_cb = cb;
+}
+static inline void store_native_close_cb(native_close_cb_t cb) {
+    g_native_close_cb = cb;
+}
+
+// Call the connect callback
+static inline void call_native_connect_async(int64_t req_id, int conn_type, const char* url, int timeout_ms) {
+    if (g_native_connect_cb != NULL) {
+        g_native_connect_cb(req_id, conn_type, url, timeout_ms);
+    }
+}
+
+// Call the read callback
+static inline void call_native_read_async(int64_t req_id, native_conn_handle_t handle, int max_bytes, int timeout_ms) {
+    if (g_native_read_cb != NULL) {
+        g_native_read_cb(req_id, handle, max_bytes, timeout_ms);
+    }
+}
+
+// Call the write callback
+static inline void call_native_write_async(int64_t req_id, native_conn_handle_t handle, const unsigned char* data, int length) {
+    if (g_native_write_cb != NULL) {
+        g_native_write_cb(req_id, handle, data, length);
+    }
+}
+
+// Call the close callback
+static inline void call_native_close(native_conn_handle_t handle) {
+    if (g_native_close_cb != NULL) {
+        g_native_close_cb(handle);
+    }
+}
+
+#line 1 "cgo-generated-wrapper"
+
 
 /* End of preamble from import "C" comments.  */
 
@@ -206,6 +302,11 @@ struct ExtractJSONValueIndexes_return {
 extern struct ExtractJSONValueIndexes_return ExtractJSONValueIndexes(GoSlice params);
 extern int set_log_callback(void* callback);
 extern void clear_log_callback(void);
+extern void submit_connect_result(int64_t req_id, native_conn_handle_t handle, int err_code, char* err_msg);
+extern void submit_read_result(int64_t req_id, unsigned char* data, int length, int err_code);
+extern void submit_write_result(int64_t req_id, int bytes_written, int err_code);
+extern int enable_native_networking(native_connect_cb_t connectCb, native_read_cb_t readCb, native_write_cb_t writeCb, native_close_cb_t closeCb);
+extern void disable_native_networking(void);
 
 #ifdef __cplusplus
 }

@@ -182,7 +182,6 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       _log.info('Session started: ${sessionInformation.sessionId}');
 
       await SDKVersionInformation().verifyUpdateRequirement();
-      await ZkOperatorManager().setupZkOperator(identity, explicitUseTeeOperator: options.useTeeOperator);
 
       final verificationFlowManager = VerificationFlowManager();
 
@@ -199,6 +198,20 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       // Dumping provider information as JSON for debugging
       // Useful for consumers that override provider
       _log.info(json.encode(provider));
+
+      final providerUsesOprfMpc = ZkOperatorManager().providerUsesOprfMpc(provider);
+      await ZkOperatorManager().setupZkOperator(
+        identity,
+        // oprf-mpc is only supported in TEE Mode
+        explicitUseTeeOperator: providerUsesOprfMpc ? true : options.useTeeOperator,
+      );
+
+      await const SessionManager().onRequestedProvidersFetched(
+        applicationId: request.applicationId,
+        providerId: request.providerId,
+        sessionId: sessionInformation.sessionId,
+        useTEE: Attestor.instance.useTeeOperator,
+      );
 
       final clearingWebStorage = verificationFlowManager.clearWebStorageIfRequired(
         identity,
@@ -392,6 +405,7 @@ class VerificationController extends ObservableNotifier<VerificationState> {
       sessionId: _sessionInformation?.sessionId ?? '',
       providerId: request.providerId,
       exception: exception,
+      errorCallbackUrl: options.errorCallbackUrl,
     );
   }
 

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -13,6 +12,7 @@ import '../data/identity.dart';
 import '../overrides/overrides.dart';
 import '../services/logging.dart';
 import '../services/preferences/preference.dart';
+import '../utils/sanitize.dart';
 import 'data/log.dart';
 import 'event_type.dart';
 
@@ -160,6 +160,11 @@ void _onLoggingLogRecord(LogRecord record) async {
       }
     }
     _buffer.add((record: record, identity: SessionIdentity.latest));
+
+    // Trim buffer to prevent unbounded memory growth if uploads fail or back up
+    if (_buffer.length > 2000) {
+      _buffer.removeRange(0, _buffer.length - 2000);
+    }
   } catch (e, s) {
     debugPrint(e.toString());
     debugPrintStack(stackTrace: s);
@@ -208,17 +213,69 @@ Timer? diagnosticLogUploadTimer;
 // global private variable to keep the http connection alive
 final _loggingService = DiagnosticLogging();
 
-List<LogEntry> _getLogEntryFromBuffer(List<_BufferLogEntry> logs, SessionIdentity identity) {
-  final entries = logs.map((e) {
-    return LogEntry.fromRecord(e.record, e.identity, fallbackSessionIdentity: identity);
-  }).toList();
-  return entries;
-}
+List<LogEntry> _processLogsInBackground(Map<String, dynamic> params) {
+  final List<dynamic> rawLogs = params['logs'];
+  final Map<String, dynamic> fallbackJson = params['fallbackIdentity'];
+  final fallbackIdentity = SessionIdentity(
+    appId: fallbackJson['appId'] as String? ?? '',
+    providerId: fallbackJson['providerId'] as String? ?? '',
+    sessionId: fallbackJson['sessionId'] as String? ?? '',
+  );
 
-const _mb4 = 40000000;
-int _getSizeInBytes(List<_BufferLogEntry> logs, SessionIdentity identity) {
-  final entries = _getLogEntryFromBuffer(logs, identity);
-  return utf8.encode(json.encode(entries)).lengthInBytes;
+  final List<LogEntry> entries = [];
+  for (final raw in rawLogs) {
+    try {
+      final rawIdentity = raw['identity'] as Map<String, dynamic>?;
+      SessionIdentity? identity;
+      if (rawIdentity != null) {
+        identity = SessionIdentity(
+          appId: rawIdentity['appId'] as String? ?? '',
+          providerId: rawIdentity['providerId'] as String? ?? '',
+          sessionId: rawIdentity['sessionId'] as String? ?? '',
+        );
+      }
+
+      final int safeLength = 2000;
+      final message = LogEntry.truncateLogString(raw['message'] as String, maxLength: safeLength);
+      final logLineBuffer = StringBuffer(message);
+
+      final errorStr = raw['errorStr'] as String?;
+      if (errorStr != null) {
+        logLineBuffer.write('\n');
+        logLineBuffer.writeln(LogEntry.truncateLogString(errorStr, maxLength: safeLength));
+        final stackTraceStr = raw['stackTraceStr'] as String?;
+        if (stackTraceStr != null) {
+          logLineBuffer.write('\n');
+          logLineBuffer.writeln(LogEntry.truncateLogString(stackTraceStr, maxLength: safeLength));
+        }
+      }
+
+      final int levelValue = raw['levelValue'] as int;
+      final messageToSanitize = logLineBuffer.toString();
+      final logLine = levelValue > Level.FINE.value ? sanitizeLogMessage(messageToSanitize) : messageToSanitize;
+
+      LogEventType? eventType;
+      final eventTypeStr = raw['eventType'] as String?;
+      if (eventTypeStr != null) {
+        eventType = LogEventType.values.firstWhere((e) => e.name == eventTypeStr, orElse: () => LogEventType.PASS);
+      }
+
+      entries.add(
+        LogEntry(
+          sessionIdentity: fallbackIdentity.merge(identity),
+          logLine: logLine,
+          sequence: raw['sequenceNumber'] as int,
+          type: raw['loggerName'] as String,
+          eventType: eventType,
+          time: DateTime.fromMillisecondsSinceEpoch(raw['timeMs'] as int),
+          logLevel: LogEntryLogLevel.fromLoggingLevel(Level('temp', levelValue)),
+        ),
+      );
+    } catch (e) {
+      // Ignore corrupted map structs natively skipping
+    }
+  }
+  return entries;
 }
 
 Future<void> uploadDiagnosticLogs({SessionIdentity? sessionIdentityFallack}) async {
@@ -244,22 +301,46 @@ Future<void> uploadDiagnosticLogs({SessionIdentity? sessionIdentityFallack}) asy
   final logs = _buffer;
   _buffer = [];
 
-  final entries = logs.map((e) {
-    return LogEntry.fromRecord(e.record, e.identity, fallbackSessionIdentity: identity);
-  }).toList();
-
+  // Limit oversized payloads — defer excess entries to next upload cycle
+  // Uses a safe chunk limit to avoid exponential UTF-8 JSON encoding overhead
   try {
-    while (_getSizeInBytes(logs, identity) >= _mb4) {
-      if (logs.length == 1 || logs.isEmpty) return;
+    while (logs.length > 500) {
       final e = logs.removeLast();
-      // adding will eventually move the biggest log at the end
       _buffer.add(e);
     }
   } catch (e, s) {
-    logging.severe('Failed to get size of logs', e, s);
+    logging.severe('Failed to constrain payload bounds', e, s);
   }
 
-  _loggingService.sendLogs(entries);
+  // Dump unstructured dictionaries for Thread passage isolating the Memory Heap
+  final rawLogs = logs.map((e) {
+    return {
+      'levelValue': e.record.level.value,
+      'message': e.record.message,
+      'loggerName': e.record.loggerName,
+      'timeMs': e.record.time.millisecondsSinceEpoch,
+      'sequenceNumber': e.record.sequenceNumber,
+      'errorStr': e.record.error?.toString(),
+      'stackTraceStr': e.record.stackTrace != null
+          ? LogEntry.formatStackTrace(stackTrace: e.record.stackTrace, maxFrames: 20)
+          : null,
+      'eventType': e.record.level is LevelWithEvent ? (e.record.level as LevelWithEvent).eventType.name : null,
+      'identity': e.identity?.toJson(),
+    };
+  }).toList();
+
+  final payload = {'logs': rawLogs, 'fallbackIdentity': identity.toJson()};
+
+  try {
+    // Process heavy strings and array mappings on background Isolate! CPU stays idle here.
+    final entries = await compute(_processLogsInBackground, payload);
+    _loggingService.sendLogs(entries);
+  } catch (e, s) {
+    logging.severe('Failed to compute background logs', e, s);
+  }
+
+  // F-054: Zero buffer contents after upload
+  logs.clear();
 }
 
 void _uploadDiagnosticLogsPeriodic() async {
@@ -283,10 +364,10 @@ void _onLogsToConsole(LogRecord record) {
   final label = '$formattedTime ${record.level.name} ${record.loggerName} (${record.sequenceNumber})';
 
   final message = record.message;
-  debugPrintThrottled('$label ${LogEntry.shortenStringIfContainsLargeHtml(message)}'.trim());
+  debugPrintThrottled('$label ${LogEntry.truncateLogString(message)}'.trim());
   final error = record.error;
   if (error != null) {
-    debugPrintThrottled('$label [Error] ${LogEntry.shortenStringIfContainsLargeHtml(error.toString())}');
+    debugPrintThrottled('$label [Error] ${LogEntry.truncateLogString(error.toString())}');
   }
   if (record.level >= Level.WARNING) {
     debugPrintThrottled(label);

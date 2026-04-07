@@ -15,6 +15,7 @@ import '../../data/web_context.dart';
 import '../../exception/exception.dart';
 import '../../l10n/provider.dart';
 import '../../logging/logging.dart';
+import '../../repository/feature_flags.dart';
 import '../../theme/theme.dart';
 import '../../ui/claim_creation_webview/view_model.dart';
 import '../../ui/claim_creation_webview/window/controller.dart';
@@ -650,11 +651,45 @@ enum TermsType {
   const TermsType({required this.url});
 }
 
-class _TermsOfUseNotice extends StatelessWidget {
+class _TermsOfUseNotice extends StatefulWidget {
   const _TermsOfUseNotice({super.key, this.isVisible = true, this.isAutoSubmitEnabled = false});
 
   final bool isVisible;
   final bool isAutoSubmitEnabled;
+
+  @override
+  State<_TermsOfUseNotice> createState() => _TermsOfUseNoticeState();
+}
+
+class _TermsOfUseNoticeState extends State<_TermsOfUseNotice> {
+  @override
+  void initState() {
+    super.initState();
+    // pre-load terms
+    getTermsFeatureFlags(TermsType.privacyPolicy);
+    getTermsFeatureFlags(TermsType.termsOfService);
+  }
+
+  Future<Uri?> getTermsFeatureFlags(TermsType type) async {
+    final identity = SessionIdentity.latest;
+
+    if (identity == null) return null;
+
+    final log = logging.child('getTermsFeatureFlags');
+    try {
+      final FeatureFlag<String> flag = switch (type) {
+        TermsType.privacyPolicy => FeatureFlag.privacyPolicyUrl,
+        TermsType.termsOfService => FeatureFlag.termsOfServiceUrl,
+      };
+      final repo = FeatureFlagRepository();
+      final url = await repo.getFeatureFlag(identity, flag);
+      if (url.trim().isEmpty) return null;
+      return Uri.parse(url);
+    } catch (e, s) {
+      log.warning('Failed to get feature flag', e, s);
+    }
+    return null;
+  }
 
   void _onTermsOfUsePressed(BuildContext context, TermsType type) async {
     final log = logging.child('TermsOfUseNotice');
@@ -667,6 +702,7 @@ class _TermsOfUseNotice extends StatelessWidget {
             TermsType.privacyPolicy => reclaimTheme.privacyPolicyUri,
             TermsType.termsOfService => reclaimTheme.termsAndConditionsUri,
           } ??
+          (await getTermsFeatureFlags(type)) ??
           Uri.parse(type.url);
       log.info('Launching terms type url: $uri');
 
@@ -694,12 +730,12 @@ class _TermsOfUseNotice extends StatelessWidget {
     final highlightColor =
         reclaimTheme.hyperlinkColor ?? (Theme.brightnessOf(context) == Brightness.light ? Colors.indigo : Colors.amber);
 
-    final textAlign = (isLargeScreen || isAutoSubmitEnabled) ? TextAlign.center : TextAlign.start;
+    final textAlign = (isLargeScreen || widget.isAutoSubmitEnabled) ? TextAlign.center : TextAlign.start;
 
     return AnimatedOpacity(
       duration: Durations.short3,
       curve: Curves.easeIn,
-      opacity: isVisible ? 1 : 0,
+      opacity: widget.isVisible ? 1 : 0,
       child: FontsLoaded(
         child: Padding(
           padding: textAlign == TextAlign.center ? const EdgeInsets.symmetric(horizontal: 25.0) : EdgeInsets.zero,

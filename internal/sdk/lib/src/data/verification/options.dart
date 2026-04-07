@@ -49,6 +49,10 @@ class ReclaimVerificationOptions {
   /// A language code & Country code for localization that should be enforced in the verification flow.
   final String? locale;
 
+  /// A custom URL to which error callbacks will be sent when verification fails.
+  /// If null, the default SDK error callback URL is used.
+  final String? errorCallbackUrl;
+
   const ReclaimVerificationOptions({
     this.canAutoSubmit = false,
     this.isCloseButtonVisible = true,
@@ -58,6 +62,7 @@ class ReclaimVerificationOptions {
     this.canContinueVerification,
     this.useTeeOperator,
     this.locale,
+    this.errorCallbackUrl,
   });
 
   ReclaimVerificationOptions copyWith({
@@ -69,6 +74,7 @@ class ReclaimVerificationOptions {
     CanContinueVerificationCallback? canContinueVerification,
     bool? useTeeOperator,
     String? locale,
+    String? errorCallbackUrl,
   }) {
     return ReclaimVerificationOptions(
       canAutoSubmit: canAutoSubmit ?? this.canAutoSubmit,
@@ -79,6 +85,7 @@ class ReclaimVerificationOptions {
       canContinueVerification: canContinueVerification ?? this.canContinueVerification,
       useTeeOperator: useTeeOperator ?? this.useTeeOperator,
       locale: locale ?? this.locale,
+      errorCallbackUrl: errorCallbackUrl ?? this.errorCallbackUrl,
     );
   }
 }

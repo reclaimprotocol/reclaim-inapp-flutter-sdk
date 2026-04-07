@@ -9,9 +9,11 @@ part of 'session_init.dart';
 SessionInitResponse _$SessionInitResponseFromJson(Map<String, dynamic> json) => SessionInitResponse(
   sessionId: json['sessionId'] as String? ?? '',
   resolvedProviderVersion: json['resolvedProviderVersion'] as String?,
+  sessionToken: json['sessionToken'] as String?,
 );
 
 Map<String, dynamic> _$SessionInitResponseToJson(SessionInitResponse instance) => <String, dynamic>{
   'sessionId': instance.sessionId,
   'resolvedProviderVersion': instance.resolvedProviderVersion,
+  'sessionToken': instance.sessionToken,
 };

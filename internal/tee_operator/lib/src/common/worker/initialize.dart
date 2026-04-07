@@ -29,6 +29,7 @@ class InitAlgorithmRunnable extends Runnable<InitAlgorithmInput, bool> {
   @override
   Future<bool> call(
     InitAlgorithmInput input, {
+
     required String debugLabel,
     required ReceivePort receivePort,
     required SendPort sendPort,

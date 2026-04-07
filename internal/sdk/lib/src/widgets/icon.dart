@@ -162,7 +162,7 @@ class _LogoRiveIconState extends State<LogoRiveIcon> {
   @override
   Widget build(BuildContext context) {
     final shimmerTheme = SimpleShimmerTheme.of(context);
-    late final placeholder = this.widget.placeholder ?? SimpleShimmer(height: widget.size, width: widget.size);
+    late final placeholder = widget.placeholder ?? SimpleShimmer(height: widget.size, width: widget.size);
 
     return SimpleShimmerTheme(
       data: shimmerTheme.copyWith(decoration: ShimmerDecoration(borderRadius: widget.borderRadius)),

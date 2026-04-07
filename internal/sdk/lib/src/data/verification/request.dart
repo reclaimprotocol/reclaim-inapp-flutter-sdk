@@ -43,6 +43,7 @@ class ReclaimVerificationRequest {
               resolvedVersion != null && resolvedVersion.isNotEmpty ? resolvedVersion : '',
               versionExpression: versionConstraintExpression,
             ),
+            sessionToken: template.sessionToken,
           );
         },
         parameters: template.parameters ?? const {},

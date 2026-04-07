@@ -112,6 +112,12 @@ class ClientFeatureOverrides {
     this.screenshotCaptureIntervalSeconds,
     // null
     this.teeUrls,
+    // null
+    this.privacyPolicyUrl,
+    // null
+    this.termsOfServiceUrl,
+    // null
+    this.potentialFailureReasonsUrl,
   });
 
   final bool? cookiePersist;
@@ -131,6 +137,9 @@ class ClientFeatureOverrides {
   final int? potentialLoginTimeoutS;
   final int? screenshotCaptureIntervalSeconds;
   final String? teeUrls;
+  final String? privacyPolicyUrl;
+  final String? termsOfServiceUrl;
+  final String? potentialFailureReasonsUrl;
 }
 
 class ClientLogConsumerOverride {

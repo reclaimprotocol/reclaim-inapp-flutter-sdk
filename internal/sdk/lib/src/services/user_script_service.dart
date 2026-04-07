@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../data/providers.dart';
 import '../logging/logging.dart';
@@ -21,6 +22,10 @@ class UserScriptService {
   }) async {
     try {
       final scripts = [
+        UserScript(
+          source: await rootBundle.loadString('packages/reclaim_inapp_sdk/assets/scripts/login_detection.js'),
+          injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+        ),
         UserScript(
           source: getProviderScriptEnvironment(providerData, parameters),
           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,

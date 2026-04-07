@@ -31,25 +31,35 @@ class SessionIdentity {
     if (it == null) {
       return SessionIdentity(appId: appId, providerId: providerId, sessionId: sessionId);
     } else {
-      return it.copyWith(
-        appId: it.appId.isEmpty ? appId : it.appId,
-        providerId: it.providerId.isEmpty ? providerId : it.providerId,
-        sessionId: it.sessionId.isEmpty ? sessionId : it.sessionId,
-      );
+      final newAppId = it.appId.isEmpty ? appId : it.appId;
+      final newProviderId = it.providerId.isEmpty ? providerId : it.providerId;
+      final newSessionId = it.sessionId.isEmpty ? sessionId : it.sessionId;
+
+      if (newAppId == it.appId && newProviderId == it.providerId && newSessionId == it.sessionId) {
+        return it;
+      }
+
+      return it.copyWith(appId: newAppId, providerId: newProviderId, sessionId: newSessionId);
     }
   }
 
   SessionIdentity merge(SessionIdentity? other) {
+    if (other == null) return this;
+
     String withFallback(String? it, String fallback) {
       if (it == null || it.trim().isEmpty) return fallback;
       return it;
     }
 
-    return SessionIdentity(
-      appId: withFallback(other?.appId, appId),
-      providerId: withFallback(other?.providerId, providerId),
-      sessionId: withFallback(other?.sessionId, sessionId),
-    );
+    final newAppId = withFallback(other.appId, appId);
+    final newProviderId = withFallback(other.providerId, providerId);
+    final newSessionId = withFallback(other.sessionId, sessionId);
+
+    if (newAppId == appId && newProviderId == providerId && newSessionId == sessionId) {
+      return this;
+    }
+
+    return SessionIdentity(appId: newAppId, providerId: newProviderId, sessionId: newSessionId);
   }
 
   @override

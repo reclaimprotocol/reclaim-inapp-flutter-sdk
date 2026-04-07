@@ -152,7 +152,11 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
     final verification = VerificationController.readOf(context);
     final session = await verification.sessionStartFuture;
     if (!mounted) return;
-    final aiServiceClient = AiServiceClient(session.sessionInformation.sessionId, session.identity.providerId);
+    final aiServiceClient = AiServiceClient(
+      session.sessionInformation.sessionId,
+      session.identity.providerId,
+      sessionToken: session.sessionInformation.sessionToken,
+    );
     _aiServiceClientRef = aiServiceClient;
     _sessionIdRef = session.sessionInformation.sessionId;
     _aiActionController = AIActionController(context, aiServiceClient);
@@ -612,6 +616,8 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
                 onLoadStop: _onLoadStop,
                 onCreateWindow: onCreateWindowAction,
                 shouldOverrideUrlLoading: shouldOverrideUrlLoading,
+                onReceivedServerTrustAuthRequest: onReceivedServerTrustAuthRequest,
+                onReceivedHttpError: onReceivedHttpError,
               );
             },
           ),

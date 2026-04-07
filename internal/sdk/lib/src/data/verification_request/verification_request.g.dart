@@ -16,11 +16,13 @@ ClientSdkVerificationRequest _$ClientSdkVerificationRequestFromJson(Map<String, 
       contextString: json['context'] as String?,
       sessionId: json['sessionId'] as String?,
       redirectUrl: json['redirectUrl'] as String?,
+      cancelCallbackUrl: json['cancelCallbackUrl'] as String?,
       parameters: (json['parameters'] as Map<String, dynamic>?)?.map((k, e) => MapEntry(k, e as String)),
       isCloseButtonVisible: json['isCloseButtonVisible'] as bool?,
       jsonProofResponse: json['jsonProofResponse'] as bool?,
       providerVersion: json['providerVersion'] as String?,
       resolvedProviderVersion: json['resolvedProviderVersion'] as String?,
+      sessionToken: json['sessionToken'] as String?,
     );
 
 Map<String, dynamic> _$ClientSdkVerificationRequestToJson(ClientSdkVerificationRequest instance) => <String, dynamic>{
@@ -32,9 +34,11 @@ Map<String, dynamic> _$ClientSdkVerificationRequestToJson(ClientSdkVerificationR
   'context': instance.contextString,
   'sessionId': instance.sessionId,
   'redirectUrl': instance.redirectUrl,
+  'cancelCallbackUrl': instance.cancelCallbackUrl,
   'isCloseButtonVisible': instance.isCloseButtonVisible,
   'jsonProofResponse': instance.jsonProofResponse,
   'parameters': instance.parameters,
   'providerVersion': instance.providerVersion,
   'resolvedProviderVersion': instance.resolvedProviderVersion,
+  'sessionToken': instance.sessionToken,
 };

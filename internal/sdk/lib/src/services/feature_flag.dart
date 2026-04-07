@@ -132,11 +132,11 @@ class FeatureFlagService {
     String? sessionId,
   }) async {
     final queryParams = {
-      if (publicKey != null) 'publicKey': publicKey,
+      'publicKey': ?publicKey,
       'featureFlagNames': featureFlagNames,
-      if (appId != null) 'appId': appId,
-      if (providerId != null) 'providerId': providerId,
-      if (sessionId != null) 'sessionId': sessionId,
+      'appId': ?appId,
+      'providerId': ?providerId,
+      'sessionId': ?sessionId,
       'operatingSystem': Platform.operatingSystem,
       'inappSdkVersion': await getReclaimMainSdkVersionRaw() ?? '',
     };

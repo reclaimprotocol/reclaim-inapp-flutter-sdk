@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 import 'package:logging/logging.dart';
@@ -12,6 +13,7 @@ import '../common/exceptions.dart';
 import '../common/operator_interface.dart';
 import '../common/reusable_resource_pool.dart';
 import '../common/worker/isolate_worker/isolate_worker.dart';
+import '../common/worker/protocol_library_networking/protocol_library_networking.dart';
 import 'logging/flutter_log_callback.dart';
 import 'models/client_options.dart';
 import 'models/request_data.dart';
@@ -45,12 +47,29 @@ class ReclaimTEEOperator extends ReclaimTEEOperatorBase {
       final opr = ReclaimTEEOperator._();
 
       unawaited(opr._initializeGoLibraryLogging());
+      unawaited(opr._initializeLibraryNetworking());
 
       _logger.info('Reclaim TEE Operator initialized successfully');
       _cachedInstances = opr;
       return opr;
     }
     return _cachedInstances!;
+  }
+
+  BackgroundWorker<void, bool>? _networkConnectionManagerWorker;
+
+  Future<void> _initializeLibraryNetworking() async {
+    try {
+      // We only do this for iOS for now
+      if (!Platform.isIOS) return;
+      _logger.info('Enabling delegated network connection');
+      final manager = WorkerManager(ReclaimLibraryDelegatedNetworkConnectionRunnable());
+      _networkConnectionManagerWorker = await manager.createWorker();
+      final isEnabled = await _networkConnectionManagerWorker?.executeInBackground(null);
+      _logger.info('Enabled delegated network connection: $isEnabled');
+    } catch (e, s) {
+      _logger.warning('Failed to initialize library networking', e, s);
+    }
   }
 
   Future<void> _initializeGoLibraryLogging() async {
@@ -173,6 +192,11 @@ class ReclaimTEEOperator extends ReclaimTEEOperatorBase {
 
         final response = json.decode(resultStr) as Map<String, dynamic>;
 
+        // Handle error response from Go
+        if (response.containsKey('error')) {
+          final errorMessage = response['error'] as String;
+          throw Exception('JSON extraction failed: $errorMessage');
+        }
         // Handle successful response with ranges
         if (response.containsKey('ranges')) {
           final ranges = response['ranges'] as List<dynamic>;

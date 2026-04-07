@@ -20,15 +20,17 @@ sealed class ReclaimUrls {
   static const String DEFAULT_ATTESTOR_WEB_SCRIPT_URL = '$DEFAULT_ATTESTOR_WEB_URL/resources/attestor-jsc.min.mjs?v=0';
 
   // TEE (Trusted Execution Environment) URLs
-  static const String DEFAULT_TEEK_URL = 'wss://tk.reclaimprotocol.org/ws';
-  static const String DEFAULT_TEET_URL = 'wss://tt.reclaimprotocol.org/ws';
-  static const String DEFAULT_TEE_ATTESTOR_URL = 'wss://attestor.reclaimprotocol.org:444/ws';
+  static const String DEFAULT_TEEK_WS_URL = 'wss://tk.reclaimprotocol.org/ws';
+  static const String DEFAULT_TEET_WS_URL = 'wss://tt.reclaimprotocol.org/ws';
+  static const String DEFAULT_TEE_ATTESTOR_WS_URL = 'wss://attestor.reclaimprotocol.org:444/ws';
 
   static const String DIAGNOSTIC_LOGGING = String.fromEnvironment(
     'org.reclaimprotocol.inapp_sdk.DIAGNOSTIC_LOGGING_API',
     defaultValue: '$LOGS_API_BASE_URL/api/business-logs/logDump',
   );
   static const String DEFAULT_CALLBACK_URL_PATH = '$SDK_API_BASE_URL/api/sdk/callback';
+  static String getErrorCallbackUrl(String sessionId) =>
+      '$SDK_API_BASE_URL/api/sdk/error-callback?callbackId=$sessionId';
   static const String AI_SERVICE_BASE_URL = 'https://service.reclaimprotocol.org/api';
   static const String AI_SERVICE_SEND_EVENTS = '$AI_SERVICE_BASE_URL/network-requests/add-to-queue';
   static const String AI_SERVICE_GET_AI_RESPONSE = '$AI_SERVICE_BASE_URL/ai-actions';
@@ -36,12 +38,10 @@ sealed class ReclaimUrls {
     return '$SDK_API_BASE_URL/api/applications/$appId/provider/$providerId';
   }
 
-  static const String PRIVACY_POLICY_URL =
-      'https://reclaimprotocol.notion.site/Privacy-Policy-Reclaim-Protocol-115275b816cb80ab94b8ca8616673658';
-  static const String TERMS_OF_SERVICE_URL =
-      'https://reclaimprotocol.notion.site/Terms-of-Service-Reclaim-Protocol-13c275b816cb80b1a5ade76c6f2532dd';
+  static const String PRIVACY_POLICY_URL = 'https://docs.reclaimprotocol.org/legalese/privacy-policy';
+  static const String TERMS_OF_SERVICE_URL = 'https://docs.reclaimprotocol.org/legalese/terms-of-service';
   static const String POTENTIAL_FAILURE_REASONS_URL =
-      'https://reclaimprotocol.notion.site/Potential-Failure-Reasons-Reclaim-Protocol-242275b816cb80d08d35c1dd13a83d39';
+      'https://docs.reclaimprotocol.org/troubleshooting/potential-failure-reasons';
 }
 
 final templateParamRegex = RegExp(r'{{(.*?)}}');

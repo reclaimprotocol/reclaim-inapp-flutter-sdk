@@ -13,10 +13,22 @@ import '../exception/exception.dart';
 import '../logging/logging.dart';
 import '../repository/feature_flags.dart';
 import '../services/base_http.dart';
-import '../utils/http/http.dart';
 
 class ZkOperatorManager {
   final log = logging.child('ZkOperatorManager');
+
+  bool providerUsesOprfMpc(HttpProvider provider) {
+    final requestUsesOprfMpc = provider.requestData.fold<bool>(false, (previous, e) {
+      final needsOprfCircuit = e.responseRedactions.any(
+        (r) => r.hash?.trim().isNotEmpty == true && r.hash?.trim().toLowerCase() == 'oprf-mpc',
+      );
+      if (needsOprfCircuit) {
+        return true;
+      }
+      return previous;
+    });
+    return requestUsesOprfMpc || provider.customInjection?.toLowerCase().contains('oprf-mpc') == true;
+  }
 
   // Can improve performance by 12% by pre-initializing the algorithms that are needed for the requests (Computed from tests).
   Future<void> prepareOperatorForAlgorithmWithHints(HttpProvider provider) async {
@@ -27,20 +39,24 @@ class ZkOperatorManager {
         logger.info('Setting up CHACHA20 for proxy mode');
         ProverAlgorithmInitializer.instance.ensureInitialized(ProverAlgorithmType.CHACHA20);
       }
-      final needsHashingCount = provider.requestData.fold<int>(0, (previous, e) {
-        final needsHashing = e.responseRedactions.any((r) => r.hash?.trim().isNotEmpty == true);
-        if (needsHashing) {
+      final needsOprfCircuitCount = provider.requestData.fold<int>(0, (previous, e) {
+        final needsOprfCircuit = e.responseRedactions.any(
+          (r) => r.hash?.trim().isNotEmpty == true && r.hash?.trim().toLowerCase() != 'oprf-mpc',
+        );
+        if (needsOprfCircuit) {
           return previous + 1;
         }
         return previous;
       });
       final requestCount = provider.requestData.length;
-      final needsHashing = needsHashingCount > 0;
-      logger.info('needsHashing: $needsHashing, needsHashingCount: $needsHashingCount, requestCount: $requestCount');
-      if (needsHashing) {
+      final needsOprfCircuitForHashing = needsOprfCircuitCount > 0;
+      logger.info(
+        'needsOprfCircuitForHashing: $needsOprfCircuitForHashing, needsHashingCount: $needsOprfCircuitCount, requestCount: $requestCount',
+      );
+      if (needsOprfCircuitForHashing) {
         final requestCount = provider.requestData.length;
         if (requestCount > 1) {
-          final int count = (requestCount - needsHashingCount).clamp(1, 6);
+          final int count = (requestCount - needsOprfCircuitCount).clamp(1, 6);
           final initializationDelay = Duration(seconds: count * 5);
           logger.info('initializationDelay: $initializationDelay');
           await Future.delayed(initializationDelay);
@@ -59,25 +75,45 @@ class ZkOperatorManager {
     final teeUrlsJson = await featureFlagRepository.getFeatureFlag(sessionIdentity, FeatureFlag.teeUrls);
 
     // Parse TEE URLs from JSON string with fallbacks to defaults
-    String attestorUrl = ReclaimUrls.DEFAULT_TEE_ATTESTOR_URL;
-    String teekUrl = ReclaimUrls.DEFAULT_TEEK_URL;
-    String teetUrl = ReclaimUrls.DEFAULT_TEET_URL;
+    String attestorWsUrl = ReclaimUrls.DEFAULT_TEE_ATTESTOR_WS_URL;
+    String teekWsUrl = ReclaimUrls.DEFAULT_TEEK_WS_URL;
+    String teetWsUrl = ReclaimUrls.DEFAULT_TEET_WS_URL;
 
     try {
       if (teeUrlsJson.isNotEmpty) {
         final teeUrlsMap = json.decode(teeUrlsJson) as Map<String, dynamic>;
-        attestorUrl = teeUrlsMap['teeAttestorUrl'] as String? ?? ReclaimUrls.DEFAULT_TEE_ATTESTOR_URL;
-        teekUrl = teeUrlsMap['teekUrl'] as String? ?? ReclaimUrls.DEFAULT_TEEK_URL;
-        teetUrl = teeUrlsMap['teetUrl'] as String? ?? ReclaimUrls.DEFAULT_TEET_URL;
+        attestorWsUrl = teeUrlsMap['teeAttestorUrl'] as String? ?? ReclaimUrls.DEFAULT_TEE_ATTESTOR_WS_URL;
+        teekWsUrl = teeUrlsMap['teekUrl'] as String? ?? ReclaimUrls.DEFAULT_TEEK_WS_URL;
+        teetWsUrl = teeUrlsMap['teetUrl'] as String? ?? ReclaimUrls.DEFAULT_TEET_WS_URL;
         log.info(
-          '🔐 TEE URLS: Using URLs from feature flags - attestorUrl: $attestorUrl, teekUrl: $teekUrl, teetUrl: $teetUrl',
+          '🔐 TEE URLS: Using URLs from feature flags - attestorWsUrl: $attestorWsUrl, teekWsUrl: $teekWsUrl, teetWsUrl: $teetWsUrl',
         );
       }
     } catch (e) {
       log.warning('🔐 TEE URLS: Failed to parse teeUrls JSON, using defaults: $e');
     }
 
-    return TeeUrls(attestorUrl: attestorUrl, teekUrl: teekUrl, teetUrl: teetUrl);
+    return TeeUrls(attestorWsUrl: attestorWsUrl, teekWsUrl: teekWsUrl, teetWsUrl: teetWsUrl);
+  }
+
+  Future<bool> isServiceAccessible(String url) async {
+    final logger = log.child('isServiceAccessible');
+    final uri = Uri.parse(url);
+    try {
+      final response = await reclaimHttpBaseClient.head(
+        uri.replace(scheme: uri.host.contains('localhost') ? 'http' : 'https'),
+      );
+      final isAccessible = response.statusCode >= 200 && response.statusCode < 500;
+      if (!isAccessible) {
+        logger.warning(
+          '🔐 TEE URLS: Failed to pre-test with failed status code ${response.statusCode} for TEE $url URL',
+        );
+      }
+      return isAccessible;
+    } catch (e, s) {
+      logger.warning('🔐 TEE URLS: Failed to pre-test TEE $url URL', e, s);
+      return false;
+    }
   }
 
   Future<void> preTestTeeUrls() async {
@@ -85,37 +121,21 @@ class ZkOperatorManager {
 
     final teeUrls = await getTeeUrls();
 
-    final String attestorUrl = teeUrls.attestorUrl;
-    final String teekUrl = teeUrls.teekUrl;
-    final String teetUrl = teeUrls.teetUrl;
+    final String attestorWsUrl = teeUrls.attestorWsUrl;
+    final String teekWsUrl = teeUrls.teekWsUrl;
+    final String teetWsUrl = teeUrls.teetWsUrl;
 
-    logger.info('🔐 TEE URLS: Can use URLs - attestorUrl: $attestorUrl, teekUrl: $teekUrl, teetUrl: $teetUrl');
+    logger.info(
+      '🔐 TEE URLS: Can use URLs - attestorWsUrl: $attestorWsUrl, teekWsUrl: $teekWsUrl, teetWsUrl: $teetWsUrl',
+    );
 
     try {
-      final attestorUrlAsync = reclaimHttpBaseClient
-          .get(Uri.parse(attestorUrl))
-          .then((response) => response.isSuccess)
-          .catchError((e, s) {
-            logger.warning('🔐 TEE URLS: Failed to pre-test TEE Attestor URL', e, s);
-            return false;
-          });
-      final teekUrlAsync = reclaimHttpBaseClient
-          .get(Uri.parse(teekUrl))
-          .then((response) => response.isSuccess)
-          .catchError((e, s) {
-            logger.warning('🔐 TEE URLS: Failed to pre-test TEE TEE-K URL', e, s);
-            return false;
-          });
-      final teetUrlAsync = reclaimHttpBaseClient
-          .get(Uri.parse(teetUrl))
-          .then((response) => response.isSuccess)
-          .catchError((e, s) {
-            logger.warning('🔐 TEE URLS: Failed to pre-test TEE TEE-T URL', e, s);
-            return false;
-          });
+      final attestorUrlAsync = isServiceAccessible(attestorWsUrl);
+      final teekUrlAsync = isServiceAccessible(teekWsUrl);
+      final teetUrlAsync = isServiceAccessible(teetWsUrl);
       await Future.wait([attestorUrlAsync, teekUrlAsync, teetUrlAsync]);
       logger.info(
-        '🔐 TEE URLS: Pre-tested TEE URLs, results: attestorUrlResult=${await attestorUrlAsync}, teekUrlResult=${await teekUrlAsync}, teetUrlResult=${await teetUrlAsync}',
+        '🔐 TEE URLS: Pre-tested TEE URLs, results: attestorWsUrlResult=${await attestorUrlAsync}, teekWsUrlResult=${await teekUrlAsync}, teetWsUrlResult=${await teetUrlAsync}',
       );
     } catch (e, s) {
       log.warning('🔐 TEE URLS: Failed to pre-test TEE URLs', e, s);

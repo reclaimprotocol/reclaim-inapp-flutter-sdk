@@ -66,6 +66,8 @@ abstract interface class SessionUpdateHandler {
     required String logType,
     Map<String, dynamic>? metadata,
   });
+
+  Future<void> sendErrorCallback({required String sessionId, required Map<String, dynamic> error, String? callbackUrl});
 }
 
 class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
@@ -91,7 +93,8 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
         'signature': signature,
         'versionNumber': providerVersion,
       });
-      logger.info('Creating session: $data');
+      logger.info('Creating session for provider=$providerId, app=$appId');
+      logger.finer('Session create payload: $data');
       final response = await _sessionHttpClient
           .post<String>(ReclaimUrls.SESSION_INIT, data: data)
           .logWhenResponseErrors();
@@ -184,7 +187,8 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
         if (metadata != null && metadata.isNotEmpty) 'metadata': metadata,
       });
 
-      logger.info('Updating session: $data');
+      logger.info('Updating session=$sessionId, status=${status.name}');
+      logger.finer('Session update payload: $data');
       final response = await _sessionHttpClient
           .post<String>(ReclaimUrls.SESSION_URL, data: data)
           .logWhenResponseErrors();
@@ -261,7 +265,7 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
         'applicationId': appId,
         'publicIpAddress': publicIpAddress,
         'logType': logType,
-        if (metadata != null) 'metadata': metadata,
+        'metadata': ?metadata,
       };
 
       _sessionHttpClient.options.headers['Content-Type'] = 'application/json';
@@ -274,6 +278,24 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
       }
     } catch (error, stackTrace) {
       logger.severe('Error sending logs to backend server', error, stackTrace);
+    }
+  }
+
+  @override
+  @mustCallSuper
+  Future<void> sendErrorCallback({
+    required String sessionId,
+    required Map<String, dynamic> error,
+    String? callbackUrl,
+  }) async {
+    final logger = logging.child('ReclaimSession.sendErrorCallback');
+    try {
+      _sessionHttpClient.options.headers['Content-Type'] = 'application/json';
+      final url = callbackUrl ?? ReclaimUrls.getErrorCallbackUrl(sessionId);
+      logger.info('Sending error callback for session: $sessionId, callbackUrl: $url');
+      await _sessionHttpClient.post<String>(url, data: json.encode(error)).logWhenResponseErrors();
+    } catch (error, stackTrace) {
+      logger.severe('Error sending error callback', error, stackTrace);
     }
   }
 }

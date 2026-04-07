@@ -135,7 +135,11 @@ class _AIFlowCoordinatorWidgetState extends State<AIFlowCoordinatorWidget> {
         .then((value) => value.toInt());
 
     final handlerMap = configureHandlerMap();
-    final aiClient = AiServiceClient(session.sessionInformation.sessionId, session.identity.providerId);
+    final aiClient = AiServiceClient(
+      session.sessionInformation.sessionId,
+      session.identity.providerId,
+      sessionToken: session.sessionInformation.sessionToken,
+    );
     final config = AIFlowCoordinatorConfig(potentialLoginTimeoutS: potentialLoginTimeoutS);
 
     if (!mounted) return;

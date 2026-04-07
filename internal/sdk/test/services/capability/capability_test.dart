@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reclaim_inapp_sdk/overrides.dart';
-import 'package:reclaim_inapp_sdk/src/overrides/override.dart';
 import 'package:reclaim_inapp_sdk/src/services/capability/access_token.dart';
 import 'package:reclaim_inapp_sdk/src/services/capability/capability.dart';
 

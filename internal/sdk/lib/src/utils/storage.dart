@@ -7,7 +7,7 @@ class ReclaimStorage {
   final FlutterSecureStorage storage;
 
   const ReclaimStorage([FlutterSecureStorage? storage])
-    : storage = storage ?? const FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: true));
+    : storage = storage ?? const FlutterSecureStorage(aOptions: AndroidOptions.defaultOptions);
 
   Future<void> saveData(String key, String value) async {
     final logger = _logger.child('saveData');

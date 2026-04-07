@@ -27,8 +27,36 @@ Future<String?> getReclaimMainSdkVersionRaw() async {
   }
 }
 
+String? cachedOperatorVersion;
+
+Future<String?> getOperatorSdkVersionRaw() async {
+  final logger = logging.child('getOperatorSdkVersionRaw');
+  try {
+    if (cachedOperatorVersion != null) {
+      return cachedOperatorVersion;
+    }
+    final packagePubspec = yaml.loadYaml(
+      await rootBundle.loadString('packages/reclaim_tee_operator_flutter/pubspec.yaml'),
+    );
+    final version = packagePubspec['version'];
+    cachedOperatorVersion = version;
+    return version;
+  } catch (e, s) {
+    logger.severe('Failed to get operator SDK version', e, s);
+    return null;
+  }
+}
+
 Future<String> getReclaimMainSdkVersion() async {
   final version = await getReclaimMainSdkVersionRaw();
+  if (version == null) {
+    return 'unknown';
+  }
+  return 'v$version';
+}
+
+Future<String> getOperatorSdkVersion() async {
+  final version = await getOperatorSdkVersionRaw();
   if (version == null) {
     return 'unknown';
   }
@@ -52,7 +80,8 @@ Future<String> _getSdkConsumerIdentifier() async {
     return '$_inappModuleIdentifierPrefix$clientAppVersion';
   }
   final sdkVersion = await getReclaimMainSdkVersion();
-  return '${_inappModuleIdentifierPrefix}sdk/$sdkVersion';
+  final operatorSdkVersion = await getOperatorSdkVersion();
+  return '${_inappModuleIdentifierPrefix}sdk/$sdkVersion operator/$operatorSdkVersion';
 }
 
 Completer<String>? _sdkConsumerIdentifierCompleter;
@@ -113,7 +142,8 @@ Future<String> _getClientSource() async {
     }
 
     final sdkVersion = await getReclaimMainSdkVersion();
-    buffer.write('sdk/$sdkVersion');
+    final operatorSdkVersion = await getOperatorSdkVersion();
+    buffer.write('sdk/$sdkVersion operator/$operatorSdkVersion');
 
     return buffer.toString();
   }();

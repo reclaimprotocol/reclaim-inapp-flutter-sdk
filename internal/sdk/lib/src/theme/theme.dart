@@ -52,6 +52,7 @@ class ReclaimTheme extends ThemeExtension<ReclaimTheme> {
   final Uri? termsAndConditionsUri;
   final Uri? privacyPolicyUri;
   final Uri? potentialFailureReasonsUri;
+  final String? secureAndPrivateText;
   final ParametersTheme parametersTheme;
 
   const ReclaimTheme({
@@ -80,6 +81,7 @@ class ReclaimTheme extends ThemeExtension<ReclaimTheme> {
     this.termsAndConditionsUri,
     this.privacyPolicyUri,
     this.potentialFailureReasonsUri,
+    this.secureAndPrivateText,
     this.parametersTheme = const ParametersTheme(),
   });
 

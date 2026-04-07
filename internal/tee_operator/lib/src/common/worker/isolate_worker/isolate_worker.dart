@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:isolate';
 import 'package:flutter/services.dart';
 import 'package:reclaim_tee_operator_flutter/src/common/logger.dart';
+export 'package:flutter/services.dart' show RootIsolateToken;
 export 'dart:isolate' show ReceivePort, SendPort;
 
 part 'log.dart';
@@ -22,6 +23,7 @@ abstract class Runnable<INPUT_TYPE, OUTPUT_TYPE> {
 
   Future<OUTPUT_TYPE> call(
     INPUT_TYPE input, {
+
     required String debugLabel,
     required ReceivePort receivePort,
     required SendPort sendPort,
@@ -106,7 +108,11 @@ class BackgroundWorker<INPUT_TYPE, OUTPUT_TYPE> {
     };
     // Spawn the isolate.
     try {
-      final rootToken = RootIsolateToken.instance!;
+      final rootToken = RootIsolateToken.instance;
+
+      if (rootToken == null) {
+        throw ArgumentError('Create background workers on root isolate');
+      }
 
       await Isolate.spawn(_startRemoteIsolate, (
         rootToken,

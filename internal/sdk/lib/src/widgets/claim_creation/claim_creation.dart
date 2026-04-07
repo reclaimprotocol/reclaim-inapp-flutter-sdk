@@ -52,6 +52,8 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     _lastInstance = this;
   }
 
+  String? errorCallbackUrl;
+
   void setHttpProvider(HttpProvider httpProvider) {
     value = value.copyWith(httpProvider: httpProvider);
   }
@@ -840,6 +842,13 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
           log.severe('Failed creating claim before this attempt', e, s);
         }
       }
+      unawaitedSequence([
+        ReclaimSession.sendErrorCallback(
+          sessionId: proofRequest.sessionId,
+          error: {'type': 'ProofGenerationFailed', 'message': e.toString()},
+          callbackUrl: errorCallbackUrl,
+        ),
+      ]);
       rethrow;
     }
   }

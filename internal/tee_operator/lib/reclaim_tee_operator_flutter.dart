@@ -43,3 +43,4 @@ export 'src/tee/logging/flutter_log_callback.dart' show FlutterZapLogger, ZapLog
 
 // Export common algorithm types (shared by both operators)
 export 'src/common/algorithm/algorithm.dart' show ProverAlgorithmType;
+export 'src/common/worker/isolate_worker/isolate_worker.dart';

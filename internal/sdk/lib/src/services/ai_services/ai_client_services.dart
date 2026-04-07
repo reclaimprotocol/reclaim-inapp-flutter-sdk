@@ -20,11 +20,23 @@ enum AIJobType { network_request, page_loaded, user_interaction }
 class AiServiceClient {
   final String sessionId;
   final String providerId;
+  final String? _sessionToken;
   final http.Client client;
 
-  AiServiceClient(this.sessionId, this.providerId, [http.Client? client]) : client = client ?? ReclaimHttpClient();
+  AiServiceClient(this.sessionId, this.providerId, {String? sessionToken, http.Client? client})
+    : _sessionToken = sessionToken,
+      client = client ?? ReclaimHttpClient();
 
-  late final TimelineEventCreator createTimelineEvent = TimelineEventCreator(sessionId: sessionId, client: client);
+  late final Map<String, String> _authHeaders = {
+    'Content-Type': 'application/json',
+    if (_sessionToken != null) 'Authorization': 'Bearer $_sessionToken',
+  };
+
+  late final TimelineEventCreator createTimelineEvent = TimelineEventCreator(
+    sessionId: sessionId,
+    client: client,
+    sessionToken: _sessionToken,
+  );
 
   Future<void> sendEvent<T extends AppEvent>(
     List<T> events,
@@ -57,11 +69,18 @@ class AiServiceClient {
       final msg = 'Sending Events to AI Service: length: ${eventDataList.length} types: $eventsTypes';
 
       logger.info(msg);
-      logger.info('Events data: $data');
+      logger.info(
+        'Events payload: sessionId=$sessionId, providerId=$providerId, chunkId=$jobId, jobType=${jobType.name}, requestCount=${eventDataList.length}',
+      );
+      for (final event in eventDataList) {
+        logger.info(
+          'Event: url=${event['url']}, reqBodyLen=${event['requestBody']?.toString().length ?? 0}, resBodyLen=${event['responseBody']?.toString().length ?? 0}',
+        );
+      }
 
       final response = await client.post(
         Uri.parse(ReclaimUrls.AI_SERVICE_SEND_EVENTS),
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders,
         body: jsonData,
       );
       logger.info('Events sent successfully to AI service: $response');
@@ -79,7 +98,7 @@ class AiServiceClient {
     try {
       final response = await client.get(
         Uri.parse('${ReclaimUrls.AI_SERVICE_GET_AI_RESPONSE}/$sessionId'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders,
       );
       final jsonData = json.decode(response.body);
       return AIResponse.fromJson(jsonData);
@@ -126,6 +145,10 @@ class AiServiceClient {
           contentType: http_parser.MediaType('image', 'png'),
         ),
       );
+
+      if (_sessionToken != null) {
+        request.headers['Authorization'] = 'Bearer $_sessionToken';
+      }
 
       // Send request
       final streamedResponse = await client.send(request);

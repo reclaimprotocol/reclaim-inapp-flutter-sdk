@@ -41,8 +41,7 @@ class AttestorWebViewClient extends AttestorJsClient with AttestorClientOperator
       final message = json.encode(rpcMessage);
 
       // using json.encode here to string escape the json message correctly
-      final js =
-          'globalThis.ATTESTOR_BASE_URL = "${attestorBrowserRpcUrl.origin}";globalThis.RPC_CHANNEL_NAME = "${AttestorJsClient.hostMessengerChannelName}";window.HostMessenger = window.backupMessenger;window.postMessage(${json.encode(message)});';
+      final js = 'globalThis._setupMessaging();window.postMessage(${json.encode(message)});';
 
       await retry(
         () => executeJavascript(js, debugId: rpcMessage.id),
@@ -56,7 +55,7 @@ class AttestorWebViewClient extends AttestorJsClient with AttestorClientOperator
   Future<Object?> executeJavascript(String js, {String? debugId}) async {
     final log = logger.child('AttestorWebViewClient.executeJavascript');
 
-    log.debug({'tag': 'rpc.js', 'value': js, if (debugId != null) 'debugId': debugId});
+    log.debug({'tag': 'rpc.js', 'value': js, 'debugId': ?debugId});
 
     final controller = _innerWebView.webViewController;
     await _ensureReadiness();
@@ -67,7 +66,7 @@ class AttestorWebViewClient extends AttestorJsClient with AttestorClientOperator
     return () async {
       try {
         final response = await controller.evaluateJavascript(source: js);
-        log.finest({'tag': 'rpc.js.response', 'value': response, if (debugId != null) 'debugId': debugId});
+        log.finest({'tag': 'rpc.js.response', 'value': response, 'debugId': ?debugId});
 
         return response;
       } catch (e, s) {
@@ -251,19 +250,19 @@ class AttestorWebViewClient extends AttestorJsClient with AttestorClientOperator
 
 String _attestorInAppWebViewUserScript(Uri attestorBrowserRpcUrl, String debugLabel) =>
     """
-globalThis.ATTESTOR_BASE_URL = "${attestorBrowserRpcUrl.origin}"
-globalThis.RPC_CHANNEL_NAME = "${AttestorJsClient.hostMessengerChannelName}"
-
-const _setupMessaging = (event) => {
+globalThis._setupMessaging = (event) => {
   try {
+    if (window[globalThis.RPC_CHANNEL_NAME]) {
+      console.info('HostMessenger setup already completed');
+      return;
+    }
     globalThis.ATTESTOR_BASE_URL = "${attestorBrowserRpcUrl.origin}"
-  	globalThis.RPC_CHANNEL_NAME = "${AttestorJsClient.hostMessengerChannelName}"
-
+    globalThis.RPC_CHANNEL_NAME = "${AttestorJsClient.hostMessengerChannelName}"
     const sendMessageToHost = (name, message) => {
       return window.flutter_inappwebview.callHandler(name, message);
     }
 
-    window.HostMessenger = {
+    window[globalThis.RPC_CHANNEL_NAME] = {
       notifyReady: () => {
         sendMessageToHost('ClientReadyHandler', true);
       },
@@ -298,6 +297,7 @@ const _setupMessaging = (event) => {
     setupConsoleLogs();
 
     window.HostMessenger.notifyReady();
+    console.info('HostMessenger setup completed');
   } catch (e) {
     console.error('Error in DOMContentLoaded', e);
   }

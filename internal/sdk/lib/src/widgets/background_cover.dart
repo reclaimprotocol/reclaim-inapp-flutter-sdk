@@ -96,7 +96,7 @@ class BackgroundCover extends StatelessWidget {
     if (blurStrength != 0) {
       backgroundGraphic = Stack(
         children: [
-          if (backgroundGraphic != null) backgroundGraphic,
+          ?backgroundGraphic,
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: blurStrength, sigmaY: blurStrength),

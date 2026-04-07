@@ -23,11 +23,13 @@ class ClientSdkVerificationRequest {
   final String? contextString;
   final String? sessionId;
   final String? redirectUrl;
+  final String? cancelCallbackUrl;
   final bool? isCloseButtonVisible;
   final bool? jsonProofResponse;
   final Map<String, String>? parameters;
   final String? providerVersion;
   final String? resolvedProviderVersion;
+  final String? sessionToken;
 
   const ClientSdkVerificationRequest({
     required this.providerId,
@@ -38,22 +40,26 @@ class ClientSdkVerificationRequest {
     this.contextString,
     this.sessionId,
     this.redirectUrl,
+    this.cancelCallbackUrl,
     this.parameters,
     this.isCloseButtonVisible,
     this.jsonProofResponse,
     this.providerVersion,
     this.resolvedProviderVersion,
+    this.sessionToken,
   });
 
   ClientSdkVerificationRequest copyWith({
     String? callbackUrl,
     String? contextString,
     String? redirectUrl,
+    String? cancelCallbackUrl,
     Map<String, String>? parameters,
     bool? isCloseButtonVisible,
     bool? jsonProofResponse,
     String? providerVersion,
     String? resolvedProviderVersion,
+    String? sessionToken,
   }) {
     return ClientSdkVerificationRequest(
       providerId: providerId,
@@ -64,11 +70,13 @@ class ClientSdkVerificationRequest {
       contextString: contextString ?? this.contextString,
       sessionId: sessionId,
       redirectUrl: redirectUrl ?? this.redirectUrl,
+      cancelCallbackUrl: cancelCallbackUrl ?? this.cancelCallbackUrl,
       parameters: parameters ?? this.parameters,
       isCloseButtonVisible: isCloseButtonVisible ?? this.isCloseButtonVisible,
       jsonProofResponse: jsonProofResponse ?? this.jsonProofResponse,
       providerVersion: providerVersion ?? this.providerVersion,
       resolvedProviderVersion: resolvedProviderVersion ?? this.resolvedProviderVersion,
+      sessionToken: sessionToken ?? this.sessionToken,
     );
   }
 

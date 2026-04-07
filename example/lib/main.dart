@@ -19,7 +19,7 @@ const String appSecret = String.fromEnvironment('APP_SECRET');
 const providerId = String.fromEnvironment(
   'PROVIDER_ID',
   // Using github username's http provider id as default.
-  defaultValue: '6d3f6753-7ee6-49ee-a545-62f1b1822ae5',
+  defaultValue: 'example',
 );
 
 void main() async {
@@ -43,6 +43,8 @@ class ReclaimExampleApp extends StatelessWidget {
   }
 }
 
+enum TEEModeOption { auto, enabled, disabled }
+
 class Example extends StatefulWidget {
   const Example({super.key});
 
@@ -54,6 +56,7 @@ class _ExampleState extends State<Example> {
   late final _providerIdController = TextEditingController(text: providerId);
 
   String get effectiveProviderId => _providerIdController.text.trim();
+  TEEModeOption teeModeOption = TEEModeOption.enabled;
 
   @override
   void dispose() {
@@ -70,10 +73,22 @@ class _ExampleState extends State<Example> {
     final msg = ScaffoldMessenger.of(context);
     try {
       print("Starting proof for provider: $effectiveProviderId, with appId: $appId");
-      final sdk = ReclaimInAppSdk.of(context);
+      final sdk = ReclaimInAppSdk();
       await sdk.setConsoleLogging(kDebugMode);
+      await sdk.setVerificationOptions(
+        ReclaimApiVerificationOptions(
+          useTeeOperator: switch (teeModeOption) {
+            TEEModeOption.auto => null,
+            TEEModeOption.enabled => true,
+            TEEModeOption.disabled => false,
+          },
+        ),
+      );
+
+      if (!context.mounted) return;
 
       response = await sdk.startVerification(
+        context,
         ReclaimVerificationRequest(
           applicationId: appId,
           providerId: effectiveProviderId,
@@ -139,6 +154,24 @@ class _ExampleState extends State<Example> {
                   },
                 ),
               ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: DropdownButtonFormField<TEEModeOption>(
+              initialValue: teeModeOption,
+              items:
+                  TEEModeOption.values.map((e) {
+                    return DropdownMenuItem(value: e, child: Text(e.name));
+                  }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    teeModeOption = value;
+                  });
+                }
+              },
+              decoration: InputDecoration(labelText: 'TEE Mode', border: OutlineInputBorder()),
             ),
           ),
           FilledButton(

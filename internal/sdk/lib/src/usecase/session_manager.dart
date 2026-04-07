@@ -73,6 +73,7 @@ class SessionManager {
     required String providerId,
     required String sessionId,
     required ReclaimException exception,
+    String? errorCallbackUrl,
   }) async {
     unawaitedSequence([
       ReclaimSession.sendLogs(
@@ -82,6 +83,12 @@ class SessionManager {
         logType: 'RECLAIM_EXCEPTION',
         metadata: {'exception': exception},
       ),
+      if (exception is ReclaimVerificationProviderScriptException)
+        ReclaimSession.sendErrorCallback(
+          sessionId: sessionId,
+          error: {'type': 'ProviderError', 'message': exception.message, ...?exception.providerError},
+          callbackUrl: errorCallbackUrl,
+        ),
     ]);
   }
 
@@ -130,13 +137,14 @@ class SessionManager {
     required String sessionId,
     required String providerId,
     required String url,
+    required String indicator,
   }) async {
     await ReclaimSession.sendLogs(
       appId: applicationId,
       sessionId: sessionId,
       providerId: providerId,
-      logType: 'LOGIN_DETECTED',
-      metadata: {'url': url},
+      logType: 'LOGIN_INDICATORS_NOT_FOUND',
+      metadata: {'url': url, 'indicator': indicator},
     );
   }
 
@@ -145,19 +153,14 @@ class SessionManager {
     required String sessionId,
     required String providerId,
     required String url,
-    required bool hasLoginRelatedTokenInUrl,
-    required bool? hasLoginRelatedElementInPage,
+    required String indicator,
   }) async {
     await ReclaimSession.sendLogs(
       appId: applicationId,
       sessionId: sessionId,
       providerId: providerId,
-      logType: 'LOGIN_REQUIRED_DETECTED',
-      metadata: {
-        'url': url,
-        'hasLoginRelatedTokenInUrl': hasLoginRelatedTokenInUrl,
-        'hasLoginRelatedElementInPage': hasLoginRelatedElementInPage,
-      },
+      logType: 'LOGIN_INDICATORS_FOUND',
+      metadata: {'url': url, 'indicator': indicator},
     );
   }
 

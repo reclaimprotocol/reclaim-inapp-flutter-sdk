@@ -195,6 +195,7 @@ ReclaimAppThemeInfo _$ReclaimAppThemeInfoFromJson(Map<String, dynamic> json) => 
   termsAndConditionLink: json['termsAndConditionLink'] as String?,
   privacyPolicyLink: json['privacyPolicyLink'] as String?,
   potentialFailureReasonsLink: json['potentialFailureReasonsLink'] as String?,
+  secureAndPrivateText: json['secureAndPrivateText'] as String?,
   preferredLocale: json['preferredLocale'] as String?,
 );
 
@@ -208,6 +209,7 @@ Map<String, dynamic> _$ReclaimAppThemeInfoToJson(ReclaimAppThemeInfo instance) =
   'termsAndConditionLink': instance.termsAndConditionLink,
   'privacyPolicyLink': instance.privacyPolicyLink,
   'potentialFailureReasonsLink': instance.potentialFailureReasonsLink,
+  'secureAndPrivateText': instance.secureAndPrivateText,
   'preferredLocale': instance.preferredLocale,
 };
 

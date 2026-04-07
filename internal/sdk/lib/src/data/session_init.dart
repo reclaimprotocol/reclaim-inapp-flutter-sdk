@@ -7,8 +7,9 @@ class SessionInitResponse {
   @JsonKey(defaultValue: '')
   final String sessionId;
   final String? resolvedProviderVersion;
+  final String? sessionToken;
 
-  const SessionInitResponse({required this.sessionId, required this.resolvedProviderVersion});
+  const SessionInitResponse({required this.sessionId, required this.resolvedProviderVersion, this.sessionToken});
 
   factory SessionInitResponse.fromJson(Map<String, dynamic> json) => _$SessionInitResponseFromJson(json);
 
