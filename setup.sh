@@ -7,8 +7,8 @@ echo "Removing existing vendored library..";
 rm -rf internal;
 mkdir -p internal;
 
-# SDK_MODULE_VERSION=0.36.0
-SDK_MODULE_VERSION=main
+SDK_MODULE_VERSION=0.36.0
+# SDK_MODULE_VERSION=main
 
 cd internal;
 
@@ -32,7 +32,7 @@ rm -rf ./tee_operator/src
 
 echo "Downloading Add to App Module"
 
-git clone --depth=1 --branch=update-lib git@github.com:reclaimprotocol/reclaim-inapp-add-to-app-module.git reclaim_verifier_module
+git clone --depth=1 --branch=main git@github.com:reclaimprotocol/reclaim-inapp-add-to-app-module.git reclaim_verifier_module
 rm -rf ./reclaim_verifier_module/.git
 rm -rf ./reclaim_verifier_module/env.json
 rm -rf ./reclaim_verifier_module/Makefile
