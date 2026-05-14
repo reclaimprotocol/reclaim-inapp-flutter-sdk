@@ -26,12 +26,30 @@ Map<String, dynamic> _$ProviderClaimDataToJson(ProviderClaimData instance) => <S
   'epoch': instance.epoch,
 };
 
-WitnessData _$WitnessDataFromJson(Map<String, dynamic> json) =>
-    WitnessData(id: json['id'] as String, url: json['url'] as String);
+VerificationCredentials _$VerificationCredentialsFromJson(Map<String, dynamic> json) => VerificationCredentials(
+  attestorAddress: json['attestor_address'] as String,
+  claimSignature: json['claim_signature'] as String,
+  attestationReport: json['attestation_report'] as String?,
+);
+
+Map<String, dynamic> _$VerificationCredentialsToJson(VerificationCredentials instance) => <String, dynamic>{
+  'attestor_address': instance.attestorAddress,
+  'claim_signature': instance.claimSignature,
+  'attestation_report': ?instance.attestationReport,
+};
+
+WitnessData _$WitnessDataFromJson(Map<String, dynamic> json) => WitnessData(
+  id: json['id'] as String,
+  url: json['url'] as String,
+  claimAttestation: json['claimAttestation'] == null
+      ? null
+      : VerificationCredentials.fromJson(json['claimAttestation'] as Map<String, dynamic>),
+);
 
 Map<String, dynamic> _$WitnessDataToJson(WitnessData instance) => <String, dynamic>{
   'id': instance.id,
   'url': instance.url,
+  'claimAttestation': ?instance.claimAttestation,
 };
 
 CreateClaimOutput _$CreateClaimOutputFromJson(Map<String, dynamic> json) => CreateClaimOutput(

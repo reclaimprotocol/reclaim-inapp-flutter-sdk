@@ -7,6 +7,7 @@ import '../../data/app_events.dart';
 import '../../data/http_request_log.dart';
 import '../../data/manual_review.dart';
 import '../../logging/logging.dart';
+import '../../utils/sanitize.dart';
 import '../../widgets/ai_flow_coordinator_widget.dart';
 import '../../widgets/claim_creation/claim_creation.dart';
 import 'manual_review/manual_review.dart';
@@ -122,7 +123,11 @@ class WebViewJSHandlerManager {
         try {
           final requestData = json.decode(args[0]);
           final requestLog = RequestLog.fromJson(requestData);
-          log.info('url : ${requestLog.url}, method : ${requestLog.method}');
+          // INFO line is sanitized by `sanitizeLogMessage` on the upload pipeline
+          // (see logging.dart) — query params carrying PII (`email=...`, `phone=...`)
+          // are redacted there. Full URL kept verbatim at FINER for dev builds.
+          log.info('url : ${sanitizeLogMessage(requestLog.url)}, method : ${requestLog.method}');
+          log.finer('url (full) : ${requestLog.url}, method : ${requestLog.method}');
 
           manualReviewController.addRequest(requestLog);
           // push the request log to the ai flow coordinator service
@@ -163,7 +168,12 @@ class WebViewJSHandlerManager {
     controller.addJavaScriptHandler(
       handlerName: 'debugLogs',
       callback: (args) {
-        logger.child('debug_logs').info(args);
+        // Provider-injected JS can pass arbitrary payloads here (e.g. publicData,
+        // optionalExtractedParams) that may contain end-user PII. Drop the body
+        // at INFO+ and keep the full args at FINER for dev builds.
+        final l = logger.child('debug_logs');
+        l.info('Received provider debug log (body redacted at INFO; raised to FINER for full payload)');
+        l.finer(args);
       },
     );
   }

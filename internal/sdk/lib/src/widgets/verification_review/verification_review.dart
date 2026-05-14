@@ -826,7 +826,10 @@ class _ActionViewState extends State<_ActionView> {
 
     final maybeProofs = controller.value.claims.map((e) => e.proofs);
     final publicData = controller.value.publicData;
-    log.fine('publicData: $publicData');
+    // FINE is NOT sanitized by the upload pipeline; raw publicData would leak
+    // end-user PII. INFO emits a redacted notification; FINER keeps the raw value.
+    log.info('publicData ready (body redacted at INFO; raised to FINER for full payload)');
+    log.finer('publicData: $publicData');
     final proofs =
         <CreateClaimOutput>[
           for (final proofs in maybeProofs)

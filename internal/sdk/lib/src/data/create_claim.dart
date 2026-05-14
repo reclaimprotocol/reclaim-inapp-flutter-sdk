@@ -30,11 +30,29 @@ class ProviderClaimData {
 }
 
 @JsonSerializable()
+class VerificationCredentials {
+  @JsonKey(name: 'attestor_address')
+  final String attestorAddress;
+  @JsonKey(name: 'claim_signature')
+  final String claimSignature;
+  @JsonKey(includeIfNull: false, name: 'attestation_report')
+  final String? attestationReport;
+
+  const VerificationCredentials({required this.attestorAddress, required this.claimSignature, this.attestationReport});
+
+  factory VerificationCredentials.fromJson(Map<String, dynamic> json) => _$VerificationCredentialsFromJson(json);
+
+  Map<String, dynamic> toJson() => _$VerificationCredentialsToJson(this);
+}
+
+@JsonSerializable()
 class WitnessData {
   final String id;
   final String url;
+  @JsonKey(includeIfNull: false)
+  final VerificationCredentials? claimAttestation;
 
-  WitnessData({required this.id, required this.url});
+  WitnessData({required this.id, required this.url, this.claimAttestation});
 
   factory WitnessData.fromJson(Map<String, dynamic> json) => _$WitnessDataFromJson(json);
 
