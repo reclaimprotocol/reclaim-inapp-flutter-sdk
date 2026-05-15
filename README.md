@@ -24,7 +24,7 @@ dependencies:
   reclaim_inapp_flutter_sdk:
     git:
       url: https://github.com/reclaimprotocol/reclaim-inapp-flutter-sdk.git
-      ref: 0.15.0
+      ref: 0.36.0
 ```
 
 #### Fixing performance issues on IOS physical devices
@@ -165,7 +165,7 @@ To fix this, you need to use embedded cronet in your android app by adding the f
 dependencies {
     // ... other dependencies (not shown for brevity)
     // Use embedded cronet
-    implementation("org.chromium.net:cronet-embedded:113.5672.61")
+    implementation("org.chromium.net:cronet-embedded:141.7340.3")
 }
 ```
 
