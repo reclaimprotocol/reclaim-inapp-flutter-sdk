@@ -249,7 +249,11 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
         deviceId = iosInfo.identifierForVendor ?? '';
         osVersion = '${iosInfo.systemName} ${iosInfo.systemVersion}';
       }
-      logger.info('deviceType: $deviceType, deviceId: $deviceId, osVersion: $osVersion');
+      // deviceId is never logged locally or in uploaded records — it's only included in the
+      // structured payload sent to the backend (kept for session tracking). See below.
+      // FINEST is dev-only (never leaves the device): emit the raw deviceId
+      // so engineers can debug locally without surgery. Gated by logger level.
+      logger.finest('deviceType: $deviceType, deviceId: $deviceId, osVersion: $osVersion');
 
       // Get public IP address
       String publicIpAddress = await getPublicIp();

@@ -154,7 +154,7 @@ class FeatureFlag<T> {
   );
 
   static final teeUrls = FeatureFlag<String>(
-    key: 'teeUrlsv2',
+    key: 'teeUrlsv3',
     canFetchFromRemote: true,
     valueIfNull: '{}',
     selector: (data) => data.teeUrls,

@@ -8,10 +8,10 @@ PODS:
   - flutter_inappwebview_ios (0.0.1):
     - Flutter
     - flutter_inappwebview_ios/Core (= 0.0.1)
-    - OrderedSet (~> 6.0.3)
+    - swift-collections (~> 1.1.1)
   - flutter_inappwebview_ios/Core (0.0.1):
     - Flutter
-    - OrderedSet (~> 6.0.3)
+    - swift-collections (~> 1.1.1)
   - flutter_secure_storage_darwin (10.0.0):
     - Flutter
     - FlutterMacOS
@@ -19,9 +19,9 @@ PODS:
     - Flutter
   - integration_test (0.0.1):
     - Flutter
+  - InternalCollectionsUtilities (1.1.1)
   - objective_c (0.0.1):
     - Flutter
-  - OrderedSet (6.0.3)
   - package_info_plus (0.4.5):
     - Flutter
   - path_provider_foundation (0.0.1):
@@ -39,6 +39,22 @@ PODS:
   - sqflite_darwin (0.0.4):
     - Flutter
     - FlutterMacOS
+  - swift-collections (1.1.1):
+    - swift-collections/BitCollections (= 1.1.1)
+    - swift-collections/DequeModule (= 1.1.1)
+    - swift-collections/HashTreeCollections (= 1.1.1)
+    - swift-collections/HeapModule (= 1.1.1)
+    - swift-collections/OrderedCollections (= 1.1.1)
+  - swift-collections/BitCollections (1.1.1):
+    - InternalCollectionsUtilities (= 1.1.1)
+  - swift-collections/DequeModule (1.1.1):
+    - InternalCollectionsUtilities (= 1.1.1)
+  - swift-collections/HashTreeCollections (1.1.1):
+    - InternalCollectionsUtilities (= 1.1.1)
+  - swift-collections/HeapModule (1.1.1):
+    - InternalCollectionsUtilities (= 1.1.1)
+  - swift-collections/OrderedCollections (1.1.1):
+    - InternalCollectionsUtilities (= 1.1.1)
   - url_launcher_ios (0.0.1):
     - Flutter
 
@@ -62,7 +78,8 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
-    - OrderedSet
+    - InternalCollectionsUtilities
+    - swift-collections
 
 EXTERNAL SOURCES:
   cupertino_http:
@@ -102,12 +119,12 @@ SPEC CHECKSUMS:
   cupertino_http: 94ac07f5ff090b8effa6c5e2c47871d48ab7c86c
   device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  flutter_inappwebview_ios: b89ba3482b96fb25e00c967aae065701b66e9b99
+  flutter_inappwebview_ios: 9cde7869829d54b4110df350f3eedd192c5a4aea
   flutter_secure_storage_darwin: acdb3f316ed05a3e68f856e0353b133eec373a23
   fluttertoast: 2c67e14dce98bbdb200df9e1acf610d7a6264ea1
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  InternalCollectionsUtilities: af3f471602c4a67cbcb0bee0a80f6f55a33ae453
   objective_c: 89e720c30d716b036faf9c9684022048eee1eee2
-  OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
@@ -115,6 +132,7 @@ SPEC CHECKSUMS:
   rive_native: fcea2a63d25e1a6417716ac1380e9667cf52ad74
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
+  swift-collections: ba248ecaf44ef500b27d5cf94d304218c89892ff
   url_launcher_ios: 694010445543906933d732453a59da0a173ae33d
 
 PODFILE CHECKSUM: 1857a7cdb7dfafe45f2b0e9a9af44644190f7506

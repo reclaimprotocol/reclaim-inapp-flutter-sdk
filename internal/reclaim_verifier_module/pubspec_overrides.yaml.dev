@@ -1,0 +1,6 @@
+# Copy file with name to pubspec_overrides.yaml to override dependency for development
+dependency_overrides:
+  # reclaim_tee_operator_flutter:
+  #   path: ../reclaim-tee-operator-flutter
+  reclaim_inapp_sdk:
+    path: ../reclaim-inapp-sdk

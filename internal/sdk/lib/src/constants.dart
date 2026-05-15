@@ -22,7 +22,7 @@ sealed class ReclaimUrls {
   // TEE (Trusted Execution Environment) URLs
   static const String DEFAULT_TEEK_WS_URL = 'wss://tk.reclaimprotocol.org/ws';
   static const String DEFAULT_TEET_WS_URL = 'wss://tt.reclaimprotocol.org/ws';
-  static const String DEFAULT_TEE_ATTESTOR_WS_URL = 'wss://attestor.reclaimprotocol.org:444/ws';
+  static const String DEFAULT_TEE_ATTESTOR_WS_URL = 'wss://tee-attestor.reclaimprotocol.org/ws';
 
   static const String DIAGNOSTIC_LOGGING = String.fromEnvironment(
     'org.reclaimprotocol.inapp_sdk.DIAGNOSTIC_LOGGING_API',

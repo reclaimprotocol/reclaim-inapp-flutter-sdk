@@ -1,3 +1,16 @@
+## 2.7.0
+
+* Update native library
+* Update native library which fixes request creation to enforce 'connection: close' header to be first after request line
+
+## 2.6.1
+
+* Update native library
+
+## 2.4.0
+
+* Updated tee-mpc library
+
 ## 2.3.1
 
 * Fix xpath evaluation to be less strict with bad xml

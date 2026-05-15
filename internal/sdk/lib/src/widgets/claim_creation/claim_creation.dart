@@ -15,6 +15,7 @@ import '../../services/session.dart';
 import '../../ui/dev/dev.dart';
 import '../../utils/future.dart';
 import '../../utils/list.dart';
+import '../../utils/log_redaction.dart';
 import '../../utils/observable_notifier.dart';
 import '../../utils/provider_performance_report.dart';
 import '../../utils/result.dart';
@@ -108,7 +109,11 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
   }
 
   void setPublicData(Object? publicData) {
-    logging.fine('publicData: $publicData');
+    // FINE is NOT sanitized by the upload pipeline (gate is `> FINE`), so
+    // logging the raw publicData here would leak end-user PII to logs-backend.
+    // INFO emits a redacted notification; FINER keeps the raw value for dev only.
+    logging.info('publicData received (body redacted at INFO; raised to FINER for full payload)');
+    logging.finer('publicData: $publicData');
     value = value.copyWith(publicData: Optional.value(publicData));
   }
 
@@ -724,9 +729,23 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
         ),
       );
 
+      // INFO+ records are uploaded off-device — claimData is sensitive, redact it.
       log.event(Level.INFO.withEvent(LogEventType.PROOF_GENERATED), {
         'reason': 'Proof Generated for providerId: $httpProviderId',
-        'proofs': json.encode(proofs),
+        'proofs': json.encode(
+          proofs.map((p) {
+            final m = p.toJson();
+            m['claimData'] = kRedactedPlaceholder;
+            return m;
+          }).toList(),
+        ),
+      });
+      // FINEST is dev-only (never leaves the device): emit raw proofs so
+      // engineers can inspect claimData during local debugging. Gated by
+      // the logger's effective level.
+      log.finest({
+        'reason': 'Proof Generated (raw) for providerId: $httpProviderId',
+        'proofs': json.encode(proofs.map((p) => p.toJson()).toList()),
       });
 
       // The proof generated is for only single claim request.

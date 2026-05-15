@@ -191,7 +191,13 @@ class AttestorTeeClient extends AttestorPlatform {
         epoch: claim.epoch,
       ),
       signatures: result.signatures.map((sig) => sig['claim_signature'] ?? '').toList(),
-      witnesses: [],
+      witnesses: result.signatures.map((sig) {
+        return WitnessData(
+          id: sig['attestor_address'] ?? '',
+          url: attestorUrl,
+          claimAttestation: VerificationCredentials.fromJson(sig),
+        );
+      }).toList(),
       publicData: null, // TEE operator doesn't provide public data
     );
 

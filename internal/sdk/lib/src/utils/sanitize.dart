@@ -25,6 +25,10 @@ final _combinedSensitivePattern = RegExp(
   r'(?:request|response)[Bb]ody\s*[:=]\s*\S+|'
   r'payload\s*[:=]\s*\S+|'
   r'body\s*[:=]\s*\S+|'
+  // URL query params carrying PII — value runs until next `&`, whitespace, or
+  // structural punctuation. Catches URL-encoded forms (e.g. `email=foo%40bar.com`)
+  // that the plain-email pattern below would miss.
+  r'(?:email|mail|phone|phone[_-]?number|mobile(?:[_-]?number)?|msisdn|first[_-]?name|last[_-]?name|full[_-]?name|dob|date[_-]?of[_-]?birth|birth[_-]?date|aadhaar|aadhar|aadhaar[_-]?number|pan|pan[_-]?number|ssn|passport(?:[_-]?number)?|account(?:[_-]?number)?|bank[_-]?account|ifsc|iban|card[_-]?number|cvv)\s*=\s*[^&\s,;}"\x27]+|'
   r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
   caseSensitive: false,
 );
