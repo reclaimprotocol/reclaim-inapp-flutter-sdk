@@ -1,3 +1,9 @@
+## 0.42.1
+
+* Upgrade flutter dependencies
+* Fix fallback for CDP
+* Update tee operator library
+
 ## 0.36.0
 
 * Add witnesses list with tee attestation (alpha) for tee mode proofs
