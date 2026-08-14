@@ -10,6 +10,7 @@ class ClaimCreationUIDelegateOptions {
   final OnSubmitProofsCallback onSubmitProofs;
   final OnContinuePressedCallback onContinue;
   final OnExceptionCallback onException;
+  final bool canAutoCloseOnError;
 
   const ClaimCreationUIDelegateOptions({
     required this.autoSubmit,
@@ -17,6 +18,7 @@ class ClaimCreationUIDelegateOptions {
     required this.onSubmitProofs,
     required this.onContinue,
     required this.onException,
+    required this.canAutoCloseOnError,
   });
 
   static ClaimCreationUIDelegateOptions? of(BuildContext context, {bool listen = true}) {

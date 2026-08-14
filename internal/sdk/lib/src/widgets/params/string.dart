@@ -1,9 +1,10 @@
 import 'dart:convert';
+
 import 'package:intl/intl.dart' show Intl;
 
 import '../../logging/logging.dart';
 
-String formatParamsLabel(final String input) {
+String formatParamsLabel(String input) {
   String text = input;
   text = text.trim();
   if (text.toUpperCase() == text) {
@@ -74,19 +75,19 @@ String? formatJsonValueAsHumanizedSummary(String value) {
   return null;
 }
 
-bool _isFormattedAsCollection(final String value) {
+bool _isFormattedAsCollection(String value) {
   final words = value.split(' ');
   if (words.length != 2) return false;
   return ['item', 'items'].any((e) => e == words.last);
 }
 
-bool isValueCollection(final String input) {
+bool isValueCollection(String input) {
   final value = formatJsonValueAsHumanizedSummary(input);
   if (value == null) return false;
   return _isFormattedAsCollection(value) && !_isFormattedAsCollection(input);
 }
 
-String formatParamsValue(final String input, {final bool humanize = true}) {
+String formatParamsValue(String input, {bool humanize = true}) {
   if (humanize) {
     final humanizedSummary = formatJsonValueAsHumanizedSummary(input);
     if (humanizedSummary != null) {

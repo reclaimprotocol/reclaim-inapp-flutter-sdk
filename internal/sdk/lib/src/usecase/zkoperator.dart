@@ -76,24 +76,20 @@ class ZkOperatorManager {
 
     // Parse TEE URLs from JSON string with fallbacks to defaults
     String attestorWsUrl = ReclaimUrls.DEFAULT_TEE_ATTESTOR_WS_URL;
-    String teekWsUrl = ReclaimUrls.DEFAULT_TEEK_WS_URL;
-    String teetWsUrl = ReclaimUrls.DEFAULT_TEET_WS_URL;
+    String routerUrl = ReclaimUrls.DEFAULT_TEE_ROUTER_URL;
 
     try {
       if (teeUrlsJson.isNotEmpty) {
         final teeUrlsMap = json.decode(teeUrlsJson) as Map<String, dynamic>;
         attestorWsUrl = teeUrlsMap['teeAttestorUrl'] as String? ?? ReclaimUrls.DEFAULT_TEE_ATTESTOR_WS_URL;
-        teekWsUrl = teeUrlsMap['teekUrl'] as String? ?? ReclaimUrls.DEFAULT_TEEK_WS_URL;
-        teetWsUrl = teeUrlsMap['teetUrl'] as String? ?? ReclaimUrls.DEFAULT_TEET_WS_URL;
-        log.info(
-          '🔐 TEE URLS: Using URLs from feature flags - attestorWsUrl: $attestorWsUrl, teekWsUrl: $teekWsUrl, teetWsUrl: $teetWsUrl',
-        );
+        routerUrl = teeUrlsMap['routerUrl'] as String? ?? ReclaimUrls.DEFAULT_TEE_ROUTER_URL;
+        log.info('🔐 TEE URLS: Using URLs from feature flags - attestorWsUrl: $attestorWsUrl, routerUrl: $routerUrl');
       }
     } catch (e) {
       log.warning('🔐 TEE URLS: Failed to parse teeUrls JSON, using defaults: $e');
     }
 
-    return TeeUrls(attestorWsUrl: attestorWsUrl, teekWsUrl: teekWsUrl, teetWsUrl: teetWsUrl);
+    return TeeUrls(attestorWsUrl: attestorWsUrl, routerUrl: routerUrl);
   }
 
   Future<bool> isServiceAccessible(String url) async {
@@ -122,20 +118,16 @@ class ZkOperatorManager {
     final teeUrls = await getTeeUrls();
 
     final String attestorWsUrl = teeUrls.attestorWsUrl;
-    final String teekWsUrl = teeUrls.teekWsUrl;
-    final String teetWsUrl = teeUrls.teetWsUrl;
+    final String routerUrl = teeUrls.routerUrl;
 
-    logger.info(
-      '🔐 TEE URLS: Can use URLs - attestorWsUrl: $attestorWsUrl, teekWsUrl: $teekWsUrl, teetWsUrl: $teetWsUrl',
-    );
+    logger.info('🔐 TEE URLS: Can use URLs - attestorWsUrl: $attestorWsUrl, routerUrl: $routerUrl');
 
     try {
       final attestorUrlAsync = isServiceAccessible(attestorWsUrl);
-      final teekUrlAsync = isServiceAccessible(teekWsUrl);
-      final teetUrlAsync = isServiceAccessible(teetWsUrl);
-      await Future.wait([attestorUrlAsync, teekUrlAsync, teetUrlAsync]);
+      final routerUrlAsync = isServiceAccessible(routerUrl);
+      await Future.wait([attestorUrlAsync, routerUrlAsync]);
       logger.info(
-        '🔐 TEE URLS: Pre-tested TEE URLs, results: attestorWsUrlResult=${await attestorUrlAsync}, teekWsUrlResult=${await teekUrlAsync}, teetWsUrlResult=${await teetUrlAsync}',
+        '🔐 TEE URLS: Pre-tested TEE URLs, results: attestorWsUrlResult=${await attestorUrlAsync}, routerUrlResult=${await routerUrlAsync}',
       );
     } catch (e, s) {
       log.warning('🔐 TEE URLS: Failed to pre-test TEE URLs', e, s);

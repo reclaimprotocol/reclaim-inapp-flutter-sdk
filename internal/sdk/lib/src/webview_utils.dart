@@ -259,6 +259,59 @@ const userInteractionInjection = """
 })();
 """;
 
+/// Reports the first user interaction and first typed character on each page.
+///
+/// Native-side deduplication ensures each status is submitted at most once for
+/// the verification session, including across navigations and popup WebViews.
+const sessionUserInteractionInjection = """
+(function() {
+  let reportedInteraction = false;
+  let reportedTyped = false;
+
+  function sendStatus(status, metadata) {
+    window.flutter_inappwebview.callHandler(
+      'sessionEvent',
+      JSON.stringify({ status, metadata })
+    );
+  }
+
+  function reportInteraction(type) {
+    if (reportedInteraction) return;
+    reportedInteraction = true;
+    sendStatus('USER_INTERACTED', { firstInteractionType: type });
+  }
+
+  function reportTyped() {
+    if (reportedTyped) return;
+    reportedTyped = true;
+    sendStatus('USER_TYPED');
+  }
+
+  document.addEventListener('pointerdown', function(event) {
+    if (!event.isTrusted) return;
+    reportInteraction('click');
+  }, true);
+
+  document.addEventListener('scroll', function(event) {
+    if (!event.isTrusted) return;
+    reportInteraction('scroll');
+  }, true);
+
+  document.addEventListener('keydown', function(event) {
+    if (!event.isTrusted) return;
+    const isCharacter = event.key && event.key.length === 1;
+    reportInteraction(isCharacter ? 'char' : 'special');
+    if (isCharacter) reportTyped();
+  }, true);
+
+  document.addEventListener('input', function(event) {
+    if (!event.isTrusted) return;
+    reportInteraction('char');
+    reportTyped();
+  }, true);
+})();
+""";
+
 class InjectionRequest {
   final String urlRegex;
   final String? bodySniffRegex;
@@ -303,6 +356,8 @@ final _log = logging.child('webview_utils');
 String injectInterceptorScript(InjectionType injectionType, {required HawkeyeInterceptionOptions options}) {
   _log.config('[INJECTION] Using $injectionType');
   switch (injectionType) {
+    case InjectionType.CDP:
+    case InjectionType.UNKNOWN:
     case InjectionType.HAWKEYE:
       return applyInterceptorOptionsToTemplate(options, HAWKEYE);
     case InjectionType.MSWJS:
@@ -386,7 +441,7 @@ String escapeRegexTemplate({String regexTemplate = '', bool extraEscape = false}
 
 typedef ConvertedTemplateResult = (String template, List<String> allVars, List<String> unSubstitutedVars);
 
-Iterable<String> getRegexTemplateVariables(final String template) {
+Iterable<String> getRegexTemplateVariables(String template) {
   try {
     _log.info('Getting regex template variables for `$template`');
     return regexTemplateParamRegex
@@ -413,17 +468,17 @@ Iterable<String> getRegexTemplateVariables(final String template) {
   }
 }
 
-Iterable<String> getTemplateVariables(final String template) {
+Iterable<String> getTemplateVariables(String template) {
   return templateParamRegex.allMatches(template).map((match) => match.group(1)).whereType<String>();
 }
 
-String interpolateParamValue(final String template, final String param, final Map<String, String> values) {
+String interpolateParamValue(String template, String param, Map<String, String> values) {
   final value = values[param];
   if (value == null) return template;
   return template.replaceAll('{{$param}}', value);
 }
 
-String interpolateTemplateWithValues(final String template, final Map<String, String> values) {
+String interpolateTemplateWithValues(String template, Map<String, String> values) {
   String value = template;
   for (final param in values.keys) {
     value = interpolateParamValue(value, param, values);

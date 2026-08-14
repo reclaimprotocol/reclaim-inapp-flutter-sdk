@@ -37,14 +37,12 @@ class ReusableResourcePool<RESOURCE> {
 
   ReusableResourcePool({
     required int initialPoolSize,
-    required FutureOr<RESOURCE> Function() createResource,
-    required FutureOr<void> Function(RESOURCE resource) disposeResource,
+    required this._createResource,
+    required this._disposeResource,
     required this.ageLimit,
     required this.getResourceAge,
     required this.isResourceFaulty,
-  }) : _createResource = createResource,
-       _disposeResource = disposeResource,
-       _poolSize = initialPoolSize,
+  }) : _poolSize = initialPoolSize,
        _pool = Pool(initialPoolSize);
 
   FutureOr<RESOURCE> getResource() async {

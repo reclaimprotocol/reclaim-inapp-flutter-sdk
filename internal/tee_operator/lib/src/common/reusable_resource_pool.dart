@@ -4,7 +4,7 @@ import 'dart:collection';
 import 'package:logging/logging.dart';
 import 'package:pool/pool.dart';
 
-final _log = Logger('reclaim_flutter_sdk.ReusableResourcePool');
+final _log = Logger('reclaim_inapp_sdk.ReusableResourcePool');
 
 class ReusableResourcePool<RESOURCE> {
   Pool _pool;
@@ -42,7 +42,9 @@ class ReusableResourcePool<RESOURCE> {
     required this.ageLimit,
     required this.getResourceAge,
     required this.isResourceFaulty,
+    // ignore: prefer_initializing_formals
   }) : _createResource = createResource,
+       // ignore: prefer_initializing_formals
        _disposeResource = disposeResource,
        _poolSize = initialPoolSize,
        _pool = Pool(initialPoolSize);

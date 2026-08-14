@@ -7,7 +7,7 @@ import 'package:reclaim_tee_operator_flutter/src/common/libreclaim/libreclaim.da
 
 import '../isolate_worker/isolate_worker.dart';
 
-final _logger = Logger('reclaim_flutter_sdk.reclaim_tee_operator.worker.oprf.generate_request');
+final _logger = Logger('reclaim_inapp_sdk.reclaim_tee_operator.worker.oprf.generate_request');
 
 class GenerateOPRFRequestDataRunnable extends Runnable<Uint8List, String> {
   const GenerateOPRFRequestDataRunnable();

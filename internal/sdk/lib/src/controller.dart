@@ -28,7 +28,7 @@ import 'webview_utils.dart';
 import 'widgets/feature_flags.dart';
 
 @immutable
-class VerificationState with EquatableMixin {
+class VerificationState with Equatable {
   VerificationState({
     this.requestedProvider,
     this.provider,
@@ -244,7 +244,17 @@ class VerificationController extends ObservableNotifier<VerificationState> {
 
       _log.info('Fetching attestor authentication request');
 
-      await _onFetchAttestorAuthenticationRequest(provider);
+      await _onFetchAttestorAuthenticationRequest(
+        provider,
+        SessionAttestorAuthRequest(
+          appId: request.applicationId,
+          providerId: request.providerId,
+          sessionId: sessionInformation.sessionId,
+          signature: sessionInformation.signature,
+          timestamp: sessionInformation.timestamp,
+          resolvedVersion: sessionInformation.version.resolvedVersion,
+        ),
+      );
 
       _log.info('Waiting for web storage to be cleared');
 
@@ -297,14 +307,18 @@ class VerificationController extends ObservableNotifier<VerificationState> {
     value = value.copyWith(userScripts: userScripts, matchableDevtoolProviderRequests: injectionRequests);
   }
 
-  Future<void> _onFetchAttestorAuthenticationRequest(HttpProvider requestedProvider) async {
+  Future<void> _onFetchAttestorAuthenticationRequest(
+    HttpProvider requestedProvider,
+    SessionAttestorAuthRequest sessionAuthRequest,
+  ) async {
     final callback = options.attestorAuthenticationRequest;
-    if (callback == null) return;
 
     final attestorAuthenticationRequest = await VerificationFlowManager().fetchAttestorAuthenticationRequest(
       provider: requestedProvider,
+      sessionAuthRequest: sessionAuthRequest,
       callback: callback,
     );
+
     value = value.copyWith(attestorAuthenticationRequest: attestorAuthenticationRequest);
   }
 

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class ShimmerShader extends StatefulWidget {
   const ShimmerShader({super.key, this.primaryColor, this.secondaryColor, this.animate = true, required this.child});

@@ -25,15 +25,27 @@ typedef NativeConnectCallbackNative = Void Function(Int64 reqId, Int connType, P
 typedef NativeConnectCallback = void Function(int reqId, int connType, Pointer<Utf8> url, int timeoutMs);
 
 /// Read callback: (reqId, handle, maxBytes, timeoutMs) -> void
-typedef NativeReadCallbackNative =
-    Void Function(Int64 reqId, NetworkConnectionIdentifier handle, Int maxBytes, Int timeoutMs);
+typedef NativeReadCallbackNative = Void Function(
+  Int64 reqId,
+  NetworkConnectionIdentifier handle,
+  Int maxBytes,
+  Int timeoutMs,
+);
 typedef NativeReadCallback = void Function(int reqId, NetworkConnectionIdentifier handle, int maxBytes, int timeoutMs);
 
 /// Write callback: (reqId, handle, data, length) -> void
-typedef NativeWriteCallbackNative =
-    Void Function(Int64 reqId, NetworkConnectionIdentifier handle, Pointer<UnsignedChar> data, Int length);
-typedef NativeWriteCallback =
-    void Function(int reqId, NetworkConnectionIdentifier handle, Pointer<Uint8> data, int length);
+typedef NativeWriteCallbackNative = Void Function(
+  Int64 reqId,
+  NetworkConnectionIdentifier handle,
+  Pointer<UnsignedChar> data,
+  Int length,
+);
+typedef NativeWriteCallback = void Function(
+  int reqId,
+  NetworkConnectionIdentifier handle,
+  Pointer<Uint8> data,
+  int length,
+);
 
 /// Close callback: (handle) -> void
 typedef NativeCloseCallbackNative = Void Function(NetworkConnectionIdentifier handle);
@@ -60,20 +72,18 @@ abstract class NativeNetError {
 // =============================================================================
 
 /// enable_native_networking function type
-typedef EnableNativeNetworkingNative =
-    Int32 Function(
-      Pointer<NativeFunction<NativeConnectCallbackNative>> connectCb,
-      Pointer<NativeFunction<NativeReadCallbackNative>> readCb,
-      Pointer<NativeFunction<NativeWriteCallbackNative>> writeCb,
-      Pointer<NativeFunction<NativeCloseCallbackNative>> closeCb,
-    );
-typedef EnableNativeNetworking =
-    int Function(
-      Pointer<NativeFunction<NativeConnectCallbackNative>> connectCb,
-      Pointer<NativeFunction<NativeReadCallbackNative>> readCb,
-      Pointer<NativeFunction<NativeWriteCallbackNative>> writeCb,
-      Pointer<NativeFunction<NativeCloseCallbackNative>> closeCb,
-    );
+typedef EnableNativeNetworkingNative = Int32 Function(
+  Pointer<NativeFunction<NativeConnectCallbackNative>> connectCb,
+  Pointer<NativeFunction<NativeReadCallbackNative>> readCb,
+  Pointer<NativeFunction<NativeWriteCallbackNative>> writeCb,
+  Pointer<NativeFunction<NativeCloseCallbackNative>> closeCb,
+);
+typedef EnableNativeNetworking = int Function(
+  Pointer<NativeFunction<NativeConnectCallbackNative>> connectCb,
+  Pointer<NativeFunction<NativeReadCallbackNative>> readCb,
+  Pointer<NativeFunction<NativeWriteCallbackNative>> writeCb,
+  Pointer<NativeFunction<NativeCloseCallbackNative>> closeCb,
+);
 
 /// disable_native_networking function type
 typedef DisableNativeNetworkingNative = Void Function();
@@ -163,6 +173,7 @@ void _connectCallback(int reqId, int connType, Pointer<Char> urlPtr, int timeout
     }
 
     final url = urlPtr.toDartString();
+    _callbackLogger.info('connect requested: connType=$connType url="$url" timeoutMs=$timeoutMs');
 
     final handle = await handler.connect(connType, url, timeoutMs);
     ReclaimBindings.instance.submitConnectResult(reqId, handle, NativeNetError.success, nullptr);

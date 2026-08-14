@@ -6,7 +6,7 @@ import 'package:logging/logging.dart';
 import '../utils/list.dart';
 import 'algorithm.dart';
 
-final _logger = Logger('reclaim_flutter_sdk.reclaim_tee_operator.algorithm.utils');
+final _logger = Logger('reclaim_inapp_sdk.reclaim_tee_operator.algorithm.utils');
 
 final _nameToBytes = <ProverAlgorithmType, Uint8List>{};
 final _keyToBytes = <ProverAlgorithmType, Uint8List>{};

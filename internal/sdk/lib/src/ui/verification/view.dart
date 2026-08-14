@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../controller.dart';
 import '../../data/providers.dart';
@@ -107,9 +107,8 @@ class _VerificationViewState extends State<VerificationView> {
     _clientViewModel.load(provider: provider, userScripts: userScripts).catchError((e, s) {
       if (mounted) {
         _log.severe('Failed to load client web', e, s);
-        VerificationController.readOf(
-          context,
-        ).updateException(const ReclaimVerificationProviderLoadException('Failed to load scripts'));
+        VerificationController.readOf(context)
+            .updateException(const ReclaimVerificationProviderLoadException('Failed to load scripts'));
       }
     });
   }
@@ -215,6 +214,7 @@ class _VerificationViewState extends State<VerificationView> {
                   onException: (e) {
                     VerificationController.readOf(context).updateException(e);
                   },
+                  canAutoCloseOnError: VerificationController.readOf(context).options.canAutoCloseOnError,
                 ),
                 child: Builder(
                   builder: (context) {

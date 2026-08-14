@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+
 import 'text_span.dart';
 
-String _handleLargeText(final String text) {
+String _handleLargeText(String text) {
   // TODO: change this with a way to limit length using available width
   if (text.length <= 26) return text;
   return '${text.substring(0, 23)}...';

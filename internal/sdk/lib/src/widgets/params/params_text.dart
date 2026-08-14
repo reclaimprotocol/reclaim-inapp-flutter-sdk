@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../data/create_claim.dart';
 import '../../data/providers.dart';
@@ -570,9 +570,8 @@ class _ParamsTileState extends State<ParamsTile> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 4,
-          ).add(isDividerSeparated ? const EdgeInsetsDirectional.only(end: 12.0) : EdgeInsets.zero),
+          padding: const EdgeInsets.symmetric(horizontal: 4)
+              .add(isDividerSeparated ? const EdgeInsetsDirectional.only(end: 12.0) : EdgeInsets.zero),
           child: AnimatedSwitcher(
             key: _key,
             duration: Durations.medium1,
@@ -636,9 +635,8 @@ class _ParamsTileState extends State<ParamsTile> {
                     return ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: maxWidth),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 3.0,
-                        ).add(const EdgeInsetsDirectional.only(end: 8)),
+                        padding: const EdgeInsets.symmetric(vertical: 3.0)
+                            .add(const EdgeInsetsDirectional.only(end: 8)),
                         child: Text(
                           label,
                           style: TextStyle(color: paramTitleColor, fontSize: 14, fontWeight: FontWeight.normal),

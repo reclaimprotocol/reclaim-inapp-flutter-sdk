@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../data/screenshot_metadata.dart';
 import '../logging/logging.dart';
@@ -31,12 +31,11 @@ class HybridScreenshotService {
   final _logger = logging.child('HybridScreenshotService');
 
   HybridScreenshotService({
-    required AiServiceClient aiServiceClient,
+    required this._aiServiceClient,
     required this.sessionId,
     required this.providerId,
     ScreenshotStorage? storage,
-  }) : _aiServiceClient = aiServiceClient,
-       _storage = storage ?? ScreenshotStorage(sessionId: sessionId);
+  }) : _storage = storage ?? ScreenshotStorage(sessionId: sessionId);
 
   /// Start periodic screenshot capturing with both webview and app UI
   void startCapturing({

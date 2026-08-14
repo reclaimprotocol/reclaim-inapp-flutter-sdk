@@ -2,6 +2,8 @@
 
 set -e;
 
+./scripts/lint.sh
+
 if [ -z "$GO_RECLAIM_DIR" ]
 then
     # Default to local monorepo path if available

@@ -22,7 +22,7 @@ Directory _getCacheDir([String? cacheDirName]) {
   return cacheDir;
 }
 
-final _buildClientLogger = Logger('reclaim_flutter_sdk.reclaim_tee_operator._buildClient');
+final _buildClientLogger = Logger('reclaim_inapp_sdk.reclaim_tee_operator._buildClient');
 
 http.Client _buildClientWithDefaultCaching() {
   _buildClientLogger.config('Building client with default caching');
@@ -117,7 +117,7 @@ extension _ReadUnstreamed on http.Client {
 
 final Map<String, http.Client> _cachedClients = {};
 
-final _downloadWithHttpLogger = Logger('reclaim_flutter_sdk.reclaim_tee_operator.downloadWithHttp');
+final _downloadWithHttpLogger = Logger('reclaim_inapp_sdk.reclaim_tee_operator.downloadWithHttp');
 
 Future<Uint8List?> downloadWithHttp(
   String url, {

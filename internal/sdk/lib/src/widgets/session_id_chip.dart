@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../reclaim_inapp_sdk.dart';
 import '../assets/assets.dart';

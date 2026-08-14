@@ -111,6 +111,19 @@ final class ReclaimVerificationProviderScriptException extends ReclaimVerificati
   }
 }
 
+/// Exception thrown when the provider claim creation has failed with an error to stop the verification process.
+final class ReclaimVerificationProviderFailedException extends ReclaimVerificationProviderException {
+  const ReclaimVerificationProviderFailedException(String super.message);
+
+  @override
+  final exceptionName = 'ReclaimVerificationProviderFailedException';
+
+  @override
+  Map<String, Object?> toJson() {
+    return {...super.toJson()};
+  }
+}
+
 final class ReclaimVerificationNoActivityDetectedException extends ReclaimVerificationProviderException {
   const ReclaimVerificationNoActivityDetectedException(String super.message);
 

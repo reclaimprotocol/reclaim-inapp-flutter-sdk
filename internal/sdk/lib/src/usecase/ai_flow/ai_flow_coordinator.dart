@@ -33,13 +33,8 @@ class AIFlowCoordinator {
   final _logger = logging.child('AIFlowCoordinator');
   final WebContext _webContext = WebContext();
 
-  AIFlowCoordinator({
-    required Map<Type, List<AIFlowHandler>> handlerMap,
-    required AiServiceClient aiClient,
-    AIFlowCoordinatorConfig? config,
-  }) : _handlerMap = handlerMap,
-       _aiClient = aiClient,
-       _config = config ?? const AIFlowCoordinatorConfig();
+  AIFlowCoordinator({required this._handlerMap, required this._aiClient, AIFlowCoordinatorConfig? config})
+    : _config = config ?? const AIFlowCoordinatorConfig();
 
   AiServiceClient get aiClient => _aiClient;
 

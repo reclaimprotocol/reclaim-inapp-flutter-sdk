@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:convert';
 
 import 'options.dart';
 
@@ -11,9 +12,9 @@ class AttestorClaimRequest {
   const AttestorClaimRequest({required this.operationType, required this.message});
 
   factory AttestorClaimRequest.create({
-    required final ZKOperationType operationType,
-    required final AttestorClaimOptions options,
-    required final Map<String, Object?> request,
+    required ZKOperationType operationType,
+    required AttestorClaimOptions options,
+    required Map<String, Object?> request,
   }) {
     final message = <String, Object?>{...request, "zkProofConcurrency": 1};
     if (operationType == ZKOperationType.gnarkRpc) {
@@ -23,7 +24,18 @@ class AttestorClaimRequest {
     }
     final authRequest = options.attestorAuthenticationRequest;
     if (authRequest != null) {
-      message["authRequest"] = authRequest;
+      switch (operationType) {
+        case ZKOperationType.snarkJs:
+        case ZKOperationType.gnarkRpc:
+          message["authRequest"] = authRequest;
+          break;
+        case ZKOperationType.gnarkTEENative:
+          message["authRequest"] = _jsonToBase64Codec.encode({
+            'data': authRequest.data,
+            'signature': authRequest.signature?.value,
+          });
+          break;
+      }
     }
     return AttestorClaimRequest(operationType: operationType, message: UnmodifiableMapView(message));
   }
@@ -32,3 +44,5 @@ class AttestorClaimRequest {
     return message;
   }
 }
+
+final _jsonToBase64Codec = json.fuse(utf8.fuse(base64));

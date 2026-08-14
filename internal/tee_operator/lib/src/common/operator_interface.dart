@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:measure_performance/measure_performance.dart';
 import 'package:reclaim_tee_operator_flutter/src/common/exceptions.dart';
+
 import '../common/utils/platform.dart' as platform;
 
 import '../tee/models/claim.dart';

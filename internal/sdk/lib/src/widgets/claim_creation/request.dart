@@ -170,7 +170,7 @@ class ClaimCreationRequest {
     DataProviderRequest dataRequest,
     Map proofData,
     Map<String, String> initialWitnessParams,
-    final Map<String, String> params,
+    Map<String, String> params,
   ) {
     final logger = logging.child('extractUrlTemplateParams');
     final (urlRegex, _, urlParamKeys) = convertTemplateToRegex(
@@ -204,7 +204,7 @@ class ClaimCreationRequest {
     DataProviderRequest dataRequest,
     Map proofData,
     Map<String, String> initialWitnessParams,
-    final Map<String, String> params,
+    Map<String, String> params,
   ) {
     String requestTemplate = dataRequest.bodySniff?.template ?? '';
     var (requestBodyRegex, _, requestBodyParamKeys) = convertTemplateToRegex(

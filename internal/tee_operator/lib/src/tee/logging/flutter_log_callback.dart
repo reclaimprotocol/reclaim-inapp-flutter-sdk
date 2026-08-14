@@ -4,29 +4,17 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
+
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:material_ui/material_ui.dart';
+
+import '../../common/libreclaim/libreclaim.dart';
+import '../../common/worker/isolate_worker/isolate_worker.dart';
 
 // FFI callback signature matching Go: void (*LogCallback)(const char* level, const char* message, const char* fields, int progress_percentage, const char* progress_description)
-typedef LogCallbackC =
-    Void Function(
-      Pointer<Utf8> level,
-      Pointer<Utf8> message,
-      Pointer<Utf8> fields,
-      Int32 progressPercentage,
-      Pointer<Utf8> progressDescription,
-    );
-
-// FFI function signatures
-typedef SetLogCallbackC = Int32 Function(Pointer<NativeFunction<LogCallbackC>>);
-typedef SetLogCallbackDart = int Function(Pointer<NativeFunction<LogCallbackC>>);
-
-typedef ClearLogCallbackC = Void Function();
-typedef ClearLogCallbackDart = void Function();
-
-// Test function removed
+typedef LogCallbackC = GoLogCallback;
 
 // Log message model with optional progress tracking
 class ZapLogMessage {
@@ -163,13 +151,8 @@ class FlutterZapLogger {
   Stream<ZapLogMessage> get warnStream => logStream.where((log) => log.level == 'warn' || log.level == 'warning');
   Stream<ZapLogMessage> get errorStream => logStream.where((log) => log.level == 'error');
 
-  // FFI functions
-  SetLogCallbackDart? _setLogCallback;
-  ClearLogCallbackDart? _clearLogCallback;
-  // Test function removed
-
-  // Native callback
-  NativeCallable<LogCallbackC>? _nativeCallback;
+  // Background worker that owns the native callback (see _GoLogListenerRunnable)
+  BackgroundWorker<void, bool>? _worker;
 
   // State
   bool _initialized = false;
@@ -187,9 +170,10 @@ class FlutterZapLogger {
     if (_initialized) return true;
 
     try {
-      // Timing removed
-      // Load native library based on platform
-      late final DynamicLibrary lib;
+      if (!Platform.isAndroid && !Platform.isIOS) {
+        _available = false;
+        return false;
+      }
 
       if (Platform.isAndroid) {
         // Preload the library off the UI thread to avoid startup jank
@@ -198,43 +182,22 @@ class FlutterZapLogger {
             DynamicLibrary.open('libreclaim.so');
           });
         } catch (_) {}
-        lib = DynamicLibrary.open('libreclaim.so');
-      } else if (Platform.isIOS) {
-        // Match the worker isolate: open the vendored framework directly
-        const packageName = 'reclaim_tee_operator_flutter';
-        lib = DynamicLibrary.open('$packageName.framework/$packageName');
-      } else {
-        _available = false;
-        return false;
       }
 
-      // Try to load logging functions
-      try {
-        _setLogCallback = lib.lookupFunction<SetLogCallbackC, SetLogCallbackDart>('set_log_callback');
-        _clearLogCallback = lib.lookupFunction<ClearLogCallbackC, ClearLogCallbackDart>('clear_log_callback');
-
-        // No test flutter logging lookup
-      } catch (e) {
-        // Logging not available in the library
-        _available = false;
-        return false;
+      // Register the native callback from a background worker isolate (same
+      // pattern as the native networking and ZK-init callbacks) so FFI string
+      // decoding and JSON parsing never run on the main isolate.
+      final worker = await const WorkerManager(_GoLogListenerRunnable())
+          .createWorker(debugLabel: 'GoLogListener', onMessageFromBackground: _onLogMessageFromWorker);
+      final registered = await worker.executeInBackground(null, timeout: const Duration(seconds: 10));
+      if (!registered) {
+        worker.close();
+        throw Exception('Failed to set log callback');
       }
-
-      // Create native callback
-      _nativeCallback = NativeCallable<LogCallbackC>.listener(_handleLogCallback);
-
-      // Register callback with Go
-      // Timing removed
-      final result = _setLogCallback!(_nativeCallback!.nativeFunction);
-      if (result != 1) {
-        throw Exception('Failed to set log callback, returned: $result');
-      }
+      _worker = worker;
 
       _initialized = true;
       _available = true;
-      // Initialized OK
-
-      // No test logging
 
       return true;
     } catch (e) {
@@ -243,54 +206,26 @@ class FlutterZapLogger {
     }
   }
 
-  // Callback handler - static so it can be called from native code
-  static void _handleLogCallback(
-    Pointer<Utf8> level,
-    Pointer<Utf8> message,
-    Pointer<Utf8> fields,
-    int progressPercentage,
-    Pointer<Utf8> progressDescription,
-  ) {
-    try {
-      final levelStr = level.toDartString();
+  // Receives parsed log messages from the worker isolate
+  void _onLogMessageFromWorker(dynamic message) {
+    if (message is! ZapLogMessage) return;
 
-      // Skip debug logs entirely in release mode to prevent excessive string allocations and isolate jank.
-      // progressPercentage >= 0 indicates a progress update, which we shouldn't skip.
-      if (levelStr == 'debug' && !kDebugMode && progressPercentage < 0) {
-        return;
-      }
+    // Add to stream
+    _logController.add(message);
 
-      final messageStr = message.toDartString();
-      final fieldsStr = fields.toDartString();
-      final progressDescStr = progressDescription.toDartString();
-
-      final logMessage = ZapLogMessage.fromCallback(
-        levelStr,
-        messageStr,
-        fieldsStr,
-        progressPercentage,
-        progressDescStr,
-      );
-
-      // Add to stream
-      instance._logController.add(logMessage);
-
-      // Add to history
-      instance._logHistory.add(logMessage);
-      if (instance._logHistory.length > instance.maxHistorySize) {
-        instance._logHistory.removeFirst();
-      }
-
-      // Emit to progress controller if it's a progress update
-      if (logMessage.hasProgress) {
-        instance._progressController.add(logMessage);
-      }
-
-      // Bridge Go logs to Dart's logging system
-      _bridgeToDartLogger(logMessage);
-    } catch (e) {
-      // Ignore errors in release
+    // Add to history
+    _logHistory.add(message);
+    if (_logHistory.length > maxHistorySize) {
+      _logHistory.removeFirst();
     }
+
+    // Emit to progress controller if it's a progress update
+    if (message.hasProgress) {
+      _progressController.add(message);
+    }
+
+    // Bridge Go logs to Dart's logging system
+    _bridgeToDartLogger(message);
   }
 
   // Bridge Go library logs to Dart's Logger hierarchy
@@ -341,8 +276,10 @@ class FlutterZapLogger {
   void dispose() {
     if (!_initialized) return;
 
-    _clearLogCallback?.call();
-    _nativeCallback?.close();
+    // Shutting down the worker runs _GoLogListenerRunnable.close() in the
+    // worker isolate, which clears the Go callback and closes the callable.
+    _worker?.close();
+    _worker = null;
     _logController.close();
     _progressController.close();
     _initialized = false;
@@ -364,5 +301,83 @@ class FlutterZapLogger {
         .reversed
         .take(limit)
         .toList();
+  }
+}
+
+/// Runs in a background worker isolate: registers the Go log callback via
+/// [ReclaimBindings] and forwards parsed [ZapLogMessage]s to the owner
+/// isolate. Registering through the shared bindings guarantees the callback
+/// lands in the same copy of the native library that executes the protocol
+/// (opening the library by path here can resolve to a different image — e.g.
+/// the embedded framework instead of the statically linked copy on iOS —
+/// leaving the executing copy without a registered callback, which silently
+/// drops all log/progress updates).
+class _GoLogListenerRunnable extends Runnable<void, bool> {
+  const _GoLogListenerRunnable();
+
+  // Per-isolate state: these statics live in the worker isolate only.
+  static SendPort? _sendPort;
+  static NativeCallable<LogCallbackC>? _callback;
+
+  @override
+  Future<bool> call(
+    void input, {
+    required String debugLabel,
+    required ReceivePort receivePort,
+    required SendPort sendPort,
+  }) async {
+    if (_callback != null) return true;
+
+    _sendPort = sendPort;
+    final callback = NativeCallable<LogCallbackC>.listener(_onGoLog);
+    final result = ReclaimBindings.instance.setLogCallback(callback.nativeFunction);
+    if (result != 1) {
+      callback.close();
+      _sendPort = null;
+      return false;
+    }
+    _callback = callback;
+    return true;
+  }
+
+  static void _onGoLog(
+    Pointer<Utf8> level,
+    Pointer<Utf8> message,
+    Pointer<Utf8> fields,
+    int progressPercentage,
+    Pointer<Utf8> progressDescription,
+  ) {
+    try {
+      final levelStr = level.toDartString();
+
+      // Skip debug logs entirely in release mode to prevent excessive string
+      // allocations and cross-isolate traffic.
+      // progressPercentage >= 0 indicates a progress update, which we shouldn't skip.
+      if (levelStr == 'debug' && !kDebugMode && progressPercentage < 0) {
+        return;
+      }
+
+      final logMessage = ZapLogMessage.fromCallback(
+        levelStr,
+        message.toDartString(),
+        fields.toDartString(),
+        progressPercentage,
+        progressDescription.toDartString(),
+      );
+
+      _sendPort?.send(MessageForOwner(logMessage));
+    } catch (e) {
+      // Ignore errors in release
+    }
+  }
+
+  @override
+  void close() {
+    try {
+      ReclaimBindings.instance.clearLogCallback();
+    } catch (_) {}
+    _callback?.close();
+    _callback = null;
+    _sendPort = null;
   }
 }

@@ -34,7 +34,6 @@ class PermissionService {
     try {
       await _requestPermission(Permission.location);
       await _requestPermission(Permission.locationWhenInUse);
-      await _requestPermission(Permission.locationAlways);
       final status = await Permission.location.status;
       final isDenied = status.isDenied || status.isPermanentlyDenied;
       return !isDenied;

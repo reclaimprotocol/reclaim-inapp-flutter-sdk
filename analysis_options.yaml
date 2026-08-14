@@ -3,6 +3,14 @@ analyzer:
   errors:
     constant_identifier_names: ignore
     dangling_library_doc_comments: ignore
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 formatter:
   page_width: 80
 linter:

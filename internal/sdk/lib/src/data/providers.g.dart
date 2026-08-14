@@ -45,7 +45,9 @@ HttpProvider _$HttpProviderFromJson(Map<String, dynamic> json) => HttpProvider(
   isApproved: json['isApproved'] as bool?,
   geoLocation: json['geoLocation'] as String?,
   isVerified: json['isVerified'] as bool?,
-  injectionType: $enumDecodeNullable(_$InjectionTypeEnumMap, json['injectionType']),
+  injectionType:
+      $enumDecodeNullable(_$InjectionTypeEnumMap, json['injectionType'], unknownValue: InjectionType.UNKNOWN) ??
+      InjectionType.HAWKEYE,
   disableRequestReplay: json['disableRequestReplay'] as bool?,
   providerHash: json['providerHash'] as String?,
   additionalClientOptions: json['additionalClientOptions'] as Map<String, dynamic>?,
@@ -86,6 +88,8 @@ Map<String, dynamic> _$HttpProviderToJson(HttpProvider instance) => <String, dyn
 const _$ProviderTypeEnumMap = {ProviderType.PRIVATE: 'PRIVATE', ProviderType.PUBLIC: 'PUBLIC'};
 
 const _$InjectionTypeEnumMap = {
+  InjectionType.CDP: 'CDP',
+  InjectionType.UNKNOWN: 'UNKNOWN',
   InjectionType.MSWJS: 'MSWJS',
   InjectionType.HAWKEYE: 'HAWKEYE',
   InjectionType.NONE: 'NONE',

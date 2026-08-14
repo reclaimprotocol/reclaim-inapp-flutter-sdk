@@ -1,7 +1,9 @@
 import 'dart:async';
+
 import 'package:async/async.dart' show StreamGroup;
 import 'package:flutter/foundation.dart';
 import 'package:synchronized/synchronized.dart';
+
 import '../constants.dart';
 import '../data/identity.dart';
 import '../logging/logging.dart';
@@ -21,11 +23,10 @@ class FeatureFlag<T> {
   FeatureFlag({
     required this.canFetchFromRemote,
     required this.key,
-    FeatureFlagSelector<T>? selector,
-    required T valueIfNull,
+    this._selector,
+    required this._valueIfNull,
     this.isSessionIndependent = false,
-  }) : _selector = selector,
-       _valueIfNull = valueIfNull {
+  }) {
     FeatureFlag.entries[key] = this;
   }
 

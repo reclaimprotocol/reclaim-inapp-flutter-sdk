@@ -1,7 +1,8 @@
 import 'dart:io';
+
 import 'package:logging/logging.dart';
 
-final _logger = Logger('reclaim_flutter_sdk.platform');
+final _logger = Logger('reclaim_inapp_sdk.platform');
 
 /// Check if the current platform is supported (64-bit runtime)
 bool isPlatformSupported() {

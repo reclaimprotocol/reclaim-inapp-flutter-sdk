@@ -1,12 +1,14 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:material_ui/material_ui.dart';
 
+import '../../controller.dart';
 import '../../data/app_events.dart';
 import '../../data/http_request_log.dart';
 import '../../data/manual_review.dart';
 import '../../logging/logging.dart';
+import '../../services/session.dart';
 import '../../utils/sanitize.dart';
 import '../../widgets/ai_flow_coordinator_widget.dart';
 import '../../widgets/claim_creation/claim_creation.dart';
@@ -37,6 +39,8 @@ class WebViewJSHandlerManager {
   });
 
   final logger = logging.child('WebViewJSHandlerManager');
+  bool _hasReportedUserInteracted = false;
+  bool _hasReportedUserTyped = false;
 
   /// Registers all JavaScript handlers on the given webview controller
   void registerHandlers(InAppWebViewController controller) {
@@ -46,6 +50,7 @@ class WebViewJSHandlerManager {
     _registerRequestLogsHandler(controller);
     _registerCustomizeManualReviewMessageHandler(controller);
     _registerUserInteractionHandler(controller);
+    _registerSessionEventHandler(controller);
     _registerDebugLogsHandler(controller);
     _registerProofDataHandler(controller);
     _registerExtractedDataHandler(controller);
@@ -126,8 +131,11 @@ class WebViewJSHandlerManager {
           // INFO line is sanitized by `sanitizeLogMessage` on the upload pipeline
           // (see logging.dart) — query params carrying PII (`email=...`, `phone=...`)
           // are redacted there. Full URL kept verbatim at FINER for dev builds.
-          log.info('url : ${sanitizeLogMessage(requestLog.url)}, method : ${requestLog.method}');
-          log.finer('url (full) : ${requestLog.url}, method : ${requestLog.method}');
+          if (logging.isDebugging) {
+            log.finer('url=${requestLog.url} method=${requestLog.method}');
+          } else {
+            log.info('url=${sanitizeLogMessage(requestLog.url)} method=${requestLog.method}');
+          }
 
           manualReviewController.addRequest(requestLog);
           // push the request log to the ai flow coordinator service
@@ -161,6 +169,47 @@ class WebViewJSHandlerManager {
     controller.addJavaScriptHandler(
       handlerName: 'userInteraction',
       callback: (args) async => await handleUserInteraction(args, controller),
+    );
+  }
+
+  void _registerSessionEventHandler(InAppWebViewController controller) {
+    controller.addJavaScriptHandler(
+      handlerName: 'sessionEvent',
+      callback: (args) async {
+        final log = logger.child('session_event');
+        try {
+          final data = json.decode(args[0]);
+          if (data is! Map) {
+            log.warning('Ignoring malformed session event');
+            return;
+          }
+
+          final statusName = data['status'];
+          final metadata = data['metadata'];
+          final status = switch (statusName) {
+            'USER_INTERACTED' when !_hasReportedUserInteracted => SessionStatus.USER_INTERACTED,
+            'USER_TYPED' when !_hasReportedUserTyped => SessionStatus.USER_TYPED,
+            _ => null,
+          };
+          if (status == null) return;
+
+          if (status == SessionStatus.USER_INTERACTED) {
+            _hasReportedUserInteracted = true;
+          } else {
+            _hasReportedUserTyped = true;
+          }
+
+          final verification = VerificationController.readOf(context);
+          final session = await verification.sessionStartFuture;
+          await ReclaimSession.updateSession(
+            session.sessionInformation.sessionId,
+            status,
+            metadata: metadata is Map ? metadata.cast<String, dynamic>() : null,
+          );
+        } catch (error, stackTrace) {
+          log.warning('Failed to report session event', error, stackTrace);
+        }
+      },
     );
   }
 

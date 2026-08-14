@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../data/reclaim_app_theme.dart';
 import '../widgets/color_or_image.dart';

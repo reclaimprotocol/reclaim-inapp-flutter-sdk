@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+
 import '../../data/identity.dart';
 import '../../utils/sanitize.dart';
 import '../logging.dart';
@@ -62,6 +65,8 @@ class LogEntry {
   final DateTime time;
   final String type;
   final LogEntryLogLevel logLevel;
+  final Map<String, Object?>? metadata;
+
   final LogEventType? eventType;
 
   LogEntry({
@@ -70,6 +75,7 @@ class LogEntry {
     required this.sequence,
     required this.type,
     required this.eventType,
+    required this.metadata,
     required DateTime? time,
     required this.logLevel,
   }) : time = time ?? DateTime.now();
@@ -81,8 +87,14 @@ class LogEntry {
     required SessionIdentity fallbackSessionIdentity,
   }) {
     final int safeLength = truncateLongerInformation ? 500 : 2000;
+    final level = record.level;
+    final eventType = level is LevelWithEvent ? level.eventType : null;
 
-    final message = truncateLogString(record.message, maxLength: safeLength);
+    final message = truncateLogString(
+      record.message,
+      skip: eventType == LogEventType.CLAIM_CREATION_STARTED,
+      maxLength: safeLength,
+    );
     final logLineBuffer = StringBuffer(message);
 
     final error = record.error;
@@ -98,8 +110,6 @@ class LogEntry {
       }
     }
 
-    final level = record.level;
-
     final messageToSanitize = logLineBuffer.toString();
 
     return LogEntry(
@@ -108,7 +118,8 @@ class LogEntry {
       sequence: record.sequenceNumber,
       type: record.loggerName,
       time: record.time,
-      eventType: level is LevelWithEvent ? level.eventType : null,
+      eventType: eventType,
+      metadata: level is LevelWithEvent ? level.metadata : null,
       logLevel: LogEntryLogLevel.fromLoggingLevel(record.level),
     );
   }
@@ -122,6 +133,7 @@ class LogEntry {
       "providerId": sessionIdentity.providerId,
       "appId": sessionIdentity.appId,
       "logLevel": logLevel.name,
+      "metadata": json.decode(json.encode(metadata)),
       "eventType": eventType?.name ?? '',
     };
   }
@@ -157,8 +169,9 @@ class LogEntry {
     return lines.join('\n');
   }
 
-  static String truncateLogString(String message, {int maxLength = 2000}) {
+  static String truncateLogString(String message, {bool skip = false, int maxLength = 2000}) {
     message = message.trim();
+    if (skip) return message;
     if (message.length > maxLength) {
       return '${message.substring(0, maxLength)}...<truncated ${message.length - maxLength} chars>';
     }

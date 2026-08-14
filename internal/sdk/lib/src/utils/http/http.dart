@@ -122,7 +122,7 @@ class _RetryableResponseHttpClient extends http.BaseClient {
 }
 
 class ReclaimHttpClient extends http.BaseClient {
-  ReclaimHttpClient({String? cacheDirName, this.canSetClientSource = true}) : _cacheDirName = cacheDirName;
+  ReclaimHttpClient({this._cacheDirName, this.canSetClientSource = true});
 
   final String? _cacheDirName;
   final bool canSetClientSource;

@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class ActionButton extends StatelessWidget {
-  final void Function() onPressed;
+  final VoidCallback? onPressed;
   final Widget child;
   final Color? backgroundColor;
   final Color? foregroundColor;

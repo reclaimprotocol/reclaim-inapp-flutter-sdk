@@ -1,3 +1,37 @@
+## 0.42.1
+
+* Fix "No MaterialLocalizations found" by localizing with material_ui's and cupertino_ui's delegates instead of the ones from flutter_localizations
+* Declare the flutter_localizations dependency
+
+## 0.42.0
+
+* Upgrade flutter dependencies
+
+## 0.41.0
+
+* Fix fallback for CDP
+
+## 0.40.0
+
+* Add API to enable metadata logging
+* Add logging of session events
+* Add API to change level
+* Fix sanitization of url logs
+
+## 0.39.0
+
+* Add attestor authentication support for tee mode
+* Add USER_INTERACTED and USER_TYPED in Session status
+
+## 0.38.0
+
+* Add routerUrl in TeeUrls with updated reclaim protocol operator library
+* Add fallback to HAWKEYE when injection type is CDP or something unknown
+
+## 0.37.0
+
+* Add new option `canAutoCloseOnError` to `ReclaimVerificationOptions` to control auto-close on error
+
 ## 0.36.0
 
 * Add witnesses list with tee attestation (alpha) for tee mode proofs

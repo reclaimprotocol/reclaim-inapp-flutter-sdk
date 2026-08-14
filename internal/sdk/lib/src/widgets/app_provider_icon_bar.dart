@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:simple_shimmer/simple_shimmer.dart';
 
 import '../theme/theme.dart';

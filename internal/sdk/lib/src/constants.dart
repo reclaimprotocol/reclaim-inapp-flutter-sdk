@@ -9,6 +9,7 @@ sealed class ReclaimUrls {
   );
   static const String SESSION_URL = '$SDK_API_BASE_URL/api/sdk/update/session';
   static const String SESSION_INIT = '$SDK_API_BASE_URL/api/sdk/init/session';
+  static const String SESSION_ATTESTOR_AUTH = '$SDK_API_BASE_URL/api/sdk/attestorauth/session';
   static const String MANUAL_VERIFICATION_PREFIX = '$SDK_API_BASE_URL/api/manual-verification';
   static const String LOGS_API = '$LOGS_API_BASE_URL/api/business-logs/app';
   static const String FEATURE_FLAGS_API = '$SDK_API_BASE_URL/api/feature-flags';
@@ -20,9 +21,8 @@ sealed class ReclaimUrls {
   static const String DEFAULT_ATTESTOR_WEB_SCRIPT_URL = '$DEFAULT_ATTESTOR_WEB_URL/resources/attestor-jsc.min.mjs?v=0';
 
   // TEE (Trusted Execution Environment) URLs
-  static const String DEFAULT_TEEK_WS_URL = 'wss://tk.reclaimprotocol.org/ws';
-  static const String DEFAULT_TEET_WS_URL = 'wss://tt.reclaimprotocol.org/ws';
-  static const String DEFAULT_TEE_ATTESTOR_WS_URL = 'wss://tee-attestor.reclaimprotocol.org/ws';
+  static const String DEFAULT_TEE_ROUTER_URL = 'https://tee.reclaimprotocol.org';
+  static const String DEFAULT_TEE_ATTESTOR_WS_URL = 'wss://attestor.reclaimprotocol.org:444/ws';
 
   static const String DIAGNOSTIC_LOGGING = String.fromEnvironment(
     'org.reclaimprotocol.inapp_sdk.DIAGNOSTIC_LOGGING_API',

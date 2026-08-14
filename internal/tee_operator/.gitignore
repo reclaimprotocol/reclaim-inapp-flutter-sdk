@@ -35,9 +35,8 @@ build/
 
 !android/src/main/jniLibs/**/*.h
 !android/src/main/jniLibs/**/*.so
-!ios/Classes/binding.h
-!ios/libreclaim.xcframework
-!ios/libreclaim.xcframework/**/*.a
+!ios/reclaim_tee_operator_flutter/Sources/**/*
+!ios/reclaim_tee_operator_flutter/Frameworks/**/*
 !assets/**/*.a
 !assets/**/*.so
 !assets/**/*.h
@@ -86,3 +85,6 @@ example/.dart_tool/
 
 # General
 example/.DS_Store
+
+.build/
+.swiftpm/

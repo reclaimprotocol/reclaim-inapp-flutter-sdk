@@ -4,6 +4,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../attestor/data/data.dart';
 import '../constants.dart';
 import '../data/session_init.dart';
 import '../exception/exception.dart';
@@ -17,9 +18,12 @@ export '../data/session_init.dart';
 
 final _sessionHttpClient = buildDio();
 
+@Deprecated('Prefer using LogEventType')
 enum SessionStatus {
   USER_STARTED_VERIFICATION,
   USER_INIT_VERIFICATION,
+  USER_INTERACTED,
+  USER_TYPED,
   PROOF_GENERATION_STARTED,
   PROOF_GENERATION_RETRY,
   PROOF_GENERATION_SUCCESS,
@@ -28,7 +32,24 @@ enum SessionStatus {
   AI_PROOF_SUBMITTED,
   PROOF_SUBMISSION_FAILED,
   // This spelling mistake is intentional to match the backend.
-  PROOF_MANUAL_VERIFICATION_SUBMITED,
+  PROOF_MANUAL_VERIFICATION_SUBMITED;
+
+  LogEventType toLogEventType() {
+    return switch (this) {
+      SessionStatus.USER_STARTED_VERIFICATION => LogEventType.USER_STARTED_VERIFICATION,
+      SessionStatus.USER_INIT_VERIFICATION => LogEventType.USER_INIT_VERIFICATION,
+      SessionStatus.USER_INTERACTED => LogEventType.USER_INTERACTED,
+      SessionStatus.USER_TYPED => LogEventType.USER_TYPED,
+      SessionStatus.PROOF_GENERATION_STARTED => LogEventType.PROOF_GENERATION_STARTED,
+      SessionStatus.PROOF_GENERATION_RETRY => LogEventType.PROOF_GENERATION_RETRY,
+      SessionStatus.PROOF_GENERATION_SUCCESS => LogEventType.PROOF_GENERATION_SUCCESS,
+      SessionStatus.PROOF_GENERATION_FAILED => LogEventType.PROOF_GENERATION_FAILED,
+      SessionStatus.PROOF_SUBMITTED => LogEventType.PROOF_SUBMITTED,
+      SessionStatus.AI_PROOF_SUBMITTED => LogEventType.AI_PROOF_SUBMITTED,
+      SessionStatus.PROOF_SUBMISSION_FAILED => LogEventType.PROOF_SUBMISSION_FAILED,
+      SessionStatus.PROOF_MANUAL_VERIFICATION_SUBMITED => LogEventType.PROOF_MANUAL_VERIFICATION_SUBMITTED,
+    };
+  }
 }
 
 extension _DioResponseExtension<T> on Future<Response<T>> {
@@ -42,6 +63,35 @@ extension _DioResponseExtension<T> on Future<Response<T>> {
       _logger.info(response);
       rethrow;
     }
+  }
+}
+
+class SessionAttestorAuthRequest {
+  final String appId;
+  final String providerId;
+  final String sessionId;
+  final String signature;
+  final String timestamp;
+  final String resolvedVersion;
+
+  const SessionAttestorAuthRequest({
+    required this.appId,
+    required this.providerId,
+    required this.sessionId,
+    required this.signature,
+    required this.timestamp,
+    required this.resolvedVersion,
+  });
+
+  Map<String, Object?> toJson() {
+    return {
+      'appId': appId,
+      'providerId': providerId,
+      'sessionId': sessionId,
+      'signature': signature,
+      'timestamp': timestamp,
+      'resolvedVersion': resolvedVersion,
+    };
   }
 }
 
@@ -59,11 +109,13 @@ abstract interface class SessionUpdateHandler {
   /// Implementations should throw [ReclaimExpiredSessionException] for expired sessions.
   Future<void> updateSession(String sessionId, SessionStatus status, {Map<String, dynamic>? metadata});
 
+  Future<void> requestAttestorAuth(SessionAttestorAuthRequest sessionAttestorAuthRequest);
+
   Future<void> sendLogs({
     required String appId,
     required String providerId,
     required String sessionId,
-    required String logType,
+    required LogEventType logType,
     Map<String, dynamic>? metadata,
   });
 
@@ -225,7 +277,7 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
     required String appId,
     required String providerId,
     required String sessionId,
-    required String logType,
+    required LogEventType logType,
     Map<String, dynamic>? metadata,
   }) async {
     final logger = logging.child('utils.sendLogs');
@@ -268,7 +320,7 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
         'providerId': providerId,
         'applicationId': appId,
         'publicIpAddress': publicIpAddress,
-        'logType': logType,
+        'logType': logType.name,
         'metadata': ?metadata,
       };
 
@@ -301,6 +353,29 @@ class _DefaultSessionUpdateHandler extends SessionUpdateHandler {
     } catch (error, stackTrace) {
       logger.severe('Error sending error callback', error, stackTrace);
     }
+  }
+
+  @override
+  @mustCallSuper
+  Future<AttestorAuthenticationRequest?> requestAttestorAuth(
+    SessionAttestorAuthRequest sessionAttestorAuthRequest,
+  ) async {
+    final logger = logging.child('ReclaimSession.sendErrorCallback');
+    try {
+      _sessionHttpClient.options.headers['Content-Type'] = 'application/json';
+      final url = ReclaimUrls.SESSION_ATTESTOR_AUTH;
+      logger.info('Sending attestor auth request for session: ${sessionAttestorAuthRequest.sessionId}');
+      final response = await _sessionHttpClient
+          .post<String>(url, data: json.encode(sessionAttestorAuthRequest))
+          .logWhenResponseErrors();
+      final content = response.data;
+      if (content == null || content.isEmpty) return null;
+      final decodedJsonData = json.decode(utf8.decode(base64.decode(content)));
+      return AttestorAuthenticationRequest.fromJson(decodedJsonData);
+    } catch (error, stackTrace) {
+      logger.severe('Error requesting attestor auth from sdk', error, stackTrace);
+    }
+    return null;
   }
 }
 
@@ -345,6 +420,8 @@ class _SessionUpdateHandlerImpl extends _DefaultSessionUpdateHandler {
 
   @override
   Future<void> updateSession(String sessionId, SessionStatus status, {Map<String, dynamic>? metadata}) async {
+    logging.event(LevelWithEvent(Level.INFO, status.toLogEventType(), metadata: metadata), '');
+
     final updateSession = ReclaimOverrides.session?.updateSession;
     if (updateSession != null) {
       final isSessionOk = await updateSession(sessionId, status, metadata);
@@ -356,6 +433,7 @@ class _SessionUpdateHandlerImpl extends _DefaultSessionUpdateHandler {
       }
       return;
     }
+
     return super.updateSession(sessionId, status, metadata: metadata);
   }
 
@@ -364,9 +442,11 @@ class _SessionUpdateHandlerImpl extends _DefaultSessionUpdateHandler {
     required String appId,
     required String providerId,
     required String sessionId,
-    required String logType,
+    required LogEventType logType,
     Map<String, dynamic>? metadata,
   }) async {
+    logging.event(LevelWithEvent(Level.INFO, logType, metadata: metadata), '');
+
     final logRecord = ReclaimOverrides.session?.logRecord;
     if (logRecord != null) {
       logRecord(appId: appId, sessionId: sessionId, providerId: providerId, logType: logType, metadata: metadata);
@@ -379,6 +459,15 @@ class _SessionUpdateHandlerImpl extends _DefaultSessionUpdateHandler {
       logType: logType,
       metadata: metadata,
     );
+  }
+
+  @override
+  Future<AttestorAuthenticationRequest?> requestAttestorAuth(SessionAttestorAuthRequest sessionAttestorAuthRequest) {
+    final requestAttestorAuth = ReclaimOverrides.session?.requestAttestorAuth;
+    if (requestAttestorAuth != null) {
+      return requestAttestorAuth(sessionAttestorAuthRequest);
+    }
+    return super.requestAttestorAuth(sessionAttestorAuthRequest);
   }
 }
 

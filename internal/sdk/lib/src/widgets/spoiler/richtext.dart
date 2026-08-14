@@ -23,6 +23,7 @@
 
 import 'package:flutter/rendering.dart' show DiagnosticPropertiesBuilder, DiagnosticsProperty, TextSelection;
 import 'package:flutter/widgets.dart' show BuildContext, Directionality, RichText, ValueSetter;
+
 import './models/string_details.dart';
 import './widgets/spoiler_paragraph.dart';
 

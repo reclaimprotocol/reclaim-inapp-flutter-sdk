@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'jwk_codec.dart';
 
 /// Encodes a UTF-8 encoded binary data to a URL-safe string without Base64 padding

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 final _secondaryButtonStyle = OutlinedButton.styleFrom(
   elevation: 0,

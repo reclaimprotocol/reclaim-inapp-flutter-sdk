@@ -405,9 +405,8 @@ class _SnackBarActionState extends State<_SnackBarAction> {
     }
 
     return TextButton(
-      style: TextButton.styleFrom(
-        overlayColor: resolveForegroundColor(),
-      ).copyWith(foregroundColor: resolveForegroundColor(), backgroundColor: resolveBackgroundColor()),
+      style: TextButton.styleFrom(overlayColor: resolveForegroundColor())
+          .copyWith(foregroundColor: resolveForegroundColor(), backgroundColor: resolveBackgroundColor()),
       onPressed: _haveTriggeredAction ? null : _handlePressed,
       child: _haveTriggeredAction
           ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator())

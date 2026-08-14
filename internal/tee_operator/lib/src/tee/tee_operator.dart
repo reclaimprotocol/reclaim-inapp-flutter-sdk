@@ -19,7 +19,7 @@ import 'models/client_options.dart';
 import 'models/request_data.dart';
 import 'worker/tee_operations.dart';
 
-final _logger = Logger('reclaim_flutter_sdk.reclaim_tee_operator.tee');
+final _logger = Logger('reclaim_inapp_sdk.reclaim_tee_operator.tee');
 
 typedef OnProofPerformanceReportCallback = void Function(PerformanceReport);
 
