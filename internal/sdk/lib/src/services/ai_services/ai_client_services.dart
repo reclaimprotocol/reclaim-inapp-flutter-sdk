@@ -23,9 +23,8 @@ class AiServiceClient {
   final String? _sessionToken;
   final http.Client client;
 
-  AiServiceClient(this.sessionId, this.providerId, {String? sessionToken, http.Client? client})
-    : _sessionToken = sessionToken,
-      client = client ?? ReclaimHttpClient();
+  AiServiceClient(this.sessionId, this.providerId, {this._sessionToken, http.Client? client})
+    : client = client ?? ReclaimHttpClient();
 
   late final Map<String, String> _authHeaders = {
     'Content-Type': 'application/json',
@@ -196,12 +195,10 @@ class AiServiceClient {
           "identifier": "0xfe2eb73e2047a21182736ec969b50d695f8f788afa5b5ce8451189b1615134e5",
           "claimData": {
             "provider": "http",
-            "parameters":
-                "{\"additionalClientOptions\":{},\"body\":\"{\\\"includeGroups\\\":false,\\\"includeLogins\\\":false,\\\"includeVerificationStatus\\\":true}\",\"geoLocation\":\"\",\"headers\":{\"Sec-Fetch-Mode\":\"same-origin\",\"Sec-Fetch-Site\":\"same-origin\",\"User-Agent\":\"AppleWebKit/602.1.50 (KHTML, like Gecko) CriOS/56.0.2924.75\",\"accept\":\"application/json\"},\"method\":\"POST\",\"paramValues\":{\"username\":\"karamshbeb\"},\"responseMatches\":[{\"invert\":false,\"type\":\"contains\",\"value\":\"\\\"userName\\\":\\\"{{username}}\\\"\"}],\"responseRedactions\":[{\"jsonPath\":\"\$.userName\",\"regex\":\"\\\"userName\\\":\\\"(.*)\\\"\",\"xPath\":\"\"}],\"url\":\"https://www.kaggle.com/api/i/users.UsersService/GetCurrentUser\"}",
+            "parameters": "{\"additionalClientOptions\":{},\"body\":\"{\\\"includeGroups\\\":false,\\\"includeLogins\\\":false,\\\"includeVerificationStatus\\\":true}\",\"geoLocation\":\"\",\"headers\":{\"Sec-Fetch-Mode\":\"same-origin\",\"Sec-Fetch-Site\":\"same-origin\",\"User-Agent\":\"AppleWebKit/602.1.50 (KHTML, like Gecko) CriOS/56.0.2924.75\",\"accept\":\"application/json\"},\"method\":\"POST\",\"paramValues\":{\"username\":\"karamshbeb\"},\"responseMatches\":[{\"invert\":false,\"type\":\"contains\",\"value\":\"\\\"userName\\\":\\\"{{username}}\\\"\"}],\"responseRedactions\":[{\"jsonPath\":\"\$.userName\",\"regex\":\"\\\"userName\\\":\\\"(.*)\\\"\",\"xPath\":\"\"}],\"url\":\"https://www.kaggle.com/api/i/users.UsersService/GetCurrentUser\"}",
             "owner": "0xf5393eb1b27bc0869d8402aac4336575d248d7dc",
             "timestampS": 1757077872,
-            "context":
-                "{\"extractedParameters\":{\"username\":\"karamshbeb\"},\"isAIProofs\":true,\"providerHash\":\"0xc9e2404b50af02ddd8797e218f19b0b2a896cdcd9dbf9ea525b89db2fa37de76\"}",
+            "context": "{\"extractedParameters\":{\"username\":\"karamshbeb\"},\"isAIProofs\":true,\"providerHash\":\"0xc9e2404b50af02ddd8797e218f19b0b2a896cdcd9dbf9ea525b89db2fa37de76\"}",
             "identifier": "0xfe2eb73e2047a21182736ec969b50d695f8f788afa5b5ce8451189b1615134e5",
             "epoch": 1,
           },

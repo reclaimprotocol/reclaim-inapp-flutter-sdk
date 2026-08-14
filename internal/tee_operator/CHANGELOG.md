@@ -1,3 +1,28 @@
+## 3.4.0
+
+* Update tee library
+
+## 3.3.0
+
+* Updated native library for an edge case where claim could be empty
+* Upgrade flutter dependencies
+
+## 3.2.0
+
+* Add authRequest in options of request when executing a request
+* Fix iOS TestFlight/App Store crash (`dlsym ... symbol not found` for `reclaim_get_version` and other native symbols) by shipping the native library as its own dynamic framework via Dart native assets (`DynamicLoadingBundled`) instead of statically linking it into the app executable
+* iOS no longer requires consumers to set `STRIP_STYLE=non-global` on their Xcode targets — the native library is now stripped and codesigned independently of the consuming app's build settings
+* Removed the iOS force-link shim (`reclaim_binding`/`EnforceBinding.swift`), no longer needed now that the native library isn't statically merged into the app
+
+## 3.1.0
+
+* Update TEE library
+
+## 3.0.0
+
+* Update tee library
+* Add swiftpm support
+
 ## 2.7.0
 
 * Update native library

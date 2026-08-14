@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:meta/meta.dart';
+
 import 'providers.dart';
 
 part 'create_claim.g.dart';

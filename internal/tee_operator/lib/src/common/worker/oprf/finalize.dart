@@ -7,7 +7,7 @@ import 'package:reclaim_tee_operator_flutter/src/common/libreclaim/libreclaim.da
 
 import '../isolate_worker/isolate_worker.dart';
 
-final _logger = Logger('reclaim_flutter_sdk.reclaim_tee_operator.worker.oprf.finalize');
+final _logger = Logger('reclaim_inapp_sdk.reclaim_tee_operator.worker.oprf.finalize');
 
 class TOPRFFinalizeRunnable extends Runnable<Uint8List, String> {
   const TOPRFFinalizeRunnable();

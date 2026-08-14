@@ -17,6 +17,7 @@ import '../utils/json.dart';
 import 'pigeon/messages.pigeon.dart';
 
 part 'api_impl.dart';
+part 'api_session.dart';
 
 abstract interface class ReclaimModuleExternalApi extends ReclaimModuleApi {
   factory ReclaimModuleExternalApi() = _ReclaimModuleExternalApiImpl;

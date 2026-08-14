@@ -1,8 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
+
 import '../assets/assets.dart';
 import '../data/app_info.dart';
 import '../l10n/provider.dart';
@@ -330,7 +331,7 @@ class _ReclaimThemeProviderState extends State<ReclaimThemeProvider> {
         locale: preferredLocale,
         isApplicationLevel: widget.isApplicationLevel,
         supportedLocales: ReclaimLocalizationProvider.supportedLocales,
-        localizationsDelegates: ReclaimAppLocalizations.localizationsDelegates,
+        localizationsDelegates: ReclaimLocalizationProvider.localizationsDelegate,
         child: DefaultTextStyle(
           // used as fallback for providing font family wherever text theme isn't used
           style: fallbackTextStyle,

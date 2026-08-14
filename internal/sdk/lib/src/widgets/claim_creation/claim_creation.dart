@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../attestor.dart';
 import '../../data/create_claim.dart';
@@ -231,7 +231,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
           appId: proofRequest.appId,
           sessionId: sessionId,
           providerId: httpProviderId,
-          logType: 'PROOF_GENERATED',
+          logType: LogEventType.PROOF_GENERATED,
           metadata: ProviderRequestPerformanceMeasurements(
             reports: value.claims.map((e) => e.performanceReports).whereType<ProviderRequestPerformanceReport>(),
           ).toJson(),
@@ -267,7 +267,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
         appId: proofRequest.appId,
         sessionId: sessionId,
         providerId: httpProviderId,
-        logType: 'ERROR',
+        logType: LogEventType.ERROR,
       ),
       ReclaimSession.updateSession(
         sessionId,
@@ -614,10 +614,6 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     final requestMeasurePerformance = MeasurePerformance();
 
     try {
-      log.event(
-        Level.INFO.withEvent(LogEventType.CLAIM_CREATION_STARTED),
-        'Starting claim proof generation for providerId: $httpProviderId updateProviderParams: $useSingleRequest',
-      );
       final Map<String, dynamic> createClaimInput = {
         "name": 'http',
         "params": proofRequest.getHttpParams(updateAdditionalClientOptions),
@@ -630,10 +626,9 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
         "httpProviderId": httpProviderId,
         "providerName": value.httpProvider?.name ?? httpProviderId,
       };
-
-      log.finest({
-        'reason': 'createClaim input (${proofRequest.requestData.requestIdentifier})',
-        'createClaimInput': json.encode(createClaimInput),
+      log.event(Level.INFO.withEvent(LogEventType.CLAIM_CREATION_STARTED), {
+        'createClaim.id': proofRequest.requestData.requestIdentifier,
+        if (logging.isDebugging) 'createClaimInput': json.encode(createClaimInput),
         'createClaimOptions': proofRequest.createClaimOptions,
       });
 
@@ -892,7 +887,7 @@ class ClaimCreationController extends ObservableNotifier<ClaimCreationController
     try {
       final scope = _getSingleWorkScope(proofRequest.requestData);
 
-      return scope.runGuarded(() => _onCreateClaimWithRetries(proofRequest));
+      return await scope.runGuarded(() => _onCreateClaimWithRetries(proofRequest));
     } on WorkCanceledException catch (e, s) {
       log.severe('work cancelled', e, s);
       log.info({

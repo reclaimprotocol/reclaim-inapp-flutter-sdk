@@ -28,6 +28,10 @@ class ReclaimDataProvidersResponse {
 }
 
 enum InjectionType {
+  @JsonValue('CDP')
+  CDP,
+  @JsonValue('UNKNOWN')
+  UNKNOWN,
   @JsonValue('MSWJS')
   MSWJS,
   @JsonValue('HAWKEYE')
@@ -43,7 +47,8 @@ enum InjectionType {
       'none' => InjectionType.NONE,
       'hawkeye' => InjectionType.HAWKEYE,
       'xhook' => InjectionType.XHOOK,
-      _ => throw Exception('Invalid injection type: $value'),
+      'cdp' => InjectionType.CDP,
+      _ => InjectionType.UNKNOWN,
     };
   }
 }
@@ -86,7 +91,7 @@ class HttpProvider {
   final String? geoLocation;
   @JsonKey(name: "isVerified")
   final bool? isVerified;
-  @JsonKey(name: "injectionType")
+  @JsonKey(name: "injectionType", defaultValue: InjectionType.HAWKEYE, unknownEnumValue: InjectionType.UNKNOWN)
   final InjectionType? injectionType;
   @JsonKey(name: "disableRequestReplay")
   final bool? disableRequestReplay;

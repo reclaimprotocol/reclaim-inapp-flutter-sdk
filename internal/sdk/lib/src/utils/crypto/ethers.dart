@@ -204,7 +204,7 @@ class CryptoEthers {
       }
       return res;
     } else {
-      // FIXME: le
+      // TODO: le
       throw UnimplementedError('little-endian is not supported');
     }
   }
@@ -319,7 +319,7 @@ class CryptoEthers {
 
 enum Endian {
   be,
-  // FIXME: le
+  // TODO: le
 }
 
 class ECDSASignature extends Equatable {

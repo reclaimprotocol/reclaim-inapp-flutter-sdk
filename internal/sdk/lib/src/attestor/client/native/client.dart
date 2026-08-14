@@ -12,10 +12,9 @@ import '../../data/request.dart';
 
 class TeeUrls {
   final String attestorWsUrl;
-  final String teekWsUrl;
-  final String teetWsUrl;
+  final String routerUrl;
 
-  const TeeUrls({required this.attestorWsUrl, required this.teekWsUrl, required this.teetWsUrl});
+  const TeeUrls({required this.attestorWsUrl, required this.routerUrl});
 }
 
 class AttestorTeeClient extends AttestorPlatform {
@@ -124,14 +123,11 @@ class AttestorTeeClient extends AttestorPlatform {
     final teeUrls = await ZkOperatorManager().getTeeUrls();
 
     final String attestorUrl = teeUrls.attestorWsUrl;
-    final String teekUrl = teeUrls.teekWsUrl;
-    final String teetUrl = teeUrls.teetWsUrl;
+    final String routerUrl = teeUrls.routerUrl;
 
-    log.info(
-      '🔐 TEE URLS: Using URLs from feature flags - attestorUrl: $attestorUrl, teekUrl: $teekUrl, teetUrl: $teetUrl',
-    );
+    log.info('🔐 TEE URLS: Using URLs from feature flags - attestorUrl: $attestorUrl, routerUrl: $routerUrl');
 
-    final clientOptions = ClaimCreationClientOptions(attestorUrl: attestorUrl, teekUrl: teekUrl, teetUrl: teetUrl);
+    final clientOptions = ClaimCreationClientOptions(attestorUrl: attestorUrl, routerUrl: routerUrl);
     // const clientOptions = ClaimCreationClientOptions(attestorUrl: 'wss://attestor-staging.reclaimprotocol.org/ws');
     //Debug part for delete after release
     // // Save request parameters to file before sending

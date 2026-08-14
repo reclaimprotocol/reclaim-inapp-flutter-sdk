@@ -4,15 +4,10 @@ import 'dart:collection';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart' show UserScript;
 
 import '../../attestor.dart';
-import '../data/app_info.dart';
-import '../data/identity.dart';
-import '../data/providers.dart';
-import '../data/verification/verification.dart';
-import '../exception/exception.dart';
+import '../../reclaim_inapp_sdk.dart';
 import '../logging/logging.dart';
 import '../repository/feature_flags.dart';
 import '../services/cookie_service.dart';
-import '../services/provider.dart';
 import '../services/user_script_service.dart';
 import '../web_scripts/hawkeye/interception_method.dart';
 
@@ -63,10 +58,14 @@ class VerificationFlowManager {
 
   Future<AttestorAuthenticationRequest?> fetchAttestorAuthenticationRequest({
     required HttpProvider provider,
-    required ReclaimAttestorAuthenticationRequestCallback callback,
+    required SessionAttestorAuthRequest sessionAuthRequest,
+    required ReclaimAttestorAuthenticationRequestCallback? callback,
   }) async {
     final logger = log.child('fetchAttestorAuthenticationRequest');
     try {
+      if (callback == null) {
+        return await const SessionManager().requestAttestorAuth(sessionAuthRequest);
+      }
       return await callback(provider);
     } catch (e, s) {
       logger.event(

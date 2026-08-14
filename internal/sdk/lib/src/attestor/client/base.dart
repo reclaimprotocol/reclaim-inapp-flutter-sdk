@@ -21,8 +21,9 @@ export '../exception/exception.dart';
 export 'platform.dart';
 
 typedef AttestorResponseTransformer<RESPONSE> = FutureOr<RESPONSE> Function(dynamic value);
-typedef AttestorCreateClaimPerformanceReportCallback =
-    void Function(Iterable<ZKComputePerformanceReport> performanceReports);
+typedef AttestorCreateClaimPerformanceReportCallback = void Function(
+  Iterable<ZKComputePerformanceReport> performanceReports,
+);
 
 abstract class AttestorJsClient extends AttestorPlatform {
   final DateTime createdAt;

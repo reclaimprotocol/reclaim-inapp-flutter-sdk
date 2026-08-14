@@ -47,12 +47,7 @@ void main() {
     });
 
     test('should be able to verify a token without azp', () {
-      final signed = CapabilityAccessToken.create(
-        _privateKeyString,
-        {'hello', 'world'},
-        const {},
-        sub: 'example.com',
-      );
+      final signed = CapabilityAccessToken.create(_privateKeyString, {'hello', 'world'}, const {}, sub: 'example.com');
       ReclaimEnv.CAPABILITY_ACCESS_TOKEN_VERIFICATION_KEY = _publicKeyString;
       final jws = CapabilityAccessToken.import(signed.accessToken.toString());
       expect(jws.capabilities, containsAll({'hello', 'world'}));
@@ -82,10 +77,7 @@ void main() {
         () => CapabilityAccessToken.import(expiredTokenString),
         throwsA(isA<ExpiredCapabilityAccessTokenException>()),
       );
-      expect(
-        () => CapabilityAccessToken.import(validToken.accessToken.toString()),
-        returnsNormally,
-      );
+      expect(() => CapabilityAccessToken.import(validToken.accessToken.toString()), returnsNormally);
     });
   });
 }

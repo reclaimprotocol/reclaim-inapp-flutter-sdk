@@ -7,8 +7,9 @@ import '../claim/claim.dart';
 import '../data/process.dart';
 import '../data/request.dart';
 
-typedef AttestorCreateClaimPerformanceReportCallback =
-    void Function(Iterable<ZKComputePerformanceReport> performanceReports);
+typedef AttestorCreateClaimPerformanceReportCallback = void Function(
+  Iterable<ZKComputePerformanceReport> performanceReports,
+);
 
 abstract class AttestorPlatform {
   AttestorPlatform({required this.debugLabel});

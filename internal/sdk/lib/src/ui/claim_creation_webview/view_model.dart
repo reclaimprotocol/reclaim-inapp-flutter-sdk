@@ -20,12 +20,12 @@ import '../../widgets/reclaim_appbar.dart';
 class ClaimCreationWebState {
   const ClaimCreationWebState({
     this.webAppBarValue = const WebAppBarValue(url: '', progress: 0.0),
-    InAppWebViewController? controller,
+    this._controller,
     this.requestedUrl,
     this.lastLoadStopTime,
     this.isLoading = true,
     this.hasLoadedRequestedUrl = false,
-  }) : _controller = controller;
+  });
 
   final WebAppBarValue webAppBarValue;
   final String? requestedUrl;

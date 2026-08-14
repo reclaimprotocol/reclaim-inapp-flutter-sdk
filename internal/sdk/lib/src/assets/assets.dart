@@ -1,7 +1,8 @@
 import 'dart:ui' as ui;
-import 'package:flutter/material.dart' show TextTheme, ThemeData;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:material_ui/material_ui.dart' show TextTheme, ThemeData;
 
 import 'font/font.dart';
 

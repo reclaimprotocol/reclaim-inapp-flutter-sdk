@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -30,6 +31,7 @@ class DiagnosticLogging {
 
   Future<void> sendLogs(List<LogEntry> entries) async {
     try {
+      assert(entries.isNotEmpty, 'Logs must not be empty');
       final body = json.encode({
         'logs': entries,
         'source': await getClientSource(),

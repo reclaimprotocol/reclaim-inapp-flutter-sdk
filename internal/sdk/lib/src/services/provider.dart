@@ -36,9 +36,8 @@ class ReclaimProviderService {
     final client = reclaimHttpBaseClient;
 
     final response = await client.post(
-      Uri.parse(
-        ReclaimUrls.getApplicationProviderUrl(appId, providerId),
-      ).replace(queryParameters: {'versionNumber': resolvedVersion}),
+      Uri.parse(ReclaimUrls.getApplicationProviderUrl(appId, providerId))
+          .replace(queryParameters: {'versionNumber': resolvedVersion}),
       headers: {'accept': '*/*', 'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8', 'Content-Type': 'application/json'},
       body: json.encode({'signature': signature, 'timestamp': timestamp}),
     );

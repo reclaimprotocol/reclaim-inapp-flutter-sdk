@@ -123,5 +123,50 @@ enum LogEventType {
   /// The proof submission has failed.
   PROOF_SUBMISSION_FAILED,
 
-  PASS,
+  /// A case where log event could not be determined
+  UNKNOWN,
+
+  /// Providers required for this session where fetched
+  FETCHED_PROVIDERS,
+
+  /// Some Reclaim exception occurred
+  RECLAIM_EXCEPTION,
+
+  /// A proof for submitted for manual review
+  PROOF_MANUAL_VERIFICATION_SUBMITTED,
+
+  /// The page does not contain anything that requires user to login
+  AUTH_GATE_NOT_DETECTED,
+
+  /// The page contains MFA or requires user to login
+  AUTH_REQUIRED,
+
+  @Deprecated('ERROR')
+  /// Happens before PROOF_GENERATION_FAILED
+  ERROR,
+
+  // Copy of Session Status
+  USER_STARTED_VERIFICATION,
+
+  USER_INIT_VERIFICATION,
+
+  /// User interacted with the web page for the first time
+  USER_INTERACTED,
+
+  /// User typed on the web page for the first time
+  USER_TYPED,
+
+  /// First proof generation started
+  PROOF_GENERATION_STARTED,
+
+  PROOF_GENERATION_RETRY,
+
+  /// All expected proofs generated
+  PROOF_GENERATION_SUCCESS,
+
+  /// Any proof generation failed (retry can happen in some cases)
+  PROOF_GENERATION_FAILED,
+
+  /// AI Submitted a proofs
+  AI_PROOF_SUBMITTED,
 }

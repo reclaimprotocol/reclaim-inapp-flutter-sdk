@@ -8,7 +8,7 @@ import 'package:reclaim_tee_operator_flutter/src/common/libreclaim/libreclaim.da
 
 import 'isolate_worker/isolate_worker.dart';
 
-final _logger = Logger('reclaim_flutter_sdk.reclaim_tee_operator.worker.prover');
+final _logger = Logger('reclaim_inapp_sdk.reclaim_tee_operator.worker.prover');
 
 typedef ProofResult = (String, PerformanceReport);
 

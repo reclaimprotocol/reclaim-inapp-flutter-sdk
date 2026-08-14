@@ -81,9 +81,7 @@ void main() {
         {'android://org.reclaimprotocol.example', 'ios://org.reclaimprotocol.example'},
         sub: 'example.com',
       );
-      ReclaimOverride.set(
-        CapabilityAccessToken.import(tokenWithAzp.accessToken.toString()),
-      );
+      ReclaimOverride.set(CapabilityAccessToken.import(tokenWithAzp.accessToken.toString()));
       expect(await capabilityAccessVerifier.canUse('hello'), isTrue);
       expect(await capabilityAccessVerifier.canUse('foo'), isFalse);
 
@@ -95,9 +93,7 @@ void main() {
         const {},
         sub: 'example.com',
       );
-      ReclaimOverride.set(
-        CapabilityAccessToken.import(tokenWithoutAzp.accessToken.toString()),
-      );
+      ReclaimOverride.set(CapabilityAccessToken.import(tokenWithoutAzp.accessToken.toString()));
 
       expect(await capabilityAccessVerifier.canUse('hello'), isFalse);
       expect(await capabilityAccessVerifier.canUse('foo'), isFalse);

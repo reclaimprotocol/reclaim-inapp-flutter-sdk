@@ -3,8 +3,8 @@ import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:retry/retry.dart';
 
 import '../../../attestor.dart';
@@ -284,7 +284,10 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
   // methods related to claim creation - webview configuration
 
   void _onLoad(InAppWebViewController controller, WebUri? uri) async {
-    logger.log(Level.INFO.withEvent(LogEventType.PAGE_LOADING_STARTED), 'page loading started on $uri');
+    logger.log(
+      Level.INFO.withEvent(LogEventType.PAGE_LOADING_STARTED),
+      'page loading started on ${logging.wrapPIIUri(uri)}',
+    );
     _hideToken = Object();
     final vm = ClaimCreationWebClientViewModel.readOf(context);
     final webContext = AIFlowCoordinatorWidget.of(context).webContext;
@@ -301,7 +304,10 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
   }
 
   void _onLoadStop(InAppWebViewController controller, WebUri? uri) {
-    logger.log(Level.INFO.withEvent(LogEventType.PAGE_LOADING_STOPPED), 'page loading stopped on $uri');
+    logger.log(
+      Level.INFO.withEvent(LogEventType.PAGE_LOADING_STOPPED),
+      'page loading stopped on ${logging.wrapPIIUri(uri)}',
+    );
     final vm = ClaimCreationWebClientViewModel.readOf(context);
     if (uri != null) vm.setDisplayUrl(uri.toString());
     vm.setDisplayProgress(1);
@@ -478,9 +484,8 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
       // Start hybrid screenshot capturing if this is an AI provider
       if (_screenshotService != null) {
         logger.info('Starting hybrid screenshot capture for AI provider');
-        final intervalSeconds = await FeatureFlagsProvider.readOf(
-          context,
-        ).get(FeatureFlag.screenshotCaptureIntervalSeconds);
+        final intervalSeconds = await FeatureFlagsProvider.readOf(context)
+            .get(FeatureFlag.screenshotCaptureIntervalSeconds);
         _screenshotService!.startCapturing(
           webViewController: controller,
           appKey: _appRepaintBoundaryKey,
@@ -592,16 +597,16 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
                     final provider = value.provider;
                     final userScripts = value.userScripts;
                     if (provider != null && userScripts != null) {
-                      ClaimCreationWebClientViewModel.readOf(
-                        context,
-                      ).load(provider: provider, userScripts: userScripts).catchError((e, s) {
-                        if (context.mounted) {
-                          logger.severe('Failed to load client web', e, s);
-                          VerificationController.readOf(
-                            context,
-                          ).updateException(const ReclaimVerificationProviderLoadException('Failed to load scripts'));
-                        }
-                      });
+                      ClaimCreationWebClientViewModel.readOf(context)
+                          .load(provider: provider, userScripts: userScripts)
+                          .catchError((e, s) {
+                            if (context.mounted) {
+                              logger.severe('Failed to load client web', e, s);
+                              VerificationController.readOf(context).updateException(
+                                const ReclaimVerificationProviderLoadException('Failed to load scripts'),
+                              );
+                            }
+                          });
                     }
                   } catch (e, s) {
                     logger.severe('Failed to load client web after render process gone', e, s);
@@ -721,9 +726,9 @@ class _ClaimCreationWebClientState extends State<ClaimCreationWebClient>
   Future<Duration> _getClaimCreationTimeoutDuration() async {
     final timeoutDuration = await () async {
       try {
-        final timeoutDurationInMins = await FeatureFlagsProvider.readOf(
-          context,
-        ).get(FeatureFlag.claimCreationTimeoutDurationInMins).timeout(const Duration(seconds: 5));
+        final timeoutDurationInMins = await FeatureFlagsProvider.readOf(context)
+            .get(FeatureFlag.claimCreationTimeoutDurationInMins)
+            .timeout(const Duration(seconds: 5));
         return Duration(minutes: timeoutDurationInMins);
       } catch (e, s) {
         logger.severe('Failed to get claim creation timeout duration', e, s);

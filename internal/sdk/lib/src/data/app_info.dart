@@ -35,7 +35,7 @@ class AppInfo extends ReclaimOverride<AppInfo> {
     final logger = logging.child('AppInfo.fromAppId');
     try {
       if (_cachedAppInfo.containsKey(appId)) {
-        return _cachedAppInfo[appId]!.future;
+        return await _cachedAppInfo[appId]!.future;
       }
       final completer = Completer<AppInfo>();
       _cachedAppInfo[appId] = completer;

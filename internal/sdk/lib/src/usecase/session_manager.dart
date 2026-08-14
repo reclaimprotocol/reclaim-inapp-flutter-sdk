@@ -5,6 +5,8 @@ import '../constants.dart';
 import '../logging/logging.dart';
 import '../utils/future.dart';
 
+export 'package:reclaim_inapp_sdk/src/services/session.dart';
+
 class SessionStartResponse {
   final SessionIdentity identity;
   final ReclaimSessionInformation sessionInformation;
@@ -62,7 +64,7 @@ class SessionManager {
         appId: applicationId,
         providerId: providerId,
         sessionId: sessionId,
-        logType: "FETCHED_PROVIDERS",
+        logType: LogEventType.FETCHED_PROVIDERS,
         metadata: {'useTEE': useTEE},
       ),
     );
@@ -80,7 +82,7 @@ class SessionManager {
         appId: applicationId,
         sessionId: sessionId,
         providerId: providerId,
-        logType: 'RECLAIM_EXCEPTION',
+        logType: LogEventType.RECLAIM_EXCEPTION,
         metadata: {'exception': exception},
       ),
       if (exception is ReclaimVerificationProviderScriptException)
@@ -126,7 +128,7 @@ class SessionManager {
         appId: applicationId,
         sessionId: sessionId,
         providerId: providerId,
-        logType: 'PROOF_MANUAL_VERIFICATION_SUBMITTED',
+        logType: LogEventType.PROOF_MANUAL_VERIFICATION_SUBMITTED,
       ),
       ReclaimSession.updateSession(sessionId, SessionStatus.PROOF_MANUAL_VERIFICATION_SUBMITED),
     ]);
@@ -143,8 +145,8 @@ class SessionManager {
       appId: applicationId,
       sessionId: sessionId,
       providerId: providerId,
-      logType: 'LOGIN_INDICATORS_NOT_FOUND',
-      metadata: {'url': url, 'indicator': indicator},
+      logType: LogEventType.AUTH_GATE_NOT_DETECTED,
+      metadata: {'url': logging.wrapPII(url), 'indicator': indicator},
     );
   }
 
@@ -159,12 +161,18 @@ class SessionManager {
       appId: applicationId,
       sessionId: sessionId,
       providerId: providerId,
-      logType: 'LOGIN_INDICATORS_FOUND',
-      metadata: {'url': url, 'indicator': indicator},
+      logType: LogEventType.AUTH_REQUIRED,
+      metadata: {'url': logging.wrapPII(url), 'indicator': indicator},
     );
   }
 
   Uri getDefaultCallbackUrl(String sessionId) {
     return Uri.parse(ReclaimUrls.DEFAULT_CALLBACK_URL_PATH).replace(queryParameters: {'callbackId': sessionId});
+  }
+
+  Future<AttestorAuthenticationRequest?> requestAttestorAuth(
+    SessionAttestorAuthRequest sessionAttestorAuthRequest,
+  ) async {
+    return ReclaimSession.requestAttestorAuth(sessionAttestorAuthRequest);
   }
 }

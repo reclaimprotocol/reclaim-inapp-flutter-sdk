@@ -5,6 +5,7 @@ import 'package:reclaim_tee_operator_flutter/src/common/logger.dart';
 
 import '../libreclaim/libreclaim.dart';
 import 'isolate_worker/isolate_worker.dart';
+
 import 'package:ffi/ffi.dart';
 
 // This struct acts as our synchronous communication channel

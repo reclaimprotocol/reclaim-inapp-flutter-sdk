@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:isolate';
+
 import 'package:flutter/services.dart';
 import 'package:reclaim_tee_operator_flutter/src/common/logger.dart';
 export 'package:flutter/services.dart' show RootIsolateToken;
+
 export 'dart:isolate' show ReceivePort, SendPort;
 
 part 'log.dart';

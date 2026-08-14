@@ -3,6 +3,7 @@ import 'dart:ffi';
 
 import 'package:flutter/foundation.dart';
 import 'package:reclaim_tee_operator_flutter/src/common/logger.dart';
+
 import 'algorithm/assets.dart';
 
 import 'algorithm/algorithm.dart';
@@ -27,14 +28,12 @@ typedef ProverAlgorithmAssetUrlsProvider = KeyAlgorithmAssetUrls Function(Prover
 /// The key is the [ProverAlgorithmType] and the value is a boolean indicating
 /// whether the initialization was successful.
 final _algorithmInitializerFutureCache = <ProverAlgorithmType, Future<bool>?>{};
-final _initAlgorithmWorkerFuture = const WorkerManager(
-  InitAlgorithmRunnable(httpCacheDirName: 'prover_http_cache'),
-).createWorker();
-final _lazyAlgorithmInitializerWorkerFuture = WorkerManager(
-  LazyAlgorithmInitializerRunnable(),
-).createWorker(onMessageFromBackground: _onBackgroundRequestedAlgorithmInitialization);
+final _initAlgorithmWorkerFuture = const WorkerManager(InitAlgorithmRunnable(httpCacheDirName: 'prover_http_cache'))
+    .createWorker();
+final _lazyAlgorithmInitializerWorkerFuture = WorkerManager(LazyAlgorithmInitializerRunnable())
+    .createWorker(onMessageFromBackground: _onBackgroundRequestedAlgorithmInitialization);
 
-final _initializerLog = Logger('reclaim_flutter_sdk.reclaim_tee_operator.gnark_initializer');
+final _initializerLog = Logger('reclaim_inapp_sdk.reclaim_tee_operator.gnark_initializer');
 
 final _initializedAlgorithms = ValueNotifier<Set<ProverAlgorithmType>>({});
 
@@ -118,7 +117,7 @@ class ProverAlgorithmInitializer {
         _initializerLog.severe('Algorithm initialization with unknown id request: $algorithmId');
         return false;
       }
-      return initializer.ensureInitialized(algorithm);
+      return await initializer.ensureInitialized(algorithm);
     } catch (e, s) {
       _initializerLog.severe('Failed to initialize algorithm', e, s);
       return false;

@@ -1,9 +1,9 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../utils/observable_notifier.dart';
 
-class VerificationReviewState with EquatableMixin {
+class VerificationReviewState with Equatable {
   final bool isVisible;
 
   const VerificationReviewState({this.isVisible = true});

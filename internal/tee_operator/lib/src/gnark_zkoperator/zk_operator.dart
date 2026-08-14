@@ -16,7 +16,7 @@ import '../common/worker/prover.dart';
 import '../common/algorithm_initializer.dart';
 import 'json_preprocessing.dart';
 
-final _logger = Logger('reclaim_flutter_sdk.reclaim_tee_operator.gnark');
+final _logger = Logger('reclaim_inapp_sdk.reclaim_tee_operator.gnark');
 
 /// {@macro reclaim_tee_operator.ZkOperator}
 ///
@@ -59,7 +59,7 @@ class ReclaimProxyOperator extends ReclaimProxyOperatorBase {
     List<dynamic> args, {
     void Function(ProverAlgorithmType?, PerformanceReport)? onPerformanceReport,
   }) async {
-    final logger = Logger('reclaim_flutter_sdk.reclaim_tee_operator.gnark.computeAttestorProof.$fnName');
+    final logger = Logger('reclaim_inapp_sdk.reclaim_tee_operator.gnark.computeAttestorProof.$fnName');
 
     final String response = await () async {
       switch (fnName) {
@@ -144,9 +144,8 @@ class ReclaimProxyOperator extends ReclaimProxyOperatorBase {
 
   @override
   Future<String> generateOPRFRequestData(Uint8List bytes) async {
-    final workerFuture = _generateOPRFRequestDataWorkerFuture ??= const WorkerManager(
-      GenerateOPRFRequestDataRunnable(),
-    ).createWorker();
+    final workerFuture = _generateOPRFRequestDataWorkerFuture ??= const WorkerManager(GenerateOPRFRequestDataRunnable())
+        .createWorker();
     final worker = await workerFuture;
     return worker.executeInBackground(bytes);
   }

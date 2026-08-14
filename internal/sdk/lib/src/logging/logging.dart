@@ -17,7 +17,10 @@ import 'data/log.dart';
 import 'event_type.dart';
 
 export 'package:logging/logging.dart';
+
 export 'event_type.dart';
+
+bool metadataLoggingEnabled = false;
 
 /// This is the logger we use in the sdk
 final Logger logging = _createSdkLogger();
@@ -27,13 +30,16 @@ typedef ThrowErrorCallback = Exception Function();
 class LevelWithEvent extends Level {
   final LogEventType eventType;
   final Level level;
+  final Map<String, Object?>? metadata;
 
-  LevelWithEvent(this.level, this.eventType) : super(level.name, level.value);
+  LevelWithEvent(this.level, this.eventType, {Map<String, Object?>? metadata})
+    : metadata = metadataLoggingEnabled ? metadata : null,
+      super(level.name, level.value);
 }
 
 extension LevelExtension on Level {
-  LevelWithEvent withEvent(LogEventType eventType) {
-    return LevelWithEvent(this, eventType);
+  LevelWithEvent withEvent(LogEventType eventType, {Map<String, Object?>? metadata}) {
+    return LevelWithEvent(this, eventType, metadata: metadata);
   }
 }
 
@@ -59,6 +65,15 @@ extension LoggerExtension on Logger {
       log(levelEvent, message, error, stackTrace);
 
   bool get isDebugging => level < Level.INFO || kDebugMode;
+
+  String wrapPII(String content) {
+    return isDebugging ? content : sanitizeLogMessage(content);
+  }
+
+  String wrapPIIUri(Uri? content) {
+    if (content == null) return 'null';
+    return isDebugging ? content.toString() : sanitizeLogMessage(content.replace(queryParameters: {}).toString());
+  }
 }
 
 Logger _createSdkLogger() {
@@ -236,7 +251,13 @@ List<LogEntry> _processLogsInBackground(Map<String, dynamic> params) {
       }
 
       final int safeLength = 2000;
-      final message = LogEntry.truncateLogString(raw['message'] as String, maxLength: safeLength);
+      final message = LogEntry.truncateLogString(
+        raw['message'] as String,
+        skip:
+            raw['eventType'] == LogEventType.CLAIM_CREATION_STARTED.name ||
+            raw['eventType'] == LogEventType.CLAIM_CREATION_STARTED,
+        maxLength: safeLength,
+      );
       final logLineBuffer = StringBuffer(message);
 
       final errorStr = raw['errorStr'] as String?;
@@ -257,7 +278,7 @@ List<LogEntry> _processLogsInBackground(Map<String, dynamic> params) {
       LogEventType? eventType;
       final eventTypeStr = raw['eventType'] as String?;
       if (eventTypeStr != null) {
-        eventType = LogEventType.values.firstWhere((e) => e.name == eventTypeStr, orElse: () => LogEventType.PASS);
+        eventType = LogEventType.values.firstWhere((e) => e.name == eventTypeStr, orElse: () => LogEventType.UNKNOWN);
       }
 
       entries.add(
@@ -267,12 +288,14 @@ List<LogEntry> _processLogsInBackground(Map<String, dynamic> params) {
           sequence: raw['sequenceNumber'] as int,
           type: raw['loggerName'] as String,
           eventType: eventType,
+          metadata: raw['metadata'] as Map<String, Object?>?,
           time: DateTime.fromMillisecondsSinceEpoch(raw['timeMs'] as int),
           logLevel: LogEntryLogLevel.fromLoggingLevel(Level('temp', levelValue)),
         ),
       );
-    } catch (e) {
-      // Ignore corrupted map structs natively skipping
+    } catch (e, s) {
+      debugPrintThrottled(e.toString());
+      debugPrintStack(stackTrace: s);
     }
   }
   return entries;
@@ -312,26 +335,28 @@ Future<void> uploadDiagnosticLogs({SessionIdentity? sessionIdentityFallack}) asy
     logging.severe('Failed to constrain payload bounds', e, s);
   }
 
-  // Dump unstructured dictionaries for Thread passage isolating the Memory Heap
-  final rawLogs = logs.map((e) {
-    return {
-      'levelValue': e.record.level.value,
-      'message': e.record.message,
-      'loggerName': e.record.loggerName,
-      'timeMs': e.record.time.millisecondsSinceEpoch,
-      'sequenceNumber': e.record.sequenceNumber,
-      'errorStr': e.record.error?.toString(),
-      'stackTraceStr': e.record.stackTrace != null
-          ? LogEntry.formatStackTrace(stackTrace: e.record.stackTrace, maxFrames: 20)
-          : null,
-      'eventType': e.record.level is LevelWithEvent ? (e.record.level as LevelWithEvent).eventType.name : null,
-      'identity': e.identity?.toJson(),
-    };
-  }).toList();
-
-  final payload = {'logs': rawLogs, 'fallbackIdentity': identity.toJson()};
-
   try {
+    // Dump unstructured dictionaries for Thread passage isolating the Memory Heap
+    final rawLogs = logs.map((e) {
+      return {
+        'levelValue': e.record.level.value,
+        'message': e.record.message,
+        'loggerName': e.record.loggerName,
+        'timeMs': e.record.time.millisecondsSinceEpoch,
+        'sequenceNumber': e.record.sequenceNumber,
+        'errorStr': e.record.error?.toString(),
+        'stackTraceStr': e.record.stackTrace != null
+            ? LogEntry.formatStackTrace(stackTrace: e.record.stackTrace, maxFrames: 20)
+            : null,
+        'metadata': e.record.level is LevelWithEvent ? (e.record.level as LevelWithEvent).metadata : null,
+        'eventType': e.record.level is LevelWithEvent ? (e.record.level as LevelWithEvent).eventType.name : null,
+        'identity': e.identity?.toJson(),
+      };
+    }).toList();
+
+    final payload = {'logs': rawLogs, 'fallbackIdentity': identity.toJson()};
+    assert((payload['logs'] as List).isNotEmpty, 'Logs must not be empty, cannot send 0 logs');
+
     // Process heavy strings and array mappings on background Isolate! CPU stays idle here.
     final entries = await compute(_processLogsInBackground, payload);
     _loggingService.sendLogs(entries);
@@ -364,7 +389,11 @@ void _onLogsToConsole(LogRecord record) {
   final label = '$formattedTime ${record.level.name} ${record.loggerName} (${record.sequenceNumber})';
 
   final message = record.message;
-  debugPrintThrottled('$label ${LogEntry.truncateLogString(message)}'.trim());
+  final level = record.level;
+  debugPrintThrottled(
+    '$label ${LogEntry.truncateLogString(message, skip: level is LevelWithEvent && level.eventType == LogEventType.CLAIM_CREATION_STARTED)}'
+        .trim(),
+  );
   final error = record.error;
   if (error != null) {
     debugPrintThrottled('$label [Error] ${LogEntry.truncateLogString(error.toString())}');

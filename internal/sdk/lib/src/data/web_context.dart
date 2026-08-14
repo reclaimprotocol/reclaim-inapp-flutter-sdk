@@ -22,7 +22,7 @@ class WebContext {
 
   /// Constructor for WebContext
   /// [_potentialLoginTimeoutS] - Timeout in seconds to show the review sheet if the user is potentially logged in
-  WebContext({int potentialLoginTimeoutS = 20}) : _potentialLoginTimeoutS = potentialLoginTimeoutS;
+  WebContext({this._potentialLoginTimeoutS = 20});
 
   String? get currentWebPageUrl => _currentWebPageUrl;
   String get lastInputUrl => _lastInputUrl;

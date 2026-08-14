@@ -25,12 +25,11 @@ import 'package:flutter/rendering.dart';
 
 import '../models/string_details.dart';
 
-typedef PaintCallback =
-    void Function(
-      PaintingContext context,
-      Offset offset,
-      void Function(PaintingContext context, Offset offset) superPaint,
-    );
+typedef PaintCallback = void Function(
+  PaintingContext context,
+  Offset offset,
+  void Function(PaintingContext context, Offset offset) superPaint,
+);
 
 class SpoilerParagraph extends RenderParagraph {
   final bool initialized;

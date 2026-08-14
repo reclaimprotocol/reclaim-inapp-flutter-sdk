@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../utils/observable_notifier.dart';
 import 'generated/app_localizations.dart';
@@ -23,8 +22,19 @@ class ReclaimLocalizationProvider extends ObservableNotifier<Locale?> {
   ReclaimLocalizationProvider({Locale? locale}) : super(locale);
 
   static List<Locale> get supportedLocales => ReclaimAppLocalizations.supportedLocales;
-  static List<LocalizationsDelegate<dynamic>> get localizationsDelegate =>
-      ReclaimAppLocalizations.localizationsDelegates;
+
+  // Not [ReclaimAppLocalizations.localizationsDelegates]: gen-l10n emits the delegates from
+  // package:flutter_localizations, which localize the legacy package:flutter/material.dart types.
+  // Since material/cupertino moved into their own packages, our widgets look up material_ui's
+  // MaterialLocalizations and cupertino_ui's CupertinoLocalizations instead, and those delegates
+  // never satisfy the lookup. GlobalMaterialLocalizations.delegates below is material_ui's, and
+  // already bundles the matching cupertino and widgets delegates.
+  static const List<LocalizationsDelegate<dynamic>> _localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+    ReclaimAppLocalizations.delegate,
+    ...GlobalMaterialLocalizations.delegates,
+  ];
+
+  static List<LocalizationsDelegate<dynamic>> get localizationsDelegate => _localizationsDelegates;
 
   static ReclaimAppLocalizations of(BuildContext context) {
     final l10n = maybeOf(context);

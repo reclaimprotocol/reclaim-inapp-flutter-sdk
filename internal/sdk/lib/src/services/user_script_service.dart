@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+
 import '../data/providers.dart';
 import '../logging/logging.dart';
 import '../web_scripts/hawkeye/interception_method.dart';
@@ -56,6 +57,12 @@ class UserScriptService {
       // Add user interaction injection
       scripts.add(
         UserScript(source: userInteractionInjection, injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
+      );
+
+      // Report the first user interaction and typed character as legacy
+      // session events. Dart deduplicates these across page navigations.
+      scripts.add(
+        UserScript(source: sessionUserInteractionInjection, injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START),
       );
 
       // Add workflow management script for persistent state across page loads

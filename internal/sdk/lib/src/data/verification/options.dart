@@ -9,14 +9,18 @@ export 'package:reclaim_inapp_sdk/src/attestor/data/attestor/auth.dart' show Att
 export 'package:reclaim_inapp_sdk/src/data/claim_creation_type.dart';
 export 'package:reclaim_inapp_sdk/src/data/session.dart';
 
-typedef ReclaimAttestorAuthenticationRequestCallback =
-    FutureOr<AttestorAuthenticationRequest> Function(HttpProvider provider);
+typedef ReclaimAttestorAuthenticationRequestCallback = FutureOr<AttestorAuthenticationRequest> Function(
+  HttpProvider provider,
+);
 
-typedef CanContinueVerificationCallback =
-    Future<bool> Function(HttpProvider provider, ReclaimSessionInformation sessionInformation);
+typedef CanContinueVerificationCallback = Future<bool> Function(
+  HttpProvider provider,
+  ReclaimSessionInformation sessionInformation,
+);
 
 class ReclaimVerificationOptions {
   final bool canAutoSubmit;
+  final bool canAutoCloseOnError;
   final bool isCloseButtonVisible;
   final ClaimCreationType claimCreationType;
 
@@ -55,6 +59,7 @@ class ReclaimVerificationOptions {
 
   const ReclaimVerificationOptions({
     this.canAutoSubmit = false,
+    this.canAutoCloseOnError = false,
     this.isCloseButtonVisible = true,
     this.claimCreationType = ClaimCreationType.standalone,
     this.canClearWebStorage = true,
@@ -67,6 +72,7 @@ class ReclaimVerificationOptions {
 
   ReclaimVerificationOptions copyWith({
     bool? canAutoSubmit,
+    bool? canAutoCloseOnError,
     bool? isCloseButtonVisible,
     ClaimCreationType? claimCreationType,
     bool? canClearWebStorage,
@@ -78,6 +84,7 @@ class ReclaimVerificationOptions {
   }) {
     return ReclaimVerificationOptions(
       canAutoSubmit: canAutoSubmit ?? this.canAutoSubmit,
+      canAutoCloseOnError: canAutoCloseOnError ?? this.canAutoCloseOnError,
       isCloseButtonVisible: isCloseButtonVisible ?? this.isCloseButtonVisible,
       claimCreationType: claimCreationType ?? this.claimCreationType,
       canClearWebStorage: canClearWebStorage ?? this.canClearWebStorage,

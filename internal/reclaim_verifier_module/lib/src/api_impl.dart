@@ -2,24 +2,6 @@ part of 'api.dart';
 
 final _logger = Logger('reclaim_flutter_sdk.reclaim_verifier_module.api');
 
-extension ReclaimSessionStatusExtension on ReclaimSessionStatus {
-  static ReclaimSessionStatus fromSessionStatus(SessionStatus status) {
-    return switch (status) {
-      SessionStatus.PROOF_GENERATION_FAILED => ReclaimSessionStatus.PROOF_GENERATION_FAILED,
-      SessionStatus.PROOF_GENERATION_SUCCESS => ReclaimSessionStatus.PROOF_GENERATION_SUCCESS,
-      SessionStatus.PROOF_SUBMITTED => ReclaimSessionStatus.PROOF_SUBMITTED,
-      SessionStatus.PROOF_SUBMISSION_FAILED => ReclaimSessionStatus.PROOF_SUBMISSION_FAILED,
-      // This spelling mistake is intentional to match the backend.
-      SessionStatus.PROOF_MANUAL_VERIFICATION_SUBMITED => ReclaimSessionStatus.PROOF_MANUAL_VERIFICATION_SUBMITTED,
-      SessionStatus.USER_INIT_VERIFICATION => ReclaimSessionStatus.USER_INIT_VERIFICATION,
-      SessionStatus.USER_STARTED_VERIFICATION => ReclaimSessionStatus.USER_STARTED_VERIFICATION,
-      SessionStatus.PROOF_GENERATION_STARTED => ReclaimSessionStatus.PROOF_GENERATION_STARTED,
-      SessionStatus.PROOF_GENERATION_RETRY => ReclaimSessionStatus.PROOF_GENERATION_RETRY,
-      SessionStatus.AI_PROOF_SUBMITTED => ReclaimSessionStatus.AI_PROOF_SUBMITTED,
-    };
-  }
-}
-
 extension ClaimCreationTypeExtension on ClaimCreationTypeApi {
   ClaimCreationType get toClaimCreationType {
     return switch (this) {
@@ -165,6 +147,15 @@ class _ReclaimModuleExternalApiImpl implements ReclaimModuleExternalApi {
       await _assertCanUseCapability('overrides_v1');
     }
 
+    final logLevel = logConsumer?.logLevel;
+    if (logLevel != null) {
+      setLoggingLevel(logLevel);
+    }
+    final canLogMetadata = logConsumer?.canLogMetadata;
+    if (canLogMetadata != null) {
+      metadataLoggingEnabled = canLogMetadata;
+    }
+
     ReclaimOverride.setAll([
       if (feature != null)
         ReclaimFeatureFlagData(
@@ -298,7 +289,7 @@ class _ReclaimModuleExternalApiImpl implements ReclaimModuleExternalApi {
                   appId: appId,
                   providerId: providerId,
                   sessionId: sessionId,
-                  logType: logType,
+                  logType: logType.name,
                   metadata: ensureMap<String>(metadata),
                 );
               },
@@ -323,6 +314,8 @@ class _ReclaimModuleExternalApiImpl implements ReclaimModuleExternalApi {
 
   final _defaultReclaimVerificationOptions = ReclaimVerificationOptions(
     canAutoSubmit: true,
+    // TODO: Add this as an option in platform apis
+    canAutoCloseOnError: true,
     isCloseButtonVisible: true,
   );
 
@@ -347,6 +340,8 @@ class _ReclaimModuleExternalApiImpl implements ReclaimModuleExternalApi {
       });
       _reclaimVerificationOptions = _reclaimVerificationOptions.copyWith(
         canAutoSubmit: options.canAutoSubmit,
+        // TODO: Add this as an option in platform apis
+        canAutoCloseOnError: true,
         canClearWebStorage: options.canDeleteCookiesBeforeVerificationStarts,
         attestorAuthenticationRequest: options.canUseAttestorAuthenticationRequest
             ? _requestAttestorAuthenticationRequestFromHost
@@ -465,7 +460,7 @@ class _ReclaimModuleExternalApiImpl implements ReclaimModuleExternalApi {
       } else {
         _logger.info(debugMessage);
       }
-      return _startVerification(ReclaimVerificationRequest.fromSdkRequest(request), request.sessionId ?? '');
+      return await _startVerification(ReclaimVerificationRequest.fromSdkRequest(request), request.sessionId ?? '');
     } catch (e, s) {
       _logger.severe('Failed to start verification from url', e, s);
       return Future.value(
@@ -667,6 +662,7 @@ class _ReclaimModuleExternalApiImpl implements ReclaimModuleExternalApi {
         case ReclaimVerificationRequirementException():
         case ReclaimVerificationProviderLoadException():
         case ReclaimAttestorException():
+        case ReclaimVerificationProviderFailedException():
           return ReclaimApiVerificationExceptionType.verificationFailed;
       }
     }

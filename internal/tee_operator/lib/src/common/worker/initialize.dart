@@ -11,7 +11,7 @@ import '../algorithm/algorithm.dart';
 import '../download/download.dart';
 import 'isolate_worker/isolate_worker.dart';
 
-final _logger = Logger('reclaim_flutter_sdk.reclaim_tee_operator.worker.initialize');
+final _logger = Logger('reclaim_inapp_sdk.reclaim_tee_operator.worker.initialize');
 
 class InitAlgorithmInput {
   final ProverAlgorithmType algorithm;

@@ -16,6 +16,8 @@ class ReclaimRequestData {
   final String? context;
   final Map<String, dynamic>? publicParamValues; // Note: field name is 'paramValues' in JSON
   final Map<String, dynamic>? privateParamValues; // Note: field name is 'paramValues' in JSON
+  /// Base64 protobuf AuthenticationRequest for attestor auth; empty means none.
+  final String? authRequest;
 
   const ReclaimRequestData({
     required this.url,
@@ -31,6 +33,7 @@ class ReclaimRequestData {
     this.context,
     this.publicParamValues,
     this.privateParamValues,
+    this.authRequest,
   });
 
   /// Create ReclaimRequestData directly from claim request format
@@ -38,6 +41,7 @@ class ReclaimRequestData {
   factory ReclaimRequestData.fromClaimRequest(Map<String, dynamic> claimRequest) {
     final params = claimRequest['params'] as Map<String, dynamic>?;
     final secretParams = claimRequest['secretParams'] as Map<String, dynamic>?;
+    final authRequest = claimRequest['authRequest'];
 
     if (params == null) {
       throw ArgumentError('Invalid claim request format - missing params, $claimRequest');
@@ -140,6 +144,7 @@ class ReclaimRequestData {
       context: contextStr,
       publicParamValues: publicParamValues,
       privateParamValues: privateParamValues,
+      authRequest: authRequest is String ? authRequest : null,
     );
   }
 
@@ -169,6 +174,7 @@ class ReclaimRequestData {
           'paramValues': privateParamValues!.map((key, value) => MapEntry(key, value.toString())),
       },
       if (context != null) 'context': context,
+      if (authRequest != null) 'authRequest': authRequest,
     };
   }
 
@@ -186,6 +192,7 @@ class ReclaimRequestData {
     if (context != null) 'context': context,
     if (publicParamValues != null) 'publicParamValues': publicParamValues,
     if (privateParamValues != null) 'privateParamValues': privateParamValues,
+    if (authRequest != null) 'authRequest': authRequest,
   };
 
   factory ReclaimRequestData.fromJson(Map<String, dynamic> json) {
@@ -209,6 +216,7 @@ class ReclaimRequestData {
       context: json['context'] as String?,
       publicParamValues: json['publicParamValues'] as Map<String, dynamic>?,
       privateParamValues: json['privateParamValues'] as Map<String, dynamic>?,
+      authRequest: json['authRequest'] as String?,
     );
   }
 

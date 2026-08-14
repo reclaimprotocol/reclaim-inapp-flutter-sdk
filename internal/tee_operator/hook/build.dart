@@ -17,12 +17,30 @@ void main(List<String> args) async {
 
       switch (targetOS) {
         case .iOS:
-          // iOS: symbols are linked into the executable
+          // iOS: bundled as its own dynamic library (not merged into the
+          // executable). Flutter's own iOS native-assets tooling lipos,
+          // strips and codesigns this dylib and wraps it in a framework at
+          // build time, independent of whatever STRIP_STYLE the consuming
+          // app's Xcode project uses -- so the Go symbols reliably survive
+          // App Store archive/export, unlike LookupInExecutable which
+          // depended on the app target's own strip settings.
+          final iosDirName = getIOSLibraryDirectoryName(input.config.code);
+          if (iosDirName == null) {
+            Logger.root.warning(
+              'Building without native library linked',
+              UnsupportedError(
+                'Unsupported iOS target architecture/SDK: ${input.config.code.targetArchitecture.name}.',
+              ),
+            );
+            return;
+          }
+          final iosLibPath = input.packageRoot.resolve('assets/ios/$iosDirName/libreclaim.dylib');
           output.assets.code.add(
             CodeAsset(
               package: packageName,
               name: 'src/common/libreclaim/libreclaim.g.dart',
-              linkMode: LookupInExecutable(),
+              linkMode: DynamicLoadingBundled(),
+              file: iosLibPath,
             ),
           );
         case .android:
@@ -59,6 +77,15 @@ String? getAndroidArchitectureDirectoryName(CodeConfig code) {
   return switch (code.targetArchitecture) {
     Architecture.arm64 => 'arm64-v8a',
     Architecture.x64 => 'x86_64',
+    _ => null,
+  };
+}
+
+String? getIOSLibraryDirectoryName(CodeConfig code) {
+  final isSimulator = code.iOS.targetSdk == IOSSdk.iPhoneSimulator;
+  return switch (code.targetArchitecture) {
+    Architecture.arm64 => isSimulator ? 'ios-arm64-simulator' : 'ios-arm64',
+    Architecture.x64 when isSimulator => 'ios-x86_64-simulator',
     _ => null,
   };
 }

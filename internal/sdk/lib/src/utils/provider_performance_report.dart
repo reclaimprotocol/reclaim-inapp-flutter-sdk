@@ -4,7 +4,9 @@ import 'dart:math' as math;
 
 import 'package:measure_performance/measure_performance.dart';
 import 'package:meta/meta.dart';
+
 import '../logging/logging.dart';
+
 export 'package:measure_performance/measure_performance.dart';
 
 Map<String, Object?> _reportToJsonMapConverter(PerformanceReport report) {

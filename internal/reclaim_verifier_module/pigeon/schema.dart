@@ -10,8 +10,6 @@ import 'package:pigeon/pigeon.dart';
     kotlinOptions: KotlinOptions(package: 'org.reclaimprotocol.inapp_sdk'),
     kotlinOut: 'generated/android/src/main/java/org/reclaimprotocol/inapp_sdk/Messages.kt',
     swiftOut: 'generated/ios/Sources/ReclaimInAppSdk/Messages.swift',
-    objcHeaderOut: 'generated/ios/Sources/ReclaimInAppSdk/Messages.h',
-    objcSourceOut: 'generated/ios/Sources/ReclaimInAppSdk/Messages.m',
     copyrightHeader: 'pigeon/copyright.txt',
   ),
 )
@@ -147,6 +145,8 @@ class ClientLogConsumerOverride {
     this.enableLogHandler = true,
     this.canSdkCollectTelemetry = true,
     this.canSdkPrintLogs = false,
+    this.logLevel,
+    this.canLogMetadata = false,
   });
   // true
   final bool enableLogHandler;
@@ -154,6 +154,11 @@ class ClientLogConsumerOverride {
   final bool canSdkCollectTelemetry;
   // false
   final bool? canSdkPrintLogs;
+  // Change log level.
+  // Providing null does not affect anything.
+  final String? logLevel;
+  // false
+  final bool? canLogMetadata;
 }
 
 class ClientReclaimSessionManagementOverride {
@@ -187,6 +192,8 @@ enum ReclaimSessionStatus {
   PROOF_SUBMISSION_FAILED,
   PROOF_MANUAL_VERIFICATION_SUBMITTED,
   AI_PROOF_SUBMITTED,
+  USER_INTERACTED,
+  USER_TYPED,
 }
 
 /// Identification information of a session.

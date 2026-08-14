@@ -11,7 +11,7 @@ import '../models/claim.dart';
 import '../models/client_options.dart';
 import '../models/request_data.dart';
 
-final _logger = Logger('reclaim_flutter_sdk.reclaim_tee_operator.tee.worker.tee_operations');
+final _logger = Logger('reclaim_inapp_sdk.reclaim_tee_operator.tee.worker.tee_operations');
 
 /// Input data for TEE operations
 class TEEOperationInput {
@@ -36,16 +36,6 @@ class TEEOperationInput {
       requestId: json['requestId'] as String?,
     );
   }
-}
-
-/// Wrapper for provider JSON format that can be automatically encoded
-class _ProviderRequestWrapper {
-  final ReclaimRequestData requestData;
-
-  const _ProviderRequestWrapper(this.requestData);
-
-  // toJson() returns the provider format expected by native library
-  Map<String, dynamic> toJson() => requestData.toProviderJson();
 }
 
 /// Result of TEE operations
@@ -101,7 +91,7 @@ class TEEExecuteRunnable extends Runnable<TEEOperationInput, TEEOperationResult>
       // Convert input to the format expected by native library
       // json.encode automatically calls toJson() on objects
       measure.start();
-      final providerData = _ProviderRequestWrapper(input.requestData).toJson();
+      final providerData = input.requestData.toProviderJson();
 
       final requestJson = json.encode(providerData);
 
@@ -140,6 +130,9 @@ class TEEExecuteRunnable extends Runnable<TEEOperationInput, TEEOperationResult>
         final claimStr = claimJson.value.toDartString(claimLength.value);
         bindings.freeString(claimJson.value);
 
+        _logger.info(
+          '[$debugLabel] TEE protocol execution finished, parsing claim (response length: ${claimStr.length})',
+        );
         final completeResponse = json.decode(claimStr) as Map<String, dynamic>;
         final claim = ReclaimClaim.fromJson(completeResponse);
 
@@ -168,7 +161,7 @@ class TEEExecuteRunnable extends Runnable<TEEOperationInput, TEEOperationResult>
     } catch (e, s) {
       _logger.severe('[$debugLabel] TEE protocol execution failed: $e\\nStack: $s');
       measure.stop();
-      return TEEOperationResult(success: false, error: e.toString(), performanceReport: measure.getReport());
+      return TEEOperationResult(success: false, error: '$e\n$s', performanceReport: measure.getReport());
     }
   }
 }

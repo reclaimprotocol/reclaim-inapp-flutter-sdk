@@ -1,9 +1,8 @@
 import 'dart:collection';
-
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../logging/logging.dart';
 import '../../../services/hybrid_screenshot_service.dart';

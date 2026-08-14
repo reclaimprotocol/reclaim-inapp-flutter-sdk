@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:simple_shimmer/simple_shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -830,11 +830,7 @@ class _ActionViewState extends State<_ActionView> {
     // end-user PII. INFO emits a redacted notification; FINER keeps the raw value.
     log.info('publicData ready (body redacted at INFO; raised to FINER for full payload)');
     log.finer('publicData: $publicData');
-    final proofs =
-        <CreateClaimOutput>[
-          for (final proofs in maybeProofs)
-            if (proofs != null) ...proofs,
-        ]
+    final proofs = <CreateClaimOutput>[for (final proofs in maybeProofs) ...?proofs]
         // attach public data to all proofs
         .map((e) => e.copyWith(publicData: publicData));
 
@@ -975,18 +971,80 @@ class _SubmitWidget extends StatelessWidget {
   }
 }
 
-class _ErrorWidget extends StatelessWidget {
+class _ErrorWidget extends StatefulWidget {
   const _ErrorWidget({required this.onExtendNoActivity});
 
   final VoidCallback onExtendNoActivity;
 
   @override
-  Widget build(BuildContext context) {
-    final controller = ClaimCreationController.of(context);
-    final clientError = controller.value.providerError ?? controller.value.clientError;
+  State<_ErrorWidget> createState() => _ErrorWidgetState();
+}
 
+class _ErrorWidgetState extends State<_ErrorWidget> {
+  late final ReclaimVerificationProviderFailedException providerFailedException;
+  ClaimCreationUIDelegateOptions? get options => ClaimCreationUIDelegateOptions.of(context);
+  ClaimCreationController get controller => ClaimCreationController.of(context);
+  ReclaimException? get error {
+    return controller.value.providerError ?? controller.value.clientError ?? providerFailedException;
+  }
+
+  ReclaimException? prevError;
+
+  @override
+  void initState() {
+    super.initState();
+    providerFailedException = ReclaimVerificationProviderFailedException(
+      ClaimCreationController.of(context, listen: false).value.debugErrorDetails(),
+    );
+    Future.microtask(didClientErrorChange);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (error != prevError) {
+      prevError = error;
+      didClientErrorChange();
+    }
+  }
+
+  Timer? autoSubmitErrorTimer;
+
+  void didClientErrorChange() {
+    prevError = error;
+
+    autoSubmitErrorTimer?.cancel();
+    autoSubmitErrorTimer = null;
+
+    final e = error;
+
+    if (e == null) return;
+    if (options?.canAutoCloseOnError != true) return;
+
+    // Show error in UI for a brief moment and then submit
+    autoSubmitErrorTimer = Timer(Durations.extralong4 * 2, () {
+      closeWithException(e);
+    });
+  }
+
+  void closeWithException(ReclaimException exception) {
+    Navigator.of(context).pop();
+    options?.onException(exception);
+  }
+
+  @override
+  void dispose() {
+    autoSubmitErrorTimer?.cancel();
+    autoSubmitErrorTimer = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    final clientError = controller.value.providerError ?? controller.value.clientError;
     return Column(
       mainAxisSize: MainAxisSize.max,
       mainAxisAlignment: MainAxisAlignment.end,
@@ -999,7 +1057,20 @@ class _ErrorWidget extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            if (clientError == null || clientError is ReclaimVerificationNoActivityDetectedException)
+            if (options?.canAutoCloseOnError == true)
+              Expanded(
+                child: ActionButton(
+                  backgroundColor: colorScheme.error,
+                  foregroundColor: colorScheme.onError,
+                  onPressed: null,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [SizedBox.square(dimension: 16, child: ReclaimCircularProgressIndicator())],
+                  ),
+                ),
+              )
+            else if (clientError == null || clientError is ReclaimVerificationNoActivityDetectedException)
               Expanded(
                 child: ActionButton(
                   backgroundColor: colorScheme.error,
@@ -1010,7 +1081,7 @@ class _ErrorWidget extends StatelessWidget {
                       return;
                     }
                     // extend timer
-                    onExtendNoActivity();
+                    widget.onExtendNoActivity();
                     // clear the error and let the user continue
                     controller.setClientError(null);
                     // hide this review screen
@@ -1035,9 +1106,8 @@ class _ErrorWidget extends StatelessWidget {
                   backgroundColor: colorScheme.error,
                   foregroundColor: colorScheme.onError,
                   onPressed: () {
-                    Navigator.of(context).pop();
-                    final options = ClaimCreationUIDelegateOptions.of(context, listen: false);
-                    options?.onException(clientError);
+                    final e = clientError;
+                    closeWithException(e);
                   },
                   child: Stack(
                     alignment: Alignment.center,

@@ -8,6 +8,17 @@ export 'libreclaim.g.dart' hide calloc;
 
 typedef ZKInitCallback = Void Function(UnsignedChar);
 
+/// Matches Go's LogCallback:
+/// void (*LogCallback)(const char* level, const char* message, const char* fields,
+///                     int progress_percentage, const char* progress_description)
+typedef GoLogCallback = Void Function(
+  Pointer<Utf8> level,
+  Pointer<Utf8> message,
+  Pointer<Utf8> fields,
+  Int32 progressPercentage,
+  Pointer<Utf8> progressDescription,
+);
+
 final class ReclaimBindings {
   const ReclaimBindings._();
 
@@ -64,6 +75,19 @@ final class ReclaimBindings {
 
   void setZKInitCallback(Pointer<NativeFunction<ZKInitCallback>> callback) {
     return libreclaim.SetZKInitCallback(callback);
+  }
+
+  /// Registers the Go log callback. Returns 1 on success.
+  ///
+  /// Resolved through the same native asset as all other bindings so the
+  /// callback is registered in the same copy of the library that executes
+  /// the protocol (see hook/build.dart).
+  int setLogCallback(Pointer<NativeFunction<GoLogCallback>> callback) {
+    return libreclaim.set_log_callback(callback.cast());
+  }
+
+  void clearLogCallback() {
+    return libreclaim.clear_log_callback();
   }
 
   void markZKInitComplete(int algorithmID, bool success) {

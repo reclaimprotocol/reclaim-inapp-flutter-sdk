@@ -4,15 +4,14 @@ import '../overrides/override.dart';
 
 import 'providers.dart';
 
-typedef ProviderInformationCallback =
-    FutureOr<HttpProvider> Function({
-      required String appId,
-      required String providerId,
-      required String sessionId,
-      required String signature,
-      required String timestamp,
-      required String resolvedVersion,
-    });
+typedef ProviderInformationCallback = FutureOr<HttpProvider> Function({
+  required String appId,
+  required String providerId,
+  required String sessionId,
+  required String signature,
+  required String timestamp,
+  required String resolvedVersion,
+});
 
 class ReclaimProviderOverride extends ReclaimOverride<ReclaimProviderOverride> {
   /// Override the reclaim http provider to use for verification.

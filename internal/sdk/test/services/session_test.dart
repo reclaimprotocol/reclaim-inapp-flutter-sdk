@@ -4,6 +4,8 @@ import 'package:reclaim_inapp_sdk/src/services/session.dart';
 const Map<SessionStatus, String> sessionStatusStrings = {
   SessionStatus.USER_STARTED_VERIFICATION: 'USER_STARTED_VERIFICATION',
   SessionStatus.USER_INIT_VERIFICATION: 'USER_INIT_VERIFICATION',
+  SessionStatus.USER_INTERACTED: 'USER_INTERACTED',
+  SessionStatus.USER_TYPED: 'USER_TYPED',
   SessionStatus.PROOF_GENERATION_STARTED: 'PROOF_GENERATION_STARTED',
   SessionStatus.PROOF_GENERATION_RETRY: 'PROOF_GENERATION_RETRY',
   SessionStatus.PROOF_GENERATION_SUCCESS: 'PROOF_GENERATION_SUCCESS',

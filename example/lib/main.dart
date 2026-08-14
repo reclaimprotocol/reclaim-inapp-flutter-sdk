@@ -3,8 +3,8 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:reclaim_inapp_flutter_sdk/reclaim_inapp_flutter_sdk.dart';
 
 // For this example, we are using dart define to provide constant values for sdk

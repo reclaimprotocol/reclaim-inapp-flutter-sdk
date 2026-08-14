@@ -7,7 +7,7 @@ import 'http/http.dart';
 
 final _followLinkClient = ReclaimHttpClient();
 
-final _logger = Logger('reclaim_flutter_sdk.reclaim_verifier_module.followLink');
+final _logger = Logger('reclaim_inapp_sdk.reclaim_verifier_module.followLink');
 
 Future<String?> followUrlRedirects(String url, int followDepth, {http.Client? client}) async {
   if (followDepth > 5) {
