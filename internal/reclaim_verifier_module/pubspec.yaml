@@ -31,13 +31,13 @@ dependencies:
   cupertino_icons: ^1.0.8
   reclaim_inapp_sdk:
     git:
-      url: git@github.com:reclaimprotocol/reclaim-inapp-sdk.git
-      ref: main
+      url: https://github.com/reclaimprotocol/reclaim-inapp-flutter-sdk.git
+      ref: 0.42.1
   # Reclaim TEE operator for native protocol execution
   reclaim_tee_operator_flutter:
     git:
-      url: git@github.com:reclaimprotocol/reclaim-tee-operator-flutter.git
-      ref: main
+      url: https://github.com/reclaimprotocol/reclaim-inapp-flutter-sdk.git
+      ref: 0.42.1
   json_annotation: ^4.9.0
   logging: ^1.3.0
   http: ^1.5.0
