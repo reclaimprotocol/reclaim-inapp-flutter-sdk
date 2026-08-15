@@ -24,7 +24,7 @@ dependencies:
   reclaim_inapp_flutter_sdk:
     git:
       url: https://github.com/reclaimprotocol/reclaim-inapp-flutter-sdk.git
-      ref: 0.36.0
+      ref: 0.42.1
 ```
 
 #### Fixing performance issues on IOS physical devices
